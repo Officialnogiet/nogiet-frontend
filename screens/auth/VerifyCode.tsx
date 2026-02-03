@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AuthScreen } from '../../types';
-import { Logo } from '../../components/Icons';
+import logoFull from '../../assets/logo-full.png';
 import Footer from '../../components/Footer';
 
 interface VerifyCodeProps {
@@ -49,8 +49,7 @@ const VerifyCode: React.FC<VerifyCodeProps> = ({ onNavigate }) => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <header className="px-8 py-6">
         <div className="flex items-center gap-2">
-          <Logo className="w-8 h-8 text-black" />
-          <span className="text-xl font-bold tracking-tight">NOGIET</span>
+          <img src={logoFull} alt="NOGIET" className="h-8 w-auto" />
         </div>
       </header>
 

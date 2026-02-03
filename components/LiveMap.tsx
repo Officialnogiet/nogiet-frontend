@@ -40,13 +40,13 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
         <div className="bg-[#002b28] rounded-2xl p-3 flex items-center justify-between shadow-2xl">
           <div className="flex-1 max-w-lg relative ml-2">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            <input 
-              type="text" 
-              placeholder="Search facility, pipeline or coordinates" 
+            <input
+              type="text"
+              placeholder="Search facility, pipeline or coordinates"
               className="w-full bg-[#001f1d] border-none rounded-xl py-2.5 pl-11 pr-4 text-sm text-gray-400 focus:ring-1 focus:ring-[#009688] outline-none placeholder-gray-500"
             />
           </div>
-          <button 
+          <button
             onClick={onOpenFilters}
             className="flex items-center gap-2 px-4 py-2.5 bg-transparent hover:bg-white/5 text-gray-300 rounded-xl transition-all mr-2 group"
           >
@@ -60,7 +60,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
       <div className="absolute inset-0 grayscale contrast-75 bg-cover bg-center bg-[#f0f2f0]" style={{ backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/4/4e/Map_of_Nigeria.png')`, backgroundSize: '120% auto', backgroundPosition: 'center top' }}>
         {/* Plume Markers */}
         {plumes.map(plume => (
-          <div 
+          <div
             key={plume.id}
             className={`absolute ${plume.size} -translate-x-1/2 -translate-y-1/2 group cursor-pointer`}
             style={{ top: plume.top, left: plume.left }}
@@ -77,7 +77,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
       <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: `linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)`, backgroundSize: '60px 60px' }}></div>
 
       {/* Alert Icon Button */}
-      <button 
+      <button
         onClick={() => setIsAlertsOpen(!isAlertsOpen)}
         className="absolute top-28 left-8 w-11 h-11 bg-[#002b28] text-white flex items-center justify-center rounded-xl shadow-lg hover:bg-[#003d38] z-20"
       >
@@ -155,7 +155,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                 </div>
               ))}
             </div>
-            <button 
+            <button
               onClick={() => setShowDetailModal(true)}
               className="w-full text-center text-[12px] font-extrabold text-[#009688] border-t border-gray-50 pt-4 hover:text-[#00796b] flex items-center justify-center gap-1 group"
             >
@@ -199,17 +199,17 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                       Last 7 Days
                     </button>
                   </div>
-                  
+
                   <div className="h-64 flex items-end justify-between px-2 pt-10 relative">
                     {/* Simplified Chart */}
                     {[1800, 1500, 2400, 1400, 1400, 1100, 1300].map((val, idx) => (
                       <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
-                        <div className={`w-8 bg-[#009688] rounded-t-lg transition-all group-hover:bg-[#00796b] relative`} style={{ height: `${(val/3000)*100}%` }}>
+                        <div className={`w-8 bg-[#009688] rounded-t-lg transition-all group-hover:bg-[#00796b] relative`} style={{ height: `${(val / 3000) * 100}%` }}>
                           {idx === 2 && (
-                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111] text-white p-3 rounded-xl text-[10px] z-10 w-32 shadow-2xl">
-                               <p className="font-bold mb-1">12-01-2026</p>
-                               <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#009688]"></div>1,850 kg/hr</div>
-                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111] text-white p-3 rounded-xl text-[10px] z-10 w-32 shadow-2xl">
+                              <p className="font-bold mb-1">12-01-2026</p>
+                              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#009688]"></div>1,850 kg/hr</div>
+                            </div>
                           )}
                         </div>
                         <span className="text-[10px] font-bold text-gray-300 mt-3 whitespace-nowrap">1{idx}-01-2026</span>
