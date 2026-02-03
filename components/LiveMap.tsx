@@ -23,12 +23,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-// IMPORTANT: Use your own fresh Mapbox token
-// 1. Go to https://account.mapbox.com/access-tokens/
-// 2. Create a new token (public scope is fine for client-side)
-// 3. Put it in .env → VITE_MAPBOX_TOKEN=pk.eyJ1Ijo... 
-//    or hardcode temporarily for testing only
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface LiveMapProps {
@@ -76,6 +73,48 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true }) => 
   const [showAlerts, setShowAlerts] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<any>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ['Date', 'Rate (kg/hr)'];
+    const csvContent = [
+      headers.join(','),
+      ...CHART_DATA.map(item => `${item.date},${item.rate}`)
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `emission_data_${selectedFacility?.name || 'export'}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleShareReport = () => {
+    const doc = new jsPDF();
+
+    // Add Report Header
+    doc.setFontSize(22);
+    doc.text('Emission Analytics Report', 14, 20);
+
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Facility: ${selectedFacility?.name || 'N/A'}`, 14, 30);
+    doc.text(`Date of Report: ${new Date().toLocaleDateString()}`, 14, 37);
+
+    // Add Data Table
+    autoTable(doc, {
+      startY: 45,
+      head: [['Date', 'Emission Rate (kg/hr)']],
+      body: CHART_DATA.map(item => [item.date, `${item.rate} kg/hr`]),
+      theme: 'striped',
+      headStyles: { fillColor: [13, 148, 136] }, // Teal-600 color equivalent in RGB
+    });
+
+    doc.save(`NOGIET_Report_${selectedFacility?.name || 'FACILITY'}.pdf`);
+  };
 
   useEffect(() => {
     if (map.current) {
@@ -530,12 +569,16 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true }) => 
                 </div>
 
                 <div className={`px-10 py-6 border-t flex justify-end gap-4 transition-colors ${darkMode ? 'bg-[#0b0e14]/50 border-[#1e2430]' : 'bg-gray-50 border-gray-100'}`}>
-                  <button className={`flex items-center gap-2 px-7 py-3 border-2 rounded-2xl font-medium transition-all ${darkMode ? 'border-[#1e2430] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-500 hover:bg-white hover:border-teal-200'
-                    }`}>
+                  <button
+                    onClick={handleShareReport}
+                    className={`flex items-center gap-2 px-7 py-3 border-2 rounded-2xl font-medium transition-all ${darkMode ? 'border-[#1e2430] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-500 hover:bg-white hover:border-teal-200'
+                      }`}>
                     <Share2 size={18} className="text-gray-500" />
                     Share Report
                   </button>
-                  <button className="flex items-center gap-2 bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-teal-700 shadow-lg transition-all">
+                  <button
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-2 bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-teal-700 shadow-lg transition-all">
                     <Download size={18} />
                     Export Data
                   </button>

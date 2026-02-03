@@ -10,7 +10,7 @@ import Dashboard from './screens/Dashboard';
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>(AuthScreen.LOGIN);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
