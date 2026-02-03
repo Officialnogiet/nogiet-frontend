@@ -1,0 +1,11 @@
+
+export enum AuthScreen {
+  LOGIN = 'LOGIN',
+  FORGOT_PASSWORD = 'FORGOT_PASSWORD',
+  VERIFY_CODE = 'VERIFY_CODE',
+  NEW_PASSWORD = 'NEW_PASSWORD',
+  SUCCESS = 'SUCCESS',
+  DASHBOARD = 'DASHBOARD'
+}
+
+export type DashboardView = 'LIVE_MAP' | 'DATA_COMPARISON';
