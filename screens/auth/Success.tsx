@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { AuthScreen } from '../../types';
-import { Logo } from '../../components/Icons';
+import logoFull from '../../assets/logo-full.png';
+import iconTeal from '../../assets/icon-teal.png';
 import Footer from '../../components/Footer';
 
 interface SuccessProps {
@@ -13,17 +14,14 @@ const Success: React.FC<SuccessProps> = ({ onNavigate }) => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <header className="px-8 py-6">
         <div className="flex items-center gap-2">
-          <Logo className="w-8 h-8 text-black" />
-          <span className="text-xl font-bold tracking-tight">NOGIET</span>
+          <img src={logoFull} alt="NOGIET" className="h-8 w-auto" />
         </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center p-8">
         <div className="w-full max-w-sm text-center space-y-8">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full border-2 border-[#009688] flex items-center justify-center">
-              <Logo className="w-8 h-8 text-black" />
-            </div>
+            <img src={iconTeal} alt="Reset Password" className="w-20 h-20" />
           </div>
 
           <div className="space-y-2">

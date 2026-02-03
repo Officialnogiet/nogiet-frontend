@@ -1,238 +1,533 @@
+import React, { useState, useEffect, useRef } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import {
+  Search,
+  ChevronDown,
+  ChevronRight,
+  AlertCircle,
+  Plus,
+  Minus,
+  X,
+  ExternalLink,
+  Calendar,
+  Share2,
+  Download,
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
-import React, { useState } from 'react';
+// IMPORTANT: Use your own fresh Mapbox token
+// 1. Go to https://account.mapbox.com/access-tokens/
+// 2. Create a new token (public scope is fine for client-side)
+// 3. Put it in .env → VITE_MAPBOX_TOKEN=pk.eyJ1Ijo... 
+//    or hardcode temporarily for testing only
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface LiveMapProps {
-  onOpenFilters: () => void;
+  onOpenFilters?: () => void;
 }
 
+const HOTSPOTS = [
+  { id: '1', name: 'Kano', lng: 8.5224, lat: 12.0022, size: 40 },
+  { id: '2', name: 'Kaduna', lng: 7.435, lat: 10.5105, size: 35 },
+  { id: '3', name: 'Abuja', lng: 7.4913, lat: 9.0765, size: 50 },
+  { id: '4', name: 'Minna', lng: 6.5569, lat: 9.6143, size: 30 },
+  { id: '5', name: 'Lafia', lng: 8.5153, lat: 8.4855, size: 28 },
+  { id: '6', name: 'Enugu', lng: 7.5083, lat: 6.4483, size: 35 },
+  { id: '7', name: 'Ilorin', lng: 4.5484, lat: 8.4799, size: 32 },
+  { id: '8', name: 'Ibadan', lng: 3.947, lat: 7.3775, size: 40 },
+  { id: '9', name: 'Onitsha', lng: 6.7865, lat: 6.1527, size: 25 },
+  { id: '10', name: 'Port Harcourt', lng: 7.0085, lat: 4.7774, size: 35 },
+  { id: '11', name: 'Oyo', lng: 3.9312, lat: 7.8504, size: 22 },
+  { id: '12', name: 'Ado Ekiti', lng: 5.2181, lat: 7.6163, size: 28 },
+  { id: '13', name: 'Makurdi', lng: 8.5307, lat: 7.7322, size: 32 },
+];
+
+const ALERTS = [
+  { id: 'a1', facility: 'Delta Facility A - High Output', output: '1250kg/hr', time: '3hrs ago' },
+  { id: 'a2', facility: 'Escravos Node - Abnormal Pressure', output: '980kg/hr', time: '5hrs ago' },
+];
+
+const CHART_DATA = [
+  { date: '12-01', rate: 1850 },
+  { date: '13-01', rate: 1600 },
+  { date: '14-01', rate: 3200 },
+  { date: '15-01', rate: 1400 },
+  { date: '16-01', rate: 1400 },
+  { date: '17-01', rate: 1000 },
+  { date: '18-01', rate: 1300 },
+];
+
 const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
-  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showAlerts, setShowAlerts] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<any>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const plumes = [
-    { id: 1, name: 'Birnin Kebbi', top: '10%', left: '26%', size: 'w-4 h-4' },
-    { id: 2, name: 'Gusau', top: '13%', left: '42%', size: 'w-4 h-4' },
-    { id: 3, name: 'Kano', top: '15%', left: '55%', size: 'w-14 h-14' },
-    { id: 4, name: 'Kaduna', top: '33%', left: '48%', size: 'w-14 h-14' },
-    { id: 5, name: 'Minna', top: '44%', left: '42%', size: 'w-12 h-12' },
-    { id: 6, name: 'Abuja', top: '50%', left: '49%', size: 'w-16 h-16' },
-    { id: 7, name: 'Lafia', top: '55%', left: '56%', size: 'w-12 h-12' },
-    { id: 8, name: 'Makurdi', top: '65%', left: '56%', size: 'w-14 h-14' },
-    { id: 9, name: 'Enugu', top: '78%', left: '49%', size: 'w-14 h-14' },
-    { id: 10, name: 'Ilorin', top: '55%', left: '28%', size: 'w-14 h-14' },
-    { id: 11, name: 'Oyo', top: '63%', left: '24%', size: 'w-12 h-12' },
-    { id: 12, name: 'Ibadan', top: '68%', left: '24%', size: 'w-16 h-16' },
-    { id: 13, name: 'Ado Ekiti', top: '65%', left: '33%', size: 'w-14 h-14' },
-    { id: 14, name: 'Onitsha', top: '82%', left: '44%', size: 'w-14 h-14' },
-    { id: 15, name: 'Port Harcourt', top: '92%', left: '46%', size: 'w-16 h-16' },
-  ];
+  useEffect(() => {
+    if (map.current || !mapContainer.current) return;
 
-  const handleOpenDetail = (p: any) => {
-    setSelectedFacility(p);
-    setShowDetailModal(true);
+    console.log('Initializing Mapbox with token:', mapboxgl.accessToken ? 'Present' : 'Missing');
+    if (!mapboxgl.accessToken) {
+      setError('Mapbox access token is missing. Please check your .env file.');
+      return;
+    }
+
+    try {
+      console.log('Creating map instance...');
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [8.6753, 9.082],
+        zoom: 5.8,
+        attributionControl: false,
+        failIfMajorPerformanceCaveat: false, // Helps on lower-end devices
+        preserveDrawingBuffer: true,         // Sometimes helps with blank after load
+      });
+
+      map.current.on('load', () => {
+        console.log('Map loaded successfully');
+        setMapLoaded(true);
+
+        const bounds = new mapboxgl.LngLatBounds();
+
+
+        HOTSPOTS.forEach((spot) => {
+          const el = document.createElement('div');
+          el.className = 'custom-marker'; // optional: add CSS class for styling
+          el.style.width = '60px';
+          el.style.height = '60px';
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'center';
+          el.style.cursor = 'pointer';
+          el.style.pointerEvents = 'auto'; // important for clicks
+
+          // The glowing effect + central dot + label below
+          el.innerHTML = `
+              <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+                <div style="width: ${spot.size * 2}px; height: ${spot.size * 2}px; background: rgba(20, 184, 166, 0.25); border-radius: 50%; filter: blur(10px); position: absolute;"></div>
+                <div style="width: 14px; height: 14px; background: #14b8a6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(20,184,166,0.7); position: relative; z-index: 2;"></div>
+                <span style="position: absolute; top: 100%; margin-top: 10px; font-size: 11px; font-weight: 700; color: #1f2937; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                  ${spot.name}
+                </span>
+              </div>
+            `;
+
+          // Attach click handler directly to the element (Mapbox markers use DOM events)
+          el.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent map click interference
+            handleFacilityClick(spot);
+          });
+
+          new mapboxgl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([spot.lng, spot.lat])
+            .addTo(map.current!);
+
+          bounds.extend([spot.lng, spot.lat]);
+        });
+
+
+        // Optional: fit bounds to all points with nice padding
+        if (!bounds.isEmpty() && map.current) {   // extra safety
+          map.current.fitBounds(bounds, {
+            padding: { top: 120, bottom: 120, left: 80, right: 80 },
+            duration: 1200,
+          });
+        }
+
+        // Your existing resizes...
+        setTimeout(() => map.current?.resize(), 300);
+        setTimeout(() => map.current?.resize(), 800);
+      });
+
+      // Catch style/tile errors and log clearly
+      map.current.on('error', (e) => {
+        console.error('Mapbox error event:', e.error?.message || e);
+        if (e.error?.message?.includes('access token') || e.error?.message?.includes('token')) {
+          setError('Invalid or restricted Mapbox access token. Generate a new one at account.mapbox.com.');
+        } else if (e.error?.message?.includes('tile') || e.error?.message?.includes('sprite') || e.error?.message?.includes('glyph')) {
+          console.warn('Tile/sprite/glyph fetch failed — likely transient network issue. Map may recover automatically.');
+          // Optional: retry style load after delay
+          setTimeout(() => {
+            if (map.current && !mapLoaded) {
+              map.current.setStyle('mapbox://styles/mapbox/light-v11');
+            }
+          }, 2000);
+        } else {
+          setError('Map initialization error. Check console.');
+        }
+      });
+
+      // Optional: listen for data loading progress
+      map.current.on('sourcedata', (e) => {
+        if (e.isSourceLoaded) {
+          console.log('Source data loaded');
+        }
+      });
+
+    } catch (err: any) {
+      console.error('Critical map init failed:', err);
+      setError('Failed to create Mapbox instance. Check token and browser support.');
+    }
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  const handleFacilityClick = (spot: any) => {
+    setSelectedFacility({
+      ...spot,
+      sector: 'Refinery',
+      gasType: 'CH4',
+      emissionRate: '2,450 kg/hr',
+      source: 'CarbonMapper',
+      persistence: '13%',
+      plumes: 1,
+      instrument: 'NASA EMIT',
+    });
+  };
+
+  const zoomIn = () => {
+    if (map.current) {
+      map.current.zoomIn();
+    }
+  };
+
+  const zoomOut = () => {
+    if (map.current) {
+      map.current.zoomOut();
+    }
   };
 
   return (
-    <div className="flex-1 relative bg-white overflow-hidden">
-      {/* Search Header Overlay */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[92%] z-20">
-        <div className="bg-[#002b28] rounded-2xl p-3 flex items-center justify-between shadow-2xl">
-          <div className="flex-1 max-w-lg relative ml-2">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+    <div className="relative h-full w-full bg-gray-50 overflow-hidden">
+      {/* Map container */}
+      <div
+        ref={mapContainer}
+        className="absolute inset-0 z-0"
+        style={{ background: mapLoaded ? 'transparent' : '#e5e7eb' }}
+      />
+
+      {/* Loading / Error overlay */}
+      {!mapLoaded && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 z-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 font-medium">Loading map...</p>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-red-50/90 z-50 p-6">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md text-center">
+            <AlertCircle className="mx-auto text-red-500" size={48} />
+            <h3 className="mt-4 text-xl font-bold text-gray-900">Map Error</h3>
+            <p className="mt-2 text-gray-600">{error}</p>
+            <p className="mt-4 text-sm text-gray-500">
+              Make sure you have set a valid MAPBOX_TOKEN in your environment variables.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Grid overlay (visual style) */}
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none z-10">
+        <div
+          className="w-full h-full"
+          style={{
+            backgroundImage:
+              'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+      </div>
+
+      {/* Top search bar */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-40">
+        <div className="bg-[#002f2a] h-16 rounded-3xl flex items-center justify-between px-6 shadow-2xl border border-teal-900/30">
+          <div className="flex items-center gap-4 flex-1">
+            <Search className="text-teal-400/80" size={20} />
             <input
-              type="text"
-              placeholder="Search facility, pipeline or coordinates"
-              className="w-full bg-[#001f1d] border-none rounded-xl py-2.5 pl-11 pr-4 text-sm text-gray-400 focus:ring-1 focus:ring-[#009688] outline-none placeholder-gray-500"
+              className="bg-transparent border-none focus:outline-none text-white placeholder-teal-100/50 w-full text-sm font-medium"
+              placeholder="Search facility, pipeline or coordinates…"
             />
           </div>
+          <div className="h-8 w-px bg-white/10 mx-6" />
           <button
             onClick={onOpenFilters}
-            className="flex items-center gap-2 px-4 py-2.5 bg-transparent hover:bg-white/5 text-gray-300 rounded-xl transition-all mr-2 group"
+            className="flex items-center gap-2 text-white text-sm font-semibold hover:text-teal-300 transition-colors"
           >
-            <span className="text-sm font-bold">Choose Filters</span>
-            <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+            Filters
+            <ChevronDown size={18} />
           </button>
         </div>
       </div>
 
-      {/* Map Content */}
-      <div className="absolute inset-0 grayscale contrast-75 bg-cover bg-center bg-[#f0f2f0]" style={{ backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/4/4e/Map_of_Nigeria.png')`, backgroundSize: '120% auto', backgroundPosition: 'center top' }}>
-        {/* Plume Markers */}
-        {plumes.map(plume => (
-          <div
-            key={plume.id}
-            className={`absolute ${plume.size} -translate-x-1/2 -translate-y-1/2 group cursor-pointer`}
-            style={{ top: plume.top, left: plume.left }}
-            onClick={() => setSelectedFacility({ ...plume, name: `${plume.name} Node` })}
-          >
-            <div className="absolute inset-0 bg-[#009688] rounded-full blur-[16px] opacity-40 group-hover:opacity-60 transition-opacity"></div>
-            <div className="absolute inset-[30%] bg-[#009688] rounded-full opacity-60"></div>
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold text-gray-600 uppercase tracking-wider">{plume.name}</div>
-          </div>
-        ))}
+      {/* Alert toggle */}
+      <div className="absolute top-28 left-6 z-40">
+        <button
+          onClick={() => setShowAlerts(!showAlerts)}
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all ${showAlerts
+            ? 'bg-red-600 text-white'
+            : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'
+            }`}
+        >
+          <AlertCircle size={24} />
+        </button>
       </div>
 
-      {/* Map Grid Lines Overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: `linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)`, backgroundSize: '60px 60px' }}></div>
+      {/* Zoom controls */}
+      <div className="absolute bottom-8 right-8 z-40 flex flex-col gap-3">
+        <button
+          onClick={zoomIn}
+          className="w-12 h-12 bg-teal-600 hover:bg-teal-700 rounded-2xl flex items-center justify-center text-white shadow-xl transition-all active:scale-95"
+        >
+          <Plus size={24} />
+        </button>
+        <button
+          onClick={zoomOut}
+          className="w-12 h-12 bg-teal-600 hover:bg-teal-700 rounded-2xl flex items-center justify-center text-white shadow-xl transition-all active:scale-95"
+        >
+          <Minus size={24} />
+        </button>
+      </div>
 
-      {/* Alert Icon Button */}
-      <button
-        onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-        className="absolute top-28 left-8 w-11 h-11 bg-[#002b28] text-white flex items-center justify-center rounded-xl shadow-lg hover:bg-[#003d38] z-20"
-      >
-        <div className="relative">
-          <svg className="w-5 h-5 text-[#009688]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-[#002b28]"></div>
+      {/* Summary card - bottom left */}
+      <div className="absolute bottom-8 left-6 bg-white/95 backdrop-blur-lg shadow-2xl rounded-3xl p-8 w-80 border border-gray-100/80 z-40">
+        <div className="mb-8">
+          <h3 className="text-gray-900 font-bold text-lg">Emission Sources</h3>
+          <p className="text-xs text-gray-500 mt-1">CH₄ • Current View</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 tracking-tight">2.5k</p>
         </div>
-      </button>
+        <div>
+          <h3 className="text-gray-900 font-bold text-lg">Plumes Detected</h3>
+          <p className="text-xs text-gray-500 mt-1">CH₄ • Current View</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 tracking-tight">12.4k</p>
+        </div>
+      </div>
 
-      {/* Alerts Drawer */}
-      {isAlertsOpen && (
-        <div className="absolute top-28 left-20 w-[360px] bg-white rounded-2xl shadow-2xl p-6 z-30 animate-in fade-in slide-in-from-left-4 duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-gray-900 flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              Recent Alerts
-            </h3>
-            <button onClick={() => setIsAlertsOpen(false)} className="text-gray-400 hover:text-gray-600 p-1"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+      {/* Alerts panel */}
+      {showAlerts && (
+        <div className="absolute top-36 left-28 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl w-96 border border-gray-100 p-6 z-50">
+          <div className="flex justify-between items-center mb-5">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle size={20} />
+              <span className="font-bold text-lg">Recent Alerts</span>
+            </div>
+            <button
+              onClick={() => setShowAlerts(false)}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 hover:bg-gray-100 transition-colors cursor-pointer flex items-start gap-4">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0"></div>
-                <div className="flex-1">
-                  <p className="font-bold text-[13px] text-gray-900">Delta Facility A - High Output</p>
-                  <p className="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-tight">1250kg/hr • <span className="text-gray-300">3hrs ago</span></p>
+
+          <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
+            {ALERTS.map((alert) => (
+              <div
+                key={alert.id}
+                className="p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-red-200 hover:bg-red-50/50 transition-all cursor-pointer group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] group-hover:scale-125 transition-transform" />
+                  <div>
+                    <p className="font-semibold text-gray-900">{alert.facility}</p>
+                    <div className="flex items-center gap-2 text-xs mt-1.5">
+                      <span className="text-teal-700 font-medium">{alert.output}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="text-gray-500">{alert.time}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          <button className="w-full mt-6 py-4 bg-teal-50 rounded-2xl text-teal-700 font-bold hover:bg-teal-100 transition-colors">
+            View All Alerts
+          </button>
         </div>
       )}
 
-      {/* Summary Stats Card */}
-      <div className="absolute bottom-10 left-8 w-64 bg-white rounded-[24px] shadow-2xl p-8 z-20 border border-gray-100/50">
-        <button className="absolute right-5 top-5 text-gray-200 hover:text-gray-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button>
-        <div className="space-y-8">
-          <div>
-            <p className="text-[14px] font-bold text-gray-800">Emission Sources</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Current View (CH4)</p>
-            <p className="text-5xl font-extrabold text-gray-900 mt-2 tracking-tight">2.5k</p>
-          </div>
-          <div>
-            <p className="text-[14px] font-bold text-gray-800">Plumes Detected</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Current View (CH4)</p>
-            <p className="text-5xl font-extrabold text-gray-900 mt-2 tracking-tight">12.4k</p>
-          </div>
-        </div>
-      </div>
+      {/* Facility popup / modal */}
+      {selectedFacility && (
+        <>
+          {/* Mini popup when not expanded */}
+          {!isExpanded && (
+            <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl w-72 p-6 border border-gray-100 z-50">
+              <h3 className="font-bold text-xl text-gray-900">{selectedFacility.name} Node</h3>
+              <button className="text-teal-600 text-xs font-bold mt-2 flex items-center gap-1 hover:underline">
+                Open in Google Maps <ExternalLink size={12} />
+              </button>
 
-      {/* Zoom Controls */}
-      <div className="absolute bottom-10 right-8 flex flex-col gap-3 z-20">
-        <button className="w-11 h-11 bg-[#009688] text-white rounded-xl shadow-xl flex items-center justify-center hover:bg-[#00796b] transition-colors"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6v12m6-6H6" /></svg></button>
-        <button className="w-11 h-11 bg-[#009688] text-white rounded-xl shadow-xl flex items-center justify-center hover:bg-[#00796b] transition-colors"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" /></svg></button>
-      </div>
-
-      {/* Tooltip Popup */}
-      {selectedFacility && !showDetailModal && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[120%] w-64 bg-white rounded-2xl shadow-2xl p-6 z-40 border border-gray-100">
-          <div className="space-y-5">
-            <div>
-              <h4 className="font-extrabold text-gray-900">Escravos Pipeline Node</h4>
-              <button className="text-[10px] font-bold text-[#009688] hover:underline uppercase tracking-tight mt-1">Show in Google Maps</button>
-            </div>
-            <div className="space-y-3">
-              {[
-                { label: 'Sector', value: 'Refinery' },
-                { label: 'Gas type', value: 'CH4' },
-                { label: 'Emission rate', value: '500 kg/hr', color: 'text-[#009688]' },
-                { label: 'Source', value: 'CarbonMapper' },
-              ].map((row, idx) => (
-                <div key={idx} className="flex justify-between text-[11px] font-bold">
-                  <span className="text-gray-400 uppercase tracking-tight">{row.label}</span>
-                  <span className={row.color || 'text-gray-700'}>{row.value}</span>
+              <div className="mt-5 space-y-4 text-sm">
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Sector</span>
+                  <span className="font-medium">Oil & Gas</span>
                 </div>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowDetailModal(true)}
-              className="w-full text-center text-[12px] font-extrabold text-[#009688] border-t border-gray-50 pt-4 hover:text-[#00796b] flex items-center justify-center gap-1 group"
-            >
-              View Details <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-            </button>
-          </div>
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-gray-100"></div>
-        </div>
-      )}
-
-      {/* Detail Modal Overlay */}
-      {showDetailModal && (
-        <div className="absolute inset-0 bg-black/5 flex items-center justify-center z-[100] p-10 animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-4xl rounded-[32px] shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-10 pb-0 flex justify-between items-start">
-              <div className="space-y-1">
-                <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Escravos Pipeline Node</h2>
-                <button className="text-[12px] font-bold text-[#009688] hover:underline uppercase tracking-widest">Show in Google Maps</button>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Gas Type</span>
+                  <span className="font-medium">CH₄</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-500">Emission Rate</span>
+                  <span className="font-bold text-teal-600">{selectedFacility.emissionRate}</span>
+                </div>
               </div>
-              <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition-colors"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
 
-            <div className="p-10 pt-8 flex-1 overflow-y-auto space-y-10">
-              <div className="flex flex-col md:flex-row gap-12">
-                <div className="space-y-2">
-                  <p className="text-[64px] font-extrabold text-[#009688] leading-none tracking-tighter">2,450 <span className="text-[24px] font-bold text-gray-400 tracking-normal ml-1">kg/hr</span></p>
-                  <div className="grid grid-cols-2 gap-x-12 gap-y-4 pt-6 text-[12px] font-bold border-t border-gray-50">
-                    <div><span className="text-gray-400 block mb-1 uppercase tracking-widest">Gas Type</span><span className="text-gray-900">CH4</span></div>
-                    <div><span className="text-gray-400 block mb-1 uppercase tracking-widest">Source</span><span className="text-gray-900">CarbonMapper</span></div>
-                    <div><span className="text-gray-400 block mb-1 uppercase tracking-widest">Source Persistence</span><span className="text-gray-900">13%</span></div>
-                    <div><span className="text-gray-400 block mb-1 uppercase tracking-widest">Number of Plumes</span><span className="text-gray-900">1</span></div>
-                    <div><span className="text-gray-400 block mb-1 uppercase tracking-widest">Instrument</span><span className="text-gray-900">NASA EMIT</span></div>
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="w-full mt-6 bg-teal-600 text-white py-3 rounded-2xl font-bold hover:bg-teal-700 transition-all flex items-center justify-center gap-2 shadow-md"
+              >
+                View Full Details <ChevronRight size={16} />
+              </button>
+
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white" />
+            </div>
+          )}
+
+          {/* Expanded modal */}
+          {isExpanded && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-[100]">
+              <div className="bg-white rounded-3xl w-full max-w-6xl h-[90vh] max-h-[850px] shadow-2xl overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="px-10 py-6 border-b flex justify-between items-center bg-gray-50/50">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">{selectedFacility.name} Node</h2>
+                    <p className="text-teal-600 text-sm mt-1 flex items-center gap-2">
+                      <ExternalLink size={14} />
+                      {selectedFacility.lat.toFixed(4)}° N, {selectedFacility.lng.toFixed(4)}° E
+                    </p>
                   </div>
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className="p-3 rounded-full hover:bg-gray-200 text-gray-600"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
 
-                <div className="flex-1 bg-white border border-gray-100 rounded-3xl p-8 space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-extrabold text-gray-900 uppercase text-[12px] tracking-widest">Emission Rate</h4>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl text-[11px] font-bold text-gray-600 border border-gray-100">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      Last 7 Days
-                    </button>
-                  </div>
-
-                  <div className="h-64 flex items-end justify-between px-2 pt-10 relative">
-                    {/* Simplified Chart */}
-                    {[1800, 1500, 2400, 1400, 1400, 1100, 1300].map((val, idx) => (
-                      <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
-                        <div className={`w-8 bg-[#009688] rounded-t-lg transition-all group-hover:bg-[#00796b] relative`} style={{ height: `${(val / 3000) * 100}%` }}>
-                          {idx === 2 && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-[#111] text-white p-3 rounded-xl text-[10px] z-10 w-32 shadow-2xl">
-                              <p className="font-bold mb-1">12-01-2026</p>
-                              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#009688]"></div>1,850 kg/hr</div>
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-300 mt-3 whitespace-nowrap">1{idx}-01-2026</span>
+                <div className="flex flex-1 overflow-hidden">
+                  {/* Left sidebar */}
+                  <div className="w-80 bg-gray-50 p-10 border-r flex flex-col">
+                    <div className="mb-12">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Current Emission Rate
+                      </p>
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-6xl font-black text-teal-700">2,450</span>
+                        <span className="text-xl font-bold text-gray-500">kg/hr</span>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="space-y-8 flex-1">
+                      {[
+                        { label: 'Gas Type', value: 'CH₄' },
+                        { label: 'Data Source', value: 'CarbonMapper' },
+                        { label: 'Persistence', value: '13%' },
+                        { label: 'Active Plumes', value: '1' },
+                        { label: 'Instrument', value: 'NASA EMIT' },
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                            {item.label}
+                          </p>
+                          <p className="text-lg font-semibold text-gray-900">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-8 mt-auto border-t border-gray-200 text-xs text-gray-500 italic">
+                      Data from CarbonMapper L4 • Confidence: 94% • Updated 2 min ago
+                    </div>
                   </div>
-                  <p className="text-[10px] font-bold text-gray-300 text-center uppercase tracking-widest">Data Source: CarbonMapper API v1 • L4A Product • Real data subject to 30-day latency</p>
+
+                  {/* Chart area */}
+                  <div className="flex-1 p-10 flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-2xl font-bold text-gray-900">Emission History</h3>
+                      <button className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-2xl text-sm font-medium hover:bg-gray-50">
+                        <Calendar size={16} className="text-teal-600" />
+                        Jan 12 – 18, 2026
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
+
+                    <div className="flex-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={CHART_DATA}>
+                          <defs>
+                            <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#14b8a6" />
+                              <stop offset="95%" stopColor="#0f766e" />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f0f0f0" />
+                          <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
+                            dy={12}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
+                            unit=" kg/hr"
+                          />
+                          <Tooltip
+                            cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                            contentStyle={{
+                              backgroundColor: '#111827',
+                              border: 'none',
+                              borderRadius: '12px',
+                              color: 'white',
+                              padding: '12px 16px',
+                            }}
+                          />
+                          <Bar
+                            dataKey="rate"
+                            fill="url(#colorRate)"
+                            radius={[8, 8, 0, 0]}
+                            barSize={48}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-10 py-6 bg-gray-50 border-t flex justify-end gap-4">
+                  <button className="flex items-center gap-2 px-7 py-3 border-2 border-gray-200 rounded-2xl font-medium hover:bg-white hover:border-teal-200 transition-all">
+                    <Share2 size={18} className="text-gray-500" />
+                    Share Report
+                  </button>
+                  <button className="flex items-center gap-2 bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-teal-700 shadow-lg transition-all">
+                    <Download size={18} />
+                    Export Data
+                  </button>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-4 border-t border-gray-50 pt-10">
-                <button className="px-8 py-4 border border-gray-100 rounded-2xl text-gray-700 font-bold hover:bg-gray-50 flex items-center gap-2 transition-all shadow-sm">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                  Share
-                </button>
-                <button className="px-10 py-4 bg-[#009688] text-white rounded-2xl font-bold hover:bg-[#00796b] flex items-center gap-2 transition-all shadow-lg shadow-[#009688]/20">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Download
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );
