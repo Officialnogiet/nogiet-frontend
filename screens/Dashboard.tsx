@@ -9,9 +9,11 @@ import UserManagement from '../components/UserManagement';
 
 interface DashboardProps {
   onNavigate: (screen: AuthScreen) => void;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate, darkMode, onToggleDarkMode }) => {
   const [activeView, setActiveView] = useState<DashboardView>('LIVE_MAP');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -19,24 +21,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const renderContent = () => {
     switch (activeView) {
       case 'LIVE_MAP':
-        return <LiveMap onOpenFilters={() => setIsFilterOpen(true)} />;
+        return <LiveMap onOpenFilters={() => setIsFilterOpen(true)} darkMode={darkMode} />;
       case 'DATA_COMPARISON':
-        return <DataComparison />;
+        return <DataComparison darkMode={darkMode} />;
       case 'SETTINGS':
-        return <UserManagement />;
+        return <UserManagement darkMode={darkMode} />;
       default:
-        return <LiveMap onOpenFilters={() => setIsFilterOpen(true)} />;
+        return <LiveMap onOpenFilters={() => setIsFilterOpen(true)} darkMode={darkMode} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className={`flex h-screen transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'} overflow-hidden`}>
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         activeView={activeView}
         onViewChange={setActiveView}
         onLogout={() => onNavigate(AuthScreen.LOGIN)}
+        darkMode={darkMode}
+        onToggleDarkMode={onToggleDarkMode}
       />
 
       <main className="flex-1 relative overflow-hidden flex flex-col">
@@ -44,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Filter Panel Drawer Overlay */}
         {isFilterOpen && (
-          <FilterPanel onClose={() => setIsFilterOpen(false)} />
+          <FilterPanel onClose={() => setIsFilterOpen(false)} darkMode={darkMode} />
         )}
       </main>
     </div>

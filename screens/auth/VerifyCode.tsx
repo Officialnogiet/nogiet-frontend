@@ -69,7 +69,7 @@ const VerifyCode: React.FC<VerifyCodeProps> = ({ onNavigate }) => {
                 value={code}
                 onChange={(e) => handleInput(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all focus:outline-none ${idx < 3 && code ? 'bg-white border-gray-200' : 'bg-white border-gray-200 focus:border-[#009688]'}`}
+                className="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all focus:outline-none bg-white border-gray-200 text-gray-900 focus:border-[#009688]"
                 placeholder={idx >= 3 ? "" : ""}
               />
             ))}

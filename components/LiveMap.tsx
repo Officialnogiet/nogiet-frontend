@@ -33,6 +33,7 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface LiveMapProps {
   onOpenFilters?: () => void;
+  darkMode?: boolean;
 }
 
 const HOTSPOTS = [
@@ -66,7 +67,7 @@ const CHART_DATA = [
   { date: '18-01', rate: 1300 },
 ];
 
-const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
+const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -77,24 +78,28 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
+    if (map.current) {
+      map.current.setStyle(darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11');
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    console.log('Initializing Mapbox with token:', mapboxgl.accessToken ? 'Present' : 'Missing');
     if (!mapboxgl.accessToken) {
       setError('Mapbox access token is missing. Please check your .env file.');
       return;
     }
 
     try {
-      console.log('Creating map instance...');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
         center: [8.6753, 9.082],
         zoom: 5.8,
         attributionControl: false,
-        failIfMajorPerformanceCaveat: false, // Helps on lower-end devices
-        preserveDrawingBuffer: true,         // Sometimes helps with blank after load
+        failIfMajorPerformanceCaveat: false,
+        preserveDrawingBuffer: true,
       });
 
       map.current.on('load', () => {
@@ -120,7 +125,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
               <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                 <div style="width: ${spot.size * 2}px; height: ${spot.size * 2}px; background: rgba(20, 184, 166, 0.25); border-radius: 50%; filter: blur(10px); position: absolute;"></div>
                 <div style="width: 14px; height: 14px; background: #14b8a6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(20,184,166,0.7); position: relative; z-index: 2;"></div>
-                <span style="position: absolute; top: 100%; margin-top: 10px; font-size: 11px; font-weight: 700; color: #1f2937; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                <span style="position: absolute; top: 100%; margin-top: 10px; font-size: 11px; font-weight: 700; color: ${darkMode ? '#9ca3af' : '#1f2937'}; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
                   ${spot.name}
                 </span>
               </div>
@@ -215,30 +220,30 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
   };
 
   return (
-    <div className="relative h-full w-full bg-gray-50 overflow-hidden">
+    <div className={`relative h-full w-full overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'}`}>
       {/* Map container */}
       <div
         ref={mapContainer}
         className="absolute inset-0 z-0"
-        style={{ background: mapLoaded ? 'transparent' : '#e5e7eb' }}
+        style={{ background: mapLoaded ? 'transparent' : (darkMode ? '#0b0e14' : '#e5e7eb') }}
       />
 
       {/* Loading / Error overlay */}
       {!mapLoaded && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 z-50">
+        <div className={`absolute inset-0 flex items-center justify-center z-50 transition-colors ${darkMode ? 'bg-[#0b0e14]/80' : 'bg-gray-100/80'}`}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 font-medium">Loading map...</p>
+            <p className={`mt-4 font-medium ${darkMode ? 'text-teal-400' : 'text-gray-600'}`}>Loading map...</p>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-red-50/90 z-50 p-6">
-          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md text-center">
+        <div className={`absolute inset-0 flex items-center justify-center z-50 p-6 ${darkMode ? 'bg-[#0b0e14]/90' : 'bg-red-50/90'}`}>
+          <div className={`p-8 rounded-2xl shadow-xl max-w-md text-center border ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white'}`}>
             <AlertCircle className="mx-auto text-red-500" size={48} />
-            <h3 className="mt-4 text-xl font-bold text-gray-900">Map Error</h3>
-            <p className="mt-2 text-gray-600">{error}</p>
+            <h3 className={`mt-4 text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Map Error</h3>
+            <p className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
             <p className="mt-4 text-sm text-gray-500">
               Make sure you have set a valid MAPBOX_TOKEN in your environment variables.
             </p>
@@ -260,18 +265,21 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
 
       {/* Top search bar */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-40">
-        <div className="bg-[#002f2a] h-16 rounded-3xl flex items-center justify-between px-6 shadow-2xl border border-teal-900/30">
+        <div className={`h-16 rounded-3xl flex items-center justify-between px-6 shadow-2xl border transition-all ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-[#002f2a] border-teal-900/30'
+          }`}>
           <div className="flex items-center gap-4 flex-1">
-            <Search className="text-teal-400/80" size={20} />
+            <Search className={darkMode ? 'text-gray-400' : 'text-teal-400/80'} size={20} />
             <input
-              className="bg-transparent border-none focus:outline-none text-white placeholder-teal-100/50 w-full text-sm font-medium"
+              className={`bg-transparent border-none focus:outline-none w-full text-sm font-medium ${darkMode ? 'text-white placeholder-gray-600' : 'text-white placeholder-teal-100/50'
+                }`}
               placeholder="Search facility, pipeline or coordinates…"
             />
           </div>
           <div className="h-8 w-px bg-white/10 mx-6" />
           <button
             onClick={onOpenFilters}
-            className="flex items-center gap-2 text-white text-sm font-semibold hover:text-teal-300 transition-colors"
+            className={`flex items-center gap-2 text-sm font-semibold transition-colors ${darkMode ? 'text-gray-400 hover:text-[#009688]' : 'text-white hover:text-teal-300'
+              }`}
           >
             Filters
             <ChevronDown size={18} />
@@ -285,7 +293,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
           onClick={() => setShowAlerts(!showAlerts)}
           className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all ${showAlerts
             ? 'bg-red-600 text-white'
-            : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'
+            : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'
             }`}
         >
           <AlertCircle size={24} />
@@ -309,22 +317,24 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
       </div>
 
       {/* Summary card - bottom left */}
-      <div className="absolute bottom-8 left-6 bg-white/95 backdrop-blur-lg shadow-2xl rounded-3xl p-8 w-80 border border-gray-100/80 z-40">
+      <div className={`absolute bottom-8 left-6 backdrop-blur-lg shadow-2xl rounded-3xl p-8 w-80 border z-40 transition-colors ${darkMode ? 'bg-[#12161f]/90 border-[#1e2430]' : 'bg-white/95 border-gray-100/80'
+        }`}>
         <div className="mb-8">
-          <h3 className="text-gray-900 font-bold text-lg">Emission Sources</h3>
+          <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Emission Sources</h3>
           <p className="text-xs text-gray-500 mt-1">CH₄ • Current View</p>
-          <p className="text-5xl font-black text-gray-900 mt-3 tracking-tight">2.5k</p>
+          <p className={`text-5xl font-black mt-3 tracking-tight ${darkMode ? 'text-[#009688]' : 'text-gray-900'}`}>2.5k</p>
         </div>
         <div>
-          <h3 className="text-gray-900 font-bold text-lg">Plumes Detected</h3>
+          <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Plumes Detected</h3>
           <p className="text-xs text-gray-500 mt-1">CH₄ • Current View</p>
-          <p className="text-5xl font-black text-gray-900 mt-3 tracking-tight">12.4k</p>
+          <p className={`text-5xl font-black mt-3 tracking-tight ${darkMode ? 'text-[#009688]' : 'text-gray-900'}`}>12.4k</p>
         </div>
       </div>
 
       {/* Alerts panel */}
       {showAlerts && (
-        <div className="absolute top-36 left-28 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl w-96 border border-gray-100 p-6 z-50">
+        <div className={`absolute top-36 left-28 backdrop-blur-xl rounded-3xl shadow-2xl w-96 border p-6 z-50 transition-colors ${darkMode ? 'bg-[#12161f]/95 border-[#1e2430]' : 'bg-white/95 border-gray-100'
+          }`}>
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-2 text-red-600">
               <AlertCircle size={20} />
@@ -332,7 +342,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
             </div>
             <button
               onClick={() => setShowAlerts(false)}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+              className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'}`}
             >
               <X size={18} />
             </button>
@@ -342,15 +352,16 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
             {ALERTS.map((alert) => (
               <div
                 key={alert.id}
-                className="p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-red-200 hover:bg-red-50/50 transition-all cursor-pointer group"
+                className={`p-5 rounded-2xl border transition-all cursor-pointer group ${darkMode ? 'bg-[#0b0e14]/50 border-[#1e2430] hover:border-red-500/50 hover:bg-red-500/5' : 'bg-gray-50 border-gray-100 hover:border-red-200 hover:bg-red-50/50'
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="mt-1 w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] group-hover:scale-125 transition-transform" />
                   <div>
-                    <p className="font-semibold text-gray-900">{alert.facility}</p>
+                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{alert.facility}</p>
                     <div className="flex items-center gap-2 text-xs mt-1.5">
-                      <span className="text-teal-700 font-medium">{alert.output}</span>
-                      <span className="text-gray-300">•</span>
+                      <span className="text-teal-500 font-medium">{alert.output}</span>
+                      <span className="text-gray-600">•</span>
                       <span className="text-gray-500">{alert.time}</span>
                     </div>
                   </div>
@@ -359,7 +370,8 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
             ))}
           </div>
 
-          <button className="w-full mt-6 py-4 bg-teal-50 rounded-2xl text-teal-700 font-bold hover:bg-teal-100 transition-colors">
+          <button className={`w-full mt-6 py-4 rounded-2xl font-bold transition-colors ${darkMode ? 'bg-gray-800 text-teal-400 hover:bg-gray-750' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+            }`}>
             View All Alerts
           </button>
         </div>
@@ -370,20 +382,21 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
         <>
           {/* Mini popup when not expanded */}
           {!isExpanded && (
-            <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl w-72 p-6 border border-gray-100 z-50">
-              <h3 className="font-bold text-xl text-gray-900">{selectedFacility.name} Node</h3>
-              <button className="text-teal-600 text-xs font-bold mt-2 flex items-center gap-1 hover:underline">
+            <div className={`absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-3xl shadow-2xl w-72 p-6 border z-50 transition-colors ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-100'
+              }`}>
+              <h3 className={`font-bold text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedFacility.name} Node</h3>
+              <button className="text-teal-500 text-xs font-bold mt-2 flex items-center gap-1 hover:underline">
                 Open in Google Maps <ExternalLink size={12} />
               </button>
 
               <div className="mt-5 space-y-4 text-sm">
-                <div className="flex justify-between py-2 border-b">
+                <div className={`flex justify-between py-2 border-b ${darkMode ? 'border-[#1e2430]' : 'border-gray-50'}`}>
                   <span className="text-gray-500">Sector</span>
-                  <span className="font-medium">Oil & Gas</span>
+                  <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>Oil & Gas</span>
                 </div>
-                <div className="flex justify-between py-2 border-b">
+                <div className={`flex justify-between py-2 border-b ${darkMode ? 'border-[#1e2430]' : 'border-gray-50'}`}>
                   <span className="text-gray-500">Gas Type</span>
-                  <span className="font-medium">CH₄</span>
+                  <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>CH₄</span>
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-gray-500">Emission Rate</span>
@@ -398,18 +411,19 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                 View Full Details <ChevronRight size={16} />
               </button>
 
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white" />
+              <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 border-8 border-transparent ${darkMode ? 'border-t-[#12161f]' : 'border-t-white'}`} />
             </div>
           )}
 
           {/* Expanded modal */}
           {isExpanded && (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-[100]">
-              <div className="bg-white rounded-3xl w-full max-w-6xl h-[90vh] max-h-[850px] shadow-2xl overflow-hidden flex flex-col">
+              <div className={`rounded-3xl w-full max-w-6xl h-[90vh] max-h-[850px] shadow-2xl overflow-hidden flex flex-col transition-colors ${darkMode ? 'bg-[#12161f]' : 'bg-white'
+                }`}>
                 {/* Header */}
-                <div className="px-10 py-6 border-b flex justify-between items-center bg-gray-50/50">
+                <div className={`px-10 py-6 border-b flex justify-between items-center ${darkMode ? 'bg-[#0b0e14]/50 border-[#1e2430]' : 'bg-gray-50/50 border-gray-100'}`}>
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900">{selectedFacility.name} Node</h2>
+                    <h2 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedFacility.name} Node</h2>
                     <p className="text-teal-600 text-sm mt-1 flex items-center gap-2">
                       <ExternalLink size={14} />
                       {selectedFacility.lat.toFixed(4)}° N, {selectedFacility.lng.toFixed(4)}° E
@@ -417,7 +431,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                   </div>
                   <button
                     onClick={() => setIsExpanded(false)}
-                    className="p-3 rounded-full hover:bg-gray-200 text-gray-600"
+                    className={`p-3 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-500 hover:text-gray-400' : 'hover:bg-gray-200 text-gray-600'}`}
                   >
                     <X size={24} />
                   </button>
@@ -425,13 +439,13 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* Left sidebar */}
-                  <div className="w-80 bg-gray-50 p-10 border-r flex flex-col">
+                  <div className={`w-80 p-10 border-r flex flex-col transition-colors ${darkMode ? 'bg-[#0b0e14] border-[#1e2430]' : 'bg-gray-50 border-gray-100'}`}>
                     <div className="mb-12">
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                         Current Emission Rate
                       </p>
                       <div className="flex items-baseline gap-3">
-                        <span className="text-6xl font-black text-teal-700">2,450</span>
+                        <span className={`text-6xl font-black ${darkMode ? 'text-[#009688]' : 'text-teal-700'}`}>2,450</span>
                         <span className="text-xl font-bold text-gray-500">kg/hr</span>
                       </div>
                     </div>
@@ -445,15 +459,15 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                         { label: 'Instrument', value: 'NASA EMIT' },
                       ].map((item) => (
                         <div key={item.label}>
-                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                          <p className={`text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
                             {item.label}
                           </p>
-                          <p className="text-lg font-semibold text-gray-900">{item.value}</p>
+                          <p className={`text-lg font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{item.value}</p>
                         </div>
                       ))}
                     </div>
 
-                    <div className="pt-8 mt-auto border-t border-gray-200 text-xs text-gray-500 italic">
+                    <div className={`pt-8 mt-auto border-t text-xs italic ${darkMode ? 'border-gray-800 text-gray-600' : 'border-gray-200 text-gray-500'}`}>
                       Data from CarbonMapper L4 • Confidence: 94% • Updated 2 min ago
                     </div>
                   </div>
@@ -461,8 +475,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                   {/* Chart area */}
                   <div className="flex-1 p-10 flex flex-col">
                     <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-2xl font-bold text-gray-900">Emission History</h3>
-                      <button className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-2xl text-sm font-medium hover:bg-gray-50">
+                      <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Emission History</h3>
+                      <button className={`flex items-center gap-2 px-5 py-2.5 border rounded-2xl text-sm font-medium transition-colors ${darkMode ? 'border-[#1e2430] bg-[#0b0e14] text-gray-400 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}>
                         <Calendar size={16} className="text-teal-600" />
                         Jan 12 – 18, 2026
                         <ChevronDown size={14} />
@@ -478,7 +493,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                               <stop offset="95%" stopColor="#0f766e" />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f0f0f0" />
+                          <CartesianGrid strokeDasharray="4 4" vertical={false} stroke={darkMode ? '#1e2430' : '#f0f0f0'} />
                           <XAxis
                             dataKey="date"
                             axisLine={false}
@@ -514,8 +529,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters }) => {
                   </div>
                 </div>
 
-                <div className="px-10 py-6 bg-gray-50 border-t flex justify-end gap-4">
-                  <button className="flex items-center gap-2 px-7 py-3 border-2 border-gray-200 rounded-2xl font-medium hover:bg-white hover:border-teal-200 transition-all">
+                <div className={`px-10 py-6 border-t flex justify-end gap-4 transition-colors ${darkMode ? 'bg-[#0b0e14]/50 border-[#1e2430]' : 'bg-gray-50 border-gray-100'}`}>
+                  <button className={`flex items-center gap-2 px-7 py-3 border-2 rounded-2xl font-medium transition-all ${darkMode ? 'border-[#1e2430] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-500 hover:bg-white hover:border-teal-200'
+                    }`}>
                     <Share2 size={18} className="text-gray-500" />
                     Share Report
                   </button>

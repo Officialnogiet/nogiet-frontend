@@ -43,7 +43,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigate }) => {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#009688] focus:border-transparent"
+                className="w-full px-4 py-3 rounded-lg border outline-none transition-colors bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#009688]"
               />
             </div>
 

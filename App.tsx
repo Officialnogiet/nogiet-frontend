@@ -10,6 +10,9 @@ import Dashboard from './screens/Dashboard';
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>(AuthScreen.LOGIN);
+  const [darkMode, setDarkMode] = useState(true);
+
+  const toggleDarkMode = () => setDarkMode(!darkMode);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -24,14 +27,14 @@ const App: React.FC = () => {
       case AuthScreen.SUCCESS:
         return <Success onNavigate={setCurrentScreen} />;
       case AuthScreen.DASHBOARD:
-        return <Dashboard onNavigate={setCurrentScreen} />;
+        return <Dashboard onNavigate={setCurrentScreen} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
       default:
         return <Login onNavigate={setCurrentScreen} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col overflow-hidden">
+    <div className={`min-h-screen flex flex-col overflow-hidden transition-colors duration-300 ${currentScreen === AuthScreen.DASHBOARD && darkMode ? 'bg-[#0b0e14]' : 'bg-white'}`}>
       {renderScreen()}
     </div>
   );
