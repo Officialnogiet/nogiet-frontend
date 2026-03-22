@@ -1,33 +1,48 @@
 
 import React, { useState } from 'react';
-import { AuthScreen, DashboardView } from '../types';
+import { AuthScreen } from '../types';
+import { useDashboardStore } from '../src/stores/dashboard.store';
+import { useLogout } from '../src/hooks/useAuth';
 import Sidebar from '../components/Sidebar';
 import LiveMap from '../components/LiveMap';
 import DataComparison from '../components/DataComparison';
-import FilterPanel from '../components/FilterPanel';
+import ManageData from '../components/ManageData';
+import AlertsDashboard from '../components/AlertsDashboard';
+import FilterPanel, { DEFAULT_FILTERS, type MapFilters } from '../components/FilterPanel';
 import UserManagement from '../components/UserManagement';
+import SettingsPage from '../components/SettingsPage';
 
 interface DashboardProps {
   onNavigate: (screen: AuthScreen) => void;
-  darkMode: boolean;
-  onToggleDarkMode: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate, darkMode, onToggleDarkMode }) => {
-  const [activeView, setActiveView] = useState<DashboardView>('LIVE_MAP');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const { activeView, sidebarCollapsed, toggleSidebar, isFilterOpen, setFilterOpen, darkMode, toggleDarkMode, setActiveView } = useDashboardStore();
+  const logoutMutation = useLogout();
+  const [mapFilters, setMapFilters] = useState<MapFilters>(DEFAULT_FILTERS);
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSettled: () => onNavigate(AuthScreen.LOGIN),
+    });
+  };
 
   const renderContent = () => {
     switch (activeView) {
       case 'LIVE_MAP':
-        return <LiveMap onOpenFilters={() => setIsFilterOpen(true)} darkMode={darkMode} />;
+        return <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} filters={mapFilters} />;
       case 'DATA_COMPARISON':
         return <DataComparison darkMode={darkMode} />;
-      case 'SETTINGS':
+      case 'MANAGE_DATA':
+        return <ManageData darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} />;
+      case 'ALERTS':
+        return <AlertsDashboard darkMode={darkMode} />;
+      case 'USER_MANAGEMENT':
         return <UserManagement darkMode={darkMode} />;
+      case 'SETTINGS':
+        return <SettingsPage darkMode={darkMode} />;
       default:
-        return <LiveMap onOpenFilters={() => setIsFilterOpen(true)} darkMode={darkMode} />;
+        return <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} filters={mapFilters} />;
     }
   };
 
@@ -35,21 +50,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, darkMode, onToggleDar
     <div className={`flex h-screen transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'} overflow-hidden`}>
       <Sidebar
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggle={toggleSidebar}
         activeView={activeView}
         onViewChange={setActiveView}
-        onLogout={() => onNavigate(AuthScreen.LOGIN)}
+        onLogout={handleLogout}
         darkMode={darkMode}
-        onToggleDarkMode={onToggleDarkMode}
+        onToggleDarkMode={toggleDarkMode}
       />
-
       <main className="flex-1 relative overflow-hidden flex flex-col">
         {renderContent()}
-
-        {/* Filter Panel Drawer Overlay */}
-        {isFilterOpen && (
-          <FilterPanel onClose={() => setIsFilterOpen(false)} darkMode={darkMode} />
-        )}
+        {isFilterOpen && <FilterPanel onClose={() => setFilterOpen(false)} darkMode={darkMode} filters={mapFilters} onApply={setMapFilters} />}
       </main>
     </div>
   );

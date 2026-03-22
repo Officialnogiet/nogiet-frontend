@@ -1,18 +1,21 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { AuthScreen } from './types';
+import { useAuthStore } from './src/stores/auth.store';
 import Login from './screens/auth/Login';
 import ForgotPassword from './screens/auth/ForgotPassword';
 import VerifyCode from './screens/auth/VerifyCode';
 import NewPassword from './screens/auth/NewPassword';
 import Success from './screens/auth/Success';
 import Dashboard from './screens/Dashboard';
+import { useDashboardStore } from './src/stores/dashboard.store';
 
 const App: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<AuthScreen>(AuthScreen.LOGIN);
-  const [darkMode, setDarkMode] = useState(false);
-
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const darkMode = useDashboardStore((s) => s.darkMode);
+  const [currentScreen, setCurrentScreen] = React.useState<AuthScreen>(
+    isAuthenticated ? AuthScreen.DASHBOARD : AuthScreen.LOGIN
+  );
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -27,7 +30,7 @@ const App: React.FC = () => {
       case AuthScreen.SUCCESS:
         return <Success onNavigate={setCurrentScreen} />;
       case AuthScreen.DASHBOARD:
-        return <Dashboard onNavigate={setCurrentScreen} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
+        return <Dashboard onNavigate={setCurrentScreen} />;
       default:
         return <Login onNavigate={setCurrentScreen} />;
     }

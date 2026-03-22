@@ -8,4 +8,4 @@ export enum AuthScreen {
   DASHBOARD = 'DASHBOARD'
 }
 
-export type DashboardView = 'LIVE_MAP' | 'DATA_COMPARISON' | 'SETTINGS';
+export type DashboardView = 'LIVE_MAP' | 'DATA_COMPARISON' | 'MANAGE_DATA' | 'ALERTS' | 'USER_MANAGEMENT' | 'SETTINGS';

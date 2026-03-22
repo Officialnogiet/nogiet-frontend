@@ -1,170 +1,291 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, ChevronDown, Calendar } from 'lucide-react';
+import { useDashboardStore } from '../src/stores/dashboard.store';
 
-import React from 'react';
+export interface MapFilters {
+  showFacilities: boolean;
+  showSatellite: boolean;
+  sectors: string[];
+  gasType: 'CH4' | 'CO2';
+  instruments: string[];
+  minEmissionRate: number;
+  maxEmissionRate: number;
+  minPlumes: number;
+  maxPlumes: number;
+  minPersistence: number;
+  maxPersistence: number;
+}
+
+export const DEFAULT_FILTERS: MapFilters = {
+  showFacilities: true,
+  showSatellite: true,
+  sectors: [],
+  gasType: 'CH4',
+  instruments: [],
+  minEmissionRate: 0,
+  maxEmissionRate: 20800,
+  minPlumes: 0,
+  maxPlumes: 480,
+  minPersistence: 0,
+  maxPersistence: 100,
+};
 
 interface FilterPanelProps {
   onClose: () => void;
   darkMode?: boolean;
+  filters?: MapFilters;
+  onApply?: (filters: MapFilters) => void;
 }
 
-const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true }) => {
+const SECTORS = [
+  'Oil and Gas',
+  // 'Coal Mining',
+  // 'Waste Management',
+  // 'Agriculture',
+  // 'Other',
+];
+const INSTRUMENTS = ['NASA EMIT', 'EMU', 'NASA AVIRIS-NG', 'NASA AVIRIS-3', 'ASU GAO'];
+
+const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, filters, onApply }) => {
+  const [local, setLocal] = useState<MapFilters>(filters ?? DEFAULT_FILTERS);
+  const { setFilterOpen } = useDashboardStore();
+
+  useEffect(() => {
+    if (filters) setLocal(filters);
+  }, [filters]);
+
+  const toggleSector = (s: string) => {
+    setLocal(prev => ({
+      ...prev,
+      sectors: prev.sectors.includes(s) ? prev.sectors.filter(x => x !== s) : [...prev.sectors, s],
+    }));
+  };
+
+  const toggleInstrument = (i: string) => {
+    setLocal(prev => ({
+      ...prev,
+      instruments: prev.instruments.includes(i) ? prev.instruments.filter(x => x !== i) : [...prev.instruments, i],
+    }));
+  };
+
+  const handleDone = () => {
+    onApply?.(local);
+    setFilterOpen(false);
+  };
+
+  const handleReset = () => {
+    const reset = { ...DEFAULT_FILTERS };
+    setLocal(reset);
+    onApply?.(reset);
+  };
+
+  const Checkbox: React.FC<{ checked: boolean; onChange: () => void; label: string }> = ({ checked, onChange, label }) => (
+    <label className="flex items-center gap-3 group cursor-pointer" onClick={onChange}>
+      <div className={`w-5 h-5 border-2 rounded-md transition-all flex items-center justify-center ${checked ? 'bg-[#009688]/20 border-[#009688]' : darkMode ? 'bg-[#1a1f2b] border-[#2d364a]' : 'bg-white border-gray-200'}`}>
+        {checked && <div className="w-2.5 h-2.5 rounded-sm bg-[#009688]" />}
+      </div>
+      <span className={`text-[13px] font-bold transition-colors ${darkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'}`}>{label}</span>
+    </label>
+  );
+
   return (
-    <div className={`absolute inset-y-0 right-0 w-[440px] transform transition-all duration-300 ease-in-out z-50 flex flex-col border-l shadow-2xl ${darkMode ? 'bg-[#12161f] border-[#1e2430] text-white' : 'bg-white border-gray-100 text-gray-900'
-      }`}>
-      <div className={`p-8 border-b flex items-center justify-between ${darkMode ? 'border-[#1e2430]' : 'border-gray-50'}`}>
-        <h2 className={`text-2xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Filter</h2>
-        <button
-          onClick={onClose}
-          className={`p-2 rounded-xl transition-all ${darkMode ? 'hover:bg-[#1e2430] text-gray-400 border-[#1e2430]' : 'hover:bg-gray-50 text-gray-300 border-gray-100'
-            } border`}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+    <div className="absolute inset-0 z-[100] flex justify-end">
+      <div className="absolute inset-0 bg-gray-900/20" onClick={onClose} />
+      <div className={`relative w-[450px] h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300 transition-colors ${darkMode ? 'bg-[#12161f]' : 'bg-white'}`}>
+        <div className={`p-8 border-b flex justify-between items-center ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'}`}>
+          <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Filter</h2>
+          <button onClick={onClose} className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+            <X size={20} />
+          </button>
+        </div>
 
-      <div className="flex-1 overflow-y-auto px-10 py-6 space-y-1">
-        {/* Accordion List */}
-        {[
-          {
-            label: 'Date Range', open: true, content: (
-              <div className="flex gap-4 py-4">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="Start Date"
-                    className={`w-full pl-5 pr-11 py-3 text-xs font-bold rounded-2xl outline-none transition-all ${darkMode ? 'bg-[#1a1f2b] border-[#2d364a] text-white placeholder-gray-500' : 'bg-[#f9faf9] border-gray-100 text-gray-900 placeholder-gray-400'
-                      } border`}
-                  />
-                  <svg className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-500' : 'text-gray-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                </div>
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="End Date"
-                    className={`w-full pl-5 pr-11 py-3 text-xs font-bold rounded-2xl outline-none transition-all ${darkMode ? 'bg-[#1a1f2b] border-[#2d364a] text-white placeholder-gray-500' : 'bg-[#f9faf9] border-gray-100 text-gray-900 placeholder-gray-400'
-                      } border`}
-                  />
-                  <svg className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-500' : 'text-gray-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                </div>
-              </div>
-            )
-          },
-          {
-            label: 'Sector', open: true, content: (
-              <div className="space-y-4 py-4 pl-1">
-                {['All Sectors', 'Oil and Gas', 'Coal Mining', 'Waste Management', 'Agriculture', 'Other'].map((sector, i) => (
-                  <label key={sector} className="flex items-center gap-3 group cursor-pointer">
-                    <div className={`w-5 h-5 border-2 rounded-md transition-all relative ${i === 0
-                      ? (darkMode ? 'bg-[#009688]/20 border-[#009688]' : 'bg-gray-100 border-gray-200')
-                      : (darkMode ? 'bg-[#1a1f2b] border-[#2d364a]' : 'bg-white border-gray-100')
-                      }`}>
-                      {i === 0 && <div className={`absolute inset-1 rounded-sm ${darkMode ? 'bg-[#009688]' : 'bg-gray-400/20'}`}></div>}
-                    </div>
-                    <span className={`text-[13px] font-bold transition-colors ${darkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'
-                      }`}>{sector}</span>
-                  </label>
-                ))}
-              </div>
-            )
-          },
-          {
-            label: 'Instrument', open: true, content: (
-              <div className="space-y-4 py-4 pl-1">
-                {['All', 'NASA EMIT', 'EMU', 'NASA AVIRIS-NG', 'NASA AVIRIS-3', 'ASU GAO'].map((inst, i) => (
-                  <label key={inst} className="flex items-center gap-3 group cursor-pointer">
-                    <div className={`w-5 h-5 border-2 rounded-md transition-all relative ${darkMode ? 'bg-[#1a1f2b] border-[#2d364a]' : 'bg-white border-gray-100'
-                      }`}></div>
-                    <span className={`text-[13px] font-bold transition-colors ${darkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'
-                      }`}>{inst}</span>
-                  </label>
-                ))}
-              </div>
-            )
-          },
-          {
-            label: 'Gas Type', open: true, content: (
-              <div className="py-4 pl-1">
-                <label className="flex items-center gap-3 group cursor-pointer">
-                  <div className="w-5 h-5 bg-[#009688] border-2 border-[#009688] rounded-md flex items-center justify-center">
-                    <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </div>
-                  <span className={`text-[13px] font-bold transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>CH4</span>
-                </label>
-              </div>
-            )
-          },
-          {
-            label: 'Emission Unit', open: true, content: (
-              <div className="py-4">
-                <div className="relative">
-                  <select className={`w-full pl-5 pr-11 py-3 text-sm font-bold rounded-2xl outline-none appearance-none border transition-all ${darkMode ? 'bg-[#1a1f2b] border-[#2d364a] text-white' : 'bg-[#f9faf9] border-gray-100 text-gray-900'
-                    }`}>
-                    <option>Kg/hr</option>
-                    <option>Mscf/d</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col -gap-1 pointer-events-none">
-                    <svg className={`w-3 h-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 15l7-7 7 7" /></svg>
-                    <svg className={`w-3 h-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
-                  </div>
-                </div>
-              </div>
-            )
-          },
-          {
-            label: 'Source Emission Rate', open: true, content: (
-              <div className="pt-10 pb-4 relative px-2">
-                <div className="absolute -top-1 left-[60%] -translate-x-1/2 bg-[#009688] text-white px-3 py-1.5 rounded-lg text-[11px] font-extrabold shadow-lg shadow-[#009688]/20 whitespace-nowrap">0-12500</div>
-                <div className={`h-2 rounded-full w-full relative ${darkMode ? 'bg-[#1a1f2b]' : 'bg-gray-100'}`}>
-                  <div className="absolute left-0 right-[35%] h-full bg-[#009688] rounded-full"></div>
-                  <div className={`absolute left-[65%] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-lg border-4 border-[#009688] ${darkMode ? 'bg-[#12161f]' : 'bg-white'}`}></div>
-                </div>
-                <div className={`flex justify-between mt-3 text-[11px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}><span>0</span><span>20800</span></div>
-              </div>
-            )
-          },
-          {
-            label: 'Number of Plumes', open: true, content: (
-              <div className="pt-10 pb-4 relative px-2">
-                <div className="absolute -top-1 left-[60%] -translate-x-1/2 bg-[#009688] text-white px-3 py-1.5 rounded-lg text-[11px] font-extrabold shadow-lg shadow-[#009688]/20 whitespace-nowrap">0-330</div>
-                <div className={`h-2 rounded-full w-full relative ${darkMode ? 'bg-[#1a1f2b]' : 'bg-gray-100'}`}>
-                  <div className="absolute left-0 right-[35%] h-full bg-[#009688] rounded-full"></div>
-                  <div className={`absolute left-[65%] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-lg border-4 border-[#009688] ${darkMode ? 'bg-[#12161f]' : 'bg-white'}`}></div>
-                </div>
-                <div className={`flex justify-between mt-3 text-[11px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}><span>0</span><span>480</span></div>
-              </div>
-            )
-          },
-          {
-            label: 'Source Persistence', open: true, content: (
-              <div className="pt-10 pb-6 relative px-2">
-                <div className="absolute -top-1 left-[60%] -translate-x-1/2 bg-[#009688] text-white px-3 py-1.5 rounded-lg text-[11px] font-extrabold shadow-lg shadow-[#009688]/20 whitespace-nowrap">0-76%</div>
-                <div className={`h-2 rounded-full w-full relative ${darkMode ? 'bg-[#1a1f2b]' : 'bg-gray-100'}`}>
-                  <div className="absolute left-0 right-[35%] h-full bg-[#009688] rounded-full"></div>
-                  <div className={`absolute left-[65%] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-lg border-4 border-[#009688] ${darkMode ? 'bg-[#12161f]' : 'bg-white'}`}></div>
-                </div>
-                <div className={`flex justify-between mt-3 text-[11px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}><span>0%</span><span>100%</span></div>
-              </div>
-            )
-          },
-        ].map((item, idx) => (
-          <div key={idx} className={`border-b last:border-none py-4 ${darkMode ? 'border-[#1e2430]' : 'border-gray-50'}`}>
-            <button className={`w-full flex items-center justify-between text-base font-extrabold transition-colors ${darkMode ? 'text-gray-200 hover:text-[#009688]' : 'text-gray-800 hover:text-[#009688]'
-              }`}>
-              {item.label}
-              <svg className={`w-5 h-5 transition-transform ${item.open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            {item.open && item.content && <div className="animate-in fade-in slide-in-from-top-1 duration-200">{item.content}</div>}
-          </div>
-        ))}
-      </div>
+        <div className="p-8 space-y-8 flex-1">
+          {/* Data Sources */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Data Sources</h3>
+            </div>
+            <div className="space-y-3">
+              <Checkbox checked={local.showFacilities} onChange={() => setLocal(p => ({ ...p, showFacilities: !p.showFacilities }))} label="In-app Facility Sources" />
+              <Checkbox checked={local.showSatellite} onChange={() => setLocal(p => ({ ...p, showSatellite: !p.showSatellite }))} label="CarbonMapper Satellite" />
+            </div>
+          </section>
 
-      <div className={`p-8 border-t flex gap-4 ${darkMode ? 'border-[#1e2430]' : 'border-gray-50'}`}>
-        <button className={`flex-1 py-4 font-extrabold rounded-2xl transition-all text-sm border ${darkMode ? 'border-[#2d364a] text-gray-300 hover:bg-[#1e2430]' : 'border-gray-100 text-gray-800 hover:bg-gray-50'
-          }`}>Reset</button>
-        <button onClick={onClose} className="flex-1 py-4 bg-[#009688] text-white font-extrabold rounded-2xl hover:bg-[#00796b] transition-all text-sm shadow-xl shadow-[#009688]/20">Done</button>
+          {/* Date Range */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Date Range</h3>
+              <ChevronDown size={20} className="text-gray-400" />
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <input type="text" placeholder="Start Date"
+                  className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-teal-500 transition-all ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white placeholder-gray-700' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`} />
+                <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
+              <div className="flex-1 relative">
+                <input type="text" placeholder="End Date"
+                  className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-teal-500 transition-all ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white placeholder-gray-700' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`} />
+                <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
+          </section>
+
+          {/* Sector */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Sector</h3>
+              <ChevronDown size={20} className="text-gray-400" />
+            </div>
+            <div className="space-y-3">
+              {SECTORS.map(s => (
+                <Checkbox key={s} checked={local.sectors.length === 0 || local.sectors.includes(s)} onChange={() => toggleSector(s)} label={s} />
+              ))}
+            </div>
+          </section>
+
+          {/* Instrument */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Instrument</h3>
+              <ChevronDown size={20} className="text-gray-400" />
+            </div>
+            <div className="space-y-3">
+              {INSTRUMENTS.map(inst => (
+                <Checkbox key={inst} checked={local.instruments.length === 0 || local.instruments.includes(inst)} onChange={() => toggleInstrument(inst)} label={inst} />
+              ))}
+            </div>
+          </section>
+
+          {/* Gas Type */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Gas Type</h3>
+              <ChevronDown size={20} className="text-gray-400" />
+            </div>
+            <Checkbox checked={local.gasType === 'CH4'} onChange={() => setLocal(p => ({ ...p, gasType: 'CH4' }))} label="CH₄" />
+          </section>
+
+          {/* Emission Unit */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Emission Unit</h3>
+              <ChevronDown size={20} className="text-gray-400" />
+            </div>
+            <div className={`w-full border rounded-xl px-4 py-3 text-sm font-medium flex justify-between items-center transition-all ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-gray-200' : 'bg-white border-gray-200 text-gray-700'}`}>
+              Kg/hr
+              <ChevronDown size={16} />
+            </div>
+          </section>
+
+          {/* Range Sliders */}
+          <RangeSliderSection
+            darkMode={darkMode}
+            label="Source Emission Rate"
+            min={0} max={20800}
+            valueMin={local.minEmissionRate} valueMax={local.maxEmissionRate}
+            onChange={(lo, hi) => setLocal(p => ({ ...p, minEmissionRate: lo, maxEmissionRate: hi }))}
+          />
+          <RangeSliderSection
+            darkMode={darkMode}
+            label="Number of Plumes"
+            min={0} max={480}
+            valueMin={local.minPlumes} valueMax={local.maxPlumes}
+            onChange={(lo, hi) => setLocal(p => ({ ...p, minPlumes: lo, maxPlumes: hi }))}
+          />
+          <RangeSliderSection
+            darkMode={darkMode}
+            label="Source Persistence"
+            min={0} max={100} suffix="%"
+            valueMin={local.minPersistence} valueMax={local.maxPersistence}
+            onChange={(lo, hi) => setLocal(p => ({ ...p, minPersistence: lo, maxPersistence: hi }))}
+          />
+        </div>
+
+        <div className={`p-8 border-t flex gap-4 transition-colors ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'}`}>
+          <button onClick={handleReset} className={`flex-1 border rounded-2xl py-4 font-bold transition-all ${darkMode ? 'border-[#1e2430] text-gray-400 hover:bg-gray-800' : 'border-gray-200 text-gray-900 hover:bg-gray-50'}`}>Reset</button>
+          <button onClick={handleDone} className="flex-1 bg-teal-600 text-white rounded-2xl py-4 font-bold hover:bg-teal-700 shadow-xl shadow-teal-600/20">Done</button>
+        </div>
       </div>
     </div>
+  );
+};
+
+interface RangeSliderSectionProps {
+  darkMode: boolean;
+  label: string;
+  min: number;
+  max: number;
+  valueMin: number;
+  valueMax: number;
+  suffix?: string;
+  onChange: (lo: number, hi: number) => void;
+}
+
+const RangeSliderSection: React.FC<RangeSliderSectionProps> = ({ darkMode, label, min, max, valueMin, valueMax, suffix = '', onChange }) => {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef<'min' | 'max' | null>(null);
+
+  const pctMin = ((valueMin - min) / (max - min)) * 100;
+  const pctMax = ((valueMax - min) / (max - min)) * 100;
+
+  const resolveValue = useCallback((clientX: number) => {
+    if (!trackRef.current) return null;
+    const rect = trackRef.current.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return Math.round(min + pct * (max - min));
+  }, [min, max]);
+
+  const onPointerDown = useCallback((thumb: 'min' | 'max') => (e: React.PointerEvent) => {
+    e.preventDefault();
+    dragging.current = thumb;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const val = resolveValue(e.clientX);
+    if (val === null) return;
+    if (dragging.current === 'min') {
+      onChange(Math.min(val, valueMax), valueMax);
+    } else {
+      onChange(valueMin, Math.max(val, valueMin));
+    }
+  }, [resolveValue, onChange, valueMin, valueMax]);
+
+  const onPointerUp = useCallback(() => { dragging.current = null; }, []);
+
+  const displayLabel = `${valueMin}${suffix}-${valueMax}${suffix}`;
+
+  return (
+    <section className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{label}</h3>
+        <ChevronDown size={20} className="text-gray-400" />
+      </div>
+      <div className="relative pt-6 px-2" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-teal-600 text-white text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap">
+          {displayLabel}
+        </div>
+        <div ref={trackRef} className={`h-1.5 w-full rounded-full relative ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <div className="absolute h-full bg-teal-600 rounded-full" style={{ left: `${pctMin}%`, width: `${pctMax - pctMin}%` }} />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-teal-600 rounded-full shadow-md cursor-grab active:cursor-grabbing touch-none"
+            style={{ left: `${pctMin}%` }}
+            onPointerDown={onPointerDown('min')}
+          />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-teal-600 rounded-full shadow-md cursor-grab active:cursor-grabbing touch-none"
+            style={{ left: `${pctMax}%` }}
+            onPointerDown={onPointerDown('max')}
+          />
+        </div>
+        <div className="flex justify-between text-[10px] text-gray-400 font-bold mt-2 uppercase tracking-tight">
+          <span>{min}{suffix}</span>
+          <span>{max}{suffix}</span>
+        </div>
+      </div>
+    </section>
   );
 };
 
