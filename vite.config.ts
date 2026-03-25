@@ -37,6 +37,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
@@ -81,6 +82,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'mapbox': ['mapbox-gl'],
+          'charts': ['recharts'],
+          'export': ['html2canvas', 'xlsx', 'pptxgenjs'],
+          'vendor': ['react', 'react-dom', '@tanstack/react-query', 'zustand', 'axios'],
+        },
+      },
+    },
   }
 });
