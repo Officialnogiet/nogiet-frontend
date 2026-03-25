@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { AlertCircle, RefreshCw, X, Satellite } from 'lucide-react';
+import { AlertCircle, RefreshCw, X, Satellite, Layers } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import EmissionSummaryCard from './live-map/EmissionSummaryCard';
 import FacilityPopup from './live-map/FacilityPopup';
 import FacilityDetailModal from './live-map/FacilityDetailModal';
 import MapDataLoader from './live-map/MapDataLoader';
+import LayerTogglePanel, { DEFAULT_LAYERS, type MapLayerState } from './live-map/LayerTogglePanel';
 import type { FacilityData } from './live-map/FacilityPopup';
 import { DEFAULT_FILTERS, type MapFilters } from './FilterPanel';
 import { useFacilities, useAlerts, useGroundData, useSatelliteSources, useUnreadAlertCount, useMarkAllAlertsRead } from '../src/hooks/useEmissions';
@@ -61,12 +62,12 @@ function buildPlumeScatterGeoJSON(satellites: any[]): GeoJSON.FeatureCollection 
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
   (satellites ?? []).forEach((src: any, srcIdx: number) => {
-    const count = src.plume_count ?? 0;
+    const count = src.plumeCount ?? src.plume_count ?? 0;
     if (count <= 0) return;
 
-    const lng = src.lon;
-    const lat = src.lat;
-    const baseRate = src.emission_rate ?? 0;
+    const lng = src.longitude ?? src.lon;
+    const lat = src.latitude ?? src.lat;
+    const baseRate = src.emissionRate ?? src.emission_rate ?? 0;
     const maxR = 0.02 + Math.min(count, 20) * 0.002;
 
     for (let i = 0; i < count; i++) {
@@ -86,7 +87,7 @@ function buildPlumeScatterGeoJSON(satellites: any[]): GeoJSON.FeatureCollection 
           ],
         },
         properties: {
-          source_name: src.source_name ?? '',
+          source_name: src.name ?? src.source_name ?? '',
           plume_idx: i + 1,
           total: count,
           rate: plumeRate,
@@ -152,17 +153,18 @@ function buildSatelliteGeoJSON(features: any[]): GeoJSON.FeatureCollection {
     type: 'FeatureCollection',
     features: (features ?? []).map((src: any) => ({
       type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [src.lon, src.lat] },
+      geometry: { type: 'Point' as const, coordinates: [src.longitude ?? src.lon, src.latitude ?? src.lat] },
       properties: {
-        source_name: src.source_name ?? '',
+        source_name: src.name ?? src.source_name ?? '',
+        provider: src.provider ?? 'carbon_mapper',
         sector: src.sector ?? 'Unknown',
-        emission_rate: src.emission_rate ?? 0,
-        plume_count: src.plume_count ?? 0,
+        emission_rate: src.emissionRate ?? src.emission_rate ?? 0,
+        plume_count: src.plumeCount ?? src.plume_count ?? 0,
         gas: src.gas ?? 'CH4',
         persistence: src.persistence ?? 0,
         instrument: src.instrument ?? '',
-        first_detected: src.first_detected ?? '',
-        last_detected: src.last_detected ?? '',
+        first_detected: src.firstDetected ?? src.first_detected ?? '',
+        last_detected: src.lastDetected ?? src.last_detected ?? '',
       },
     })),
   };
@@ -212,9 +214,22 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const mapFilters = filters ?? DEFAULT_FILTERS;
   const prevFiltersRef = useRef(mapFilters);
 
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [mapLayers, setMapLayers] = useState<MapLayerState>(DEFAULT_LAYERS);
+
   useSocketUpdates();
 
-  const { data: facilities = [], isLoading: isLoadingFacilities } = useFacilities();
+  const facilityApiFilters = useMemo(() => {
+    const f: Record<string, string> = {};
+    if (mapFilters.state) f.state = mapFilters.state;
+    if (mapFilters.lga) f.lga = mapFilters.lga;
+    if (mapFilters.oilBlock) f.oilBlock = mapFilters.oilBlock;
+    if (mapFilters.operator) f.operator = mapFilters.operator;
+    if (mapFilters.facilityType) f.facilityType = mapFilters.facilityType;
+    return Object.keys(f).length > 0 ? f : undefined;
+  }, [mapFilters.state, mapFilters.lga, mapFilters.oilBlock, mapFilters.operator, mapFilters.facilityType]);
+
+  const { data: facilities = [], isLoading: isLoadingFacilities } = useFacilities(facilityApiFilters);
   const { data: alerts = [], isLoading: isLoadingAlerts } = useAlerts();
   const { data: unreadCount = 0 } = useUnreadAlertCount();
   const markAllRead = useMarkAllAlertsRead();
@@ -224,6 +239,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     page: 1, limit: 100, bbox: activeBBox,
     ...(mapFilters.minEmissionRate > 0 ? { minEmissionRate: mapFilters.minEmissionRate } : {}),
     ...(mapFilters.maxEmissionRate < 20800 ? { maxEmissionRate: mapFilters.maxEmissionRate } : {}),
+    ...(mapFilters.providers.length === 1 ? { provider: mapFilters.providers[0] } : {}),
   };
   const { data: satelliteData, isFetching: isFetchingSatellite } = useSatelliteSources(
     mapFilters.showSatellite ? satelliteFilters : { gasType: 'CH4', page: 1, limit: 100, bbox: activeBBox }
@@ -274,7 +290,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     let features: any[] = globalSatSources;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      features = features.filter((s: any) => s.source_name?.toLowerCase().includes(q) || s.sector?.toLowerCase().includes(q));
+      features = features.filter((s: any) =>
+        (s.name ?? s.source_name ?? '').toLowerCase().includes(q) ||
+        (s.sector ?? '').toLowerCase().includes(q)
+      );
     }
     if (mapFilters.sectors.length > 0) {
       features = features.filter((s: any) => mapFilters.sectors.some(sec => (s.sector ?? '').toLowerCase().includes(sec.toLowerCase())));
@@ -282,9 +301,12 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     if (mapFilters.instruments.length > 0) {
       features = features.filter((s: any) => mapFilters.instruments.some(inst => (s.instrument ?? '').includes(inst)));
     }
+    if (mapFilters.providers && mapFilters.providers.length > 0) {
+      features = features.filter((s: any) => mapFilters.providers.includes(s.provider ?? 'carbon_mapper'));
+    }
     features = features.filter((s: any) => {
-      const rate = s.emission_rate ?? 0;
-      const plumes = s.plume_count ?? 0;
+      const rate = s.emissionRate ?? s.emission_rate ?? 0;
+      const plumes = s.plumeCount ?? s.plume_count ?? 0;
       const persist = (s.persistence ?? 0) * 100;
       return rate >= mapFilters.minEmissionRate && rate <= mapFilters.maxEmissionRate
         && plumes >= mapFilters.minPlumes && plumes <= mapFilters.maxPlumes
@@ -294,7 +316,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   }, [globalSatSources, searchQuery, mapFilters]);
 
   const totalSources = filteredFacilities.length + filteredSatellite.length;
-  const totalPlumes = filteredSatellite.reduce((sum: number, s: any) => sum + (s.plume_count ?? 0), 0);
+  const totalPlumes = filteredSatellite.reduce((sum: number, s: any) => sum + (s.plumeCount ?? s.plume_count ?? 0), 0);
 
   // Fetch ground data for all facilities to build ground scatter
   useEffect(() => {
@@ -340,10 +362,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     // Check satellite sources
     const allSatFeatures: any[] = (satelliteData as any)?.features ?? [];
     const matchedSat = allSatFeatures.find((s: any) =>
-      s.source_name?.toLowerCase().includes(q) || s.sector?.toLowerCase().includes(q)
+      (s.name ?? s.source_name ?? '').toLowerCase().includes(q) || (s.sector ?? '').toLowerCase().includes(q)
     );
     if (matchedSat) {
-      flyToAndPulse(matchedSat.lon, matchedSat.lat);
+      flyToAndPulse(matchedSat.longitude ?? matchedSat.lon, matchedSat.latitude ?? matchedSat.lat);
       return;
     }
 
@@ -591,6 +613,16 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     updateSatelliteSource(map.current, filteredSatellite);
   }, [mapLoaded, filteredSatellite]);
 
+  // Toggle emission hotspot layers based on mapLayers state
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+    const vis = mapLayers.emissionHotspots ? 'visible' : 'none';
+    [SAT_LAYER_GLOW, SAT_LAYER_POINT, SAT_LAYER_LABEL, SAT_COUNT_LABEL, SCATTER_HAZE, SCATTER_GLOW, SCATTER_DOT].forEach(id => {
+      if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', vis);
+    });
+  }, [mapLoaded, mapLayers.emissionHotspots]);
+
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
 
@@ -652,7 +684,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const plumeCount = selectedFacility.plumeCount ?? 0;
       if (plumeCount <= 0) return;
 
-      const srcIdx = filteredSatellite.findIndex((s: any) => s.source_name === activePlumeSource);
+      const srcIdx = filteredSatellite.findIndex((s: any) => (s.name ?? s.source_name) === activePlumeSource);
       const seed = srcIdx >= 0 ? srcIdx : 0;
       const goldenAngle = Math.PI * (3 - Math.sqrt(5));
       const maxR = 0.02 + Math.min(plumeCount, 20) * 0.002;
@@ -1117,7 +1149,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const srcLng = coords[0];
       const srcLat = coords[1];
       const srcName = props.source_name ?? '';
-      const srcIdx = filteredSatellite.findIndex((s: any) => s.source_name === srcName);
+      const srcIdx = filteredSatellite.findIndex((s: any) => (s.name ?? s.source_name) === srcName);
       const seed = srcIdx >= 0 ? srcIdx : 0;
       const goldenAngle = Math.PI * (3 - Math.sqrt(5));
       const maxR = 0.02 + Math.min(plumeCount, 20) * 0.002;
@@ -1254,6 +1286,34 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
 
       <MapZoomControls onZoomIn={() => map.current?.zoomIn()} onZoomOut={() => map.current?.zoomOut()} />
       <EmissionSummaryCard darkMode={darkMode} totalSources={totalSources} totalPlumes={totalPlumes} facilityCount={filteredFacilities.length} satelliteCount={filteredSatellite.length} />
+
+      {/* Layer toggle button */}
+      <div className="absolute top-28 right-6 z-40">
+        <button
+          onClick={() => setShowLayerPanel(v => !v)}
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all ${showLayerPanel ? 'bg-teal-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}
+        >
+          <Layers size={22} />
+        </button>
+      </div>
+
+      <LayerTogglePanel
+        darkMode={darkMode}
+        layers={mapLayers}
+        onToggle={(layer) => {
+          setMapLayers(prev => {
+            const next = { ...prev, [layer]: !prev[layer] };
+            if (layer === 'satelliteView' && map.current) {
+              map.current.setStyle(next.satelliteView
+                ? 'mapbox://styles/mapbox/satellite-streets-v12'
+                : getMapStyleUrl(mapStyle, darkMode));
+            }
+            return next;
+          });
+        }}
+        visible={showLayerPanel}
+        onClose={() => setShowLayerPanel(false)}
+      />
 
       {showAlerts && (
         <AlertsPanel

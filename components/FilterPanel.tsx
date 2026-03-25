@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronDown, Calendar } from 'lucide-react';
 import { useDashboardStore } from '../src/stores/dashboard.store';
+import { useFacilityFilterOptions } from '../src/hooks/useEmissions';
+import { useSettingsStore } from '../src/stores/settings.store';
+import { EMISSION_UNITS, type EmissionUnit } from '../src/utils/unit-conversion';
 
 export interface MapFilters {
   showFacilities: boolean;
@@ -8,12 +11,18 @@ export interface MapFilters {
   sectors: string[];
   gasType: 'CH4' | 'CO2';
   instruments: string[];
+  providers: string[];
   minEmissionRate: number;
   maxEmissionRate: number;
   minPlumes: number;
   maxPlumes: number;
   minPersistence: number;
   maxPersistence: number;
+  state: string;
+  lga: string;
+  oilBlock: string;
+  operator: string;
+  facilityType: string;
 }
 
 export const DEFAULT_FILTERS: MapFilters = {
@@ -22,12 +31,18 @@ export const DEFAULT_FILTERS: MapFilters = {
   sectors: [],
   gasType: 'CH4',
   instruments: [],
+  providers: [],
   minEmissionRate: 0,
   maxEmissionRate: 20800,
   minPlumes: 0,
   maxPlumes: 480,
   minPersistence: 0,
   maxPersistence: 100,
+  state: '',
+  lga: '',
+  oilBlock: '',
+  operator: '',
+  facilityType: '',
 };
 
 interface FilterPanelProps {
@@ -46,9 +61,25 @@ const SECTORS = [
 ];
 const INSTRUMENTS = ['NASA EMIT', 'EMU', 'NASA AVIRIS-NG', 'NASA AVIRIS-3', 'ASU GAO'];
 
+const PROVIDERS = ['carbon_mapper', 'imeo', 'tropomi'];
+const PROVIDER_LABELS: Record<string, string> = {
+  carbon_mapper: 'Carbon Mapper',
+  imeo: 'IMEO (UNEP)',
+  tropomi: 'TROPOMI',
+};
+
+const UNIT_LABELS: Record<EmissionUnit, string> = {
+  'kg/hr': 'kg/hr',
+  'kg/day': 'kg/day',
+  'tonnes/year': 'tonnes/year',
+  'CO2e/hr': 'CO₂e/hr',
+};
+
 const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, filters, onApply }) => {
   const [local, setLocal] = useState<MapFilters>(filters ?? DEFAULT_FILTERS);
   const { setFilterOpen } = useDashboardStore();
+  const { data: filterOptions } = useFacilityFilterOptions();
+  const { emissionUnit, setEmissionUnit } = useSettingsStore();
 
   useEffect(() => {
     if (filters) setLocal(filters);
@@ -111,6 +142,71 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, fil
             </div>
           </section>
 
+          {/* Satellite Providers */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Satellite Providers</h3>
+              <ChevronDown size={20} className="text-gray-400" />
+            </div>
+            <div className="space-y-3">
+              {PROVIDERS.map(p => (
+                <Checkbox
+                  key={p}
+                  checked={local.providers.length === 0 || local.providers.includes(p)}
+                  onChange={() => setLocal(prev => ({ ...prev, providers: prev.providers.includes(p) ? prev.providers.filter(x => x !== p) : [...prev.providers, p] }))}
+                  label={PROVIDER_LABELS[p] || p}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* Spatial Filters */}
+          {filterOptions && (
+            <section className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Location Filters</h3>
+                <ChevronDown size={20} className="text-gray-400" />
+              </div>
+              <div className="space-y-3">
+                {filterOptions.states?.length > 0 && (
+                  <select value={local.state} onChange={e => setLocal(p => ({ ...p, state: e.target.value, lga: '' }))}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                    <option value="">All States</option>
+                    {filterOptions.states.map((s: string) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
+                {filterOptions.lgas?.length > 0 && (
+                  <select value={local.lga} onChange={e => setLocal(p => ({ ...p, lga: e.target.value }))}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                    <option value="">All LGAs</option>
+                    {filterOptions.lgas.map((l: string) => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                )}
+                {filterOptions.oilBlocks?.length > 0 && (
+                  <select value={local.oilBlock} onChange={e => setLocal(p => ({ ...p, oilBlock: e.target.value }))}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                    <option value="">All Oil Blocks</option>
+                    {filterOptions.oilBlocks.map((b: string) => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                )}
+                {filterOptions.operators?.length > 0 && (
+                  <select value={local.operator} onChange={e => setLocal(p => ({ ...p, operator: e.target.value }))}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                    <option value="">All Operators</option>
+                    {filterOptions.operators.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                )}
+                {filterOptions.facilityTypes?.length > 0 && (
+                  <select value={local.facilityType} onChange={e => setLocal(p => ({ ...p, facilityType: e.target.value }))}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                    <option value="">All Facility Types</option>
+                    {filterOptions.facilityTypes.map((t: string) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Date Range */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">
@@ -172,10 +268,15 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, fil
               <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Emission Unit</h3>
               <ChevronDown size={20} className="text-gray-400" />
             </div>
-            <div className={`w-full border rounded-xl px-4 py-3 text-sm font-medium flex justify-between items-center transition-all ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-gray-200' : 'bg-white border-gray-200 text-gray-700'}`}>
-              Kg/hr
-              <ChevronDown size={16} />
-            </div>
+            <select
+              value={emissionUnit}
+              onChange={e => setEmissionUnit(e.target.value as EmissionUnit)}
+              className={`w-full border rounded-xl px-4 py-3 text-sm font-medium appearance-none cursor-pointer transition-all ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-gray-200' : 'bg-white border-gray-200 text-gray-700'}`}
+            >
+              {EMISSION_UNITS.map(u => (
+                <option key={u} value={u}>{UNIT_LABELS[u]}</option>
+              ))}
+            </select>
           </section>
 
           {/* Range Sliders */}

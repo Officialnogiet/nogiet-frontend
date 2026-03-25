@@ -1,29 +1,17 @@
 import { create } from "zustand";
+import type { NormalizedSource } from "../api/emissions.api";
 
-interface SatelliteSource {
-  source_name: string;
-  lat: number;
-  lon: number;
-  sector: string;
-  gas: string;
-  emission_rate: number;
-  persistence: number;
-  plume_count: number;
-  instrument: string;
-  first_detected: string;
-  last_detected: string;
-}
+export type SatelliteSource = NormalizedSource;
 
 interface SatelliteStore {
   sources: SatelliteSource[];
   fetchedRegions: string[];
   isStale: boolean;
+  activeProviders: string[];
 
-  /** Merge new sources into the global pool, deduplicating by source_name */
   mergeSources: (incoming: SatelliteSource[], regionBBox: string) => void;
-  /** Replace all sources (e.g. on initial load) */
   setSources: (sources: SatelliteSource[], regionBBox: string) => void;
-  /** Mark data as stale so the map knows a refresh happened */
+  setActiveProviders: (providers: string[]) => void;
   markStale: () => void;
   clearStale: () => void;
   clear: () => void;
@@ -33,12 +21,13 @@ export const useSatelliteStore = create<SatelliteStore>((set) => ({
   sources: [],
   fetchedRegions: [],
   isStale: false,
+  activeProviders: [],
 
   mergeSources: (incoming, regionBBox) =>
     set((state) => {
-      const existingMap = new Map(state.sources.map((s) => [s.source_name, s]));
+      const existingMap = new Map(state.sources.map((s) => [s.id, s]));
       for (const src of incoming) {
-        existingMap.set(src.source_name, src);
+        existingMap.set(src.id, src);
       }
       return {
         sources: Array.from(existingMap.values()),
@@ -56,6 +45,7 @@ export const useSatelliteStore = create<SatelliteStore>((set) => ({
       isStale: true,
     }),
 
+  setActiveProviders: (providers) => set({ activeProviders: providers }),
   markStale: () => set({ isStale: true }),
   clearStale: () => set({ isStale: false }),
   clear: () => set({ sources: [], fetchedRegions: [], isStale: false }),

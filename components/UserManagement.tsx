@@ -35,18 +35,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ darkMode }) => {
   const deleteUser = useDeleteUser();
   const updateRolePermissions = useUpdateRolePermissions();
 
+  const roleLabel = (r: string) => {
+    switch (r) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Admin';
+      case 'facility_owner': return 'Field Agent';
+      default: return 'Member';
+    }
+  };
+
   const members = (usersData?.data ?? []).map((u: any) => ({
     id: u.id,
     name: u.fullName,
     email: u.email,
     phone: u.phone ?? '-',
     date: new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    role: u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Member',
+    role: roleLabel(u.role),
   }));
 
   const roles = (rolesData ?? []).map((r: any) => ({
     id: r.id,
-    role: r.name === 'super_admin' ? 'Super Admin' : r.name === 'admin' ? 'Admin' : 'Member',
+    role: roleLabel(r.name),
     rawName: r.name,
     description: r.description ?? '',
     permissions: (r.permissions ?? []).map((p: any) => p.name),
@@ -63,11 +72,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ darkMode }) => {
     } catch { /* error handled by query */ }
   };
 
-  const handleCreateUser = async (data: { fullName: string; email: string; role: string }) => {
+  const handleCreateUser = async (data: { fullName: string; email: string; role: string; tempPassword?: string }) => {
     try {
       await createUser.mutateAsync(data);
-      setShowAddModal(false);
-      setShowSuccessModal(true);
     } catch { /* error handled by query */ }
   };
 

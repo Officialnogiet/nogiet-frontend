@@ -13,6 +13,12 @@ export interface Facility {
   longitude: number;
   sector: string;
   region: string;
+  state?: string;
+  lga?: string;
+  oilBlock?: string;
+  operator?: string;
+  facilityType?: string;
+  alertThreshold?: number | null;
 }
 
 export interface Alert {
@@ -29,6 +35,7 @@ export interface Alert {
 export interface EmissionStats {
   totalSources: number;
   totalMeasurements: number;
+  alertsThisWeek: number;
 }
 
 export interface EmissionFilters {
@@ -37,6 +44,7 @@ export interface EmissionFilters {
   sector?: string;
   gasType?: string;
   instrument?: string;
+  provider?: string;
   minEmissionRate?: number;
   maxEmissionRate?: number;
   minPlumes?: number;
@@ -46,11 +54,92 @@ export interface EmissionFilters {
   page?: number;
   limit?: number;
   bbox?: string;
+  state?: string;
+  lga?: string;
+  oilBlock?: string;
+  operator?: string;
+  facilityType?: string;
+}
+
+export interface NormalizedSource {
+  id: string;
+  name: string;
+  provider: "carbon_mapper" | "imeo" | "tropomi";
+  latitude: number;
+  longitude: number;
+  emissionRate: number;
+  gas: string;
+  sector: string;
+  instrument: string;
+  persistence: number;
+  plumeCount: number;
+  firstDetected: string;
+  lastDetected: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SatelliteResponse {
+  features: NormalizedSource[];
+  total: number;
+  providers: string[];
+  source: "cache" | "api" | "error" | "none";
+  error?: string;
+}
+
+export interface Geofence {
+  id: string;
+  userId: string;
+  name: string;
+  geometry: any;
+  alertEnabled: boolean;
+  threshold: number | null;
+  createdAt: string;
+}
+
+export interface FieldSubmission {
+  id: string;
+  facilityId: string;
+  submittedBy: string;
+  photos: string[];
+  latitude: number;
+  longitude: number;
+  weatherConditions?: string;
+  equipmentUsed?: string;
+  notes?: string;
+  methaneReading: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface DashboardSummary {
+  totalFacilities: number;
+  totalMeasurements: number;
+  alertsThisWeek: number;
+  totalAlerts: number;
+  activeSatelliteSources: number;
+  totalSatelliteEmissionRate: number;
+  providers: string[];
+  recentAlerts: Alert[];
+  topFacilities: { facilityId: string; facilityName: string; totalReading: number; measurementCount: number }[];
+}
+
+export interface FacilityFilterOptions {
+  states: string[];
+  lgas: string[];
+  oilBlocks: string[];
+  operators: string[];
+  facilityTypes: string[];
+}
+
+export interface EmissionAggregations {
+  byRegion: { region: string; count: number; avgReading: number }[];
+  byOperator: { operator: string; count: number; avgReading: number }[];
+  cumulativeByFacility: { facilityId: string; facilityName: string; totalEmission: number; count: number; latestDate: string }[];
 }
 
 export const emissionsApi = {
-  getFacilities: () =>
-    api.get<ApiResponse<Facility[]>>("/facilities").then((r) => r.data),
+  getFacilities: (filters?: Partial<EmissionFilters>) =>
+    api.get<ApiResponse<Facility[]>>("/facilities", { params: filters }).then((r) => r.data),
 
   getFacilityById: (id: string) =>
     api.get<ApiResponse<Facility>>(`/facilities/${id}`).then((r) => r.data),
@@ -76,10 +165,10 @@ export const emissionsApi = {
     api.get<ApiResponse<EmissionStats>>("/stats").then((r) => r.data),
 
   getSatelliteSources: (filters: EmissionFilters) =>
-    api.get<ApiResponse<any>>("/satellite/sources", { params: filters }).then((r) => r.data),
+    api.get<ApiResponse<SatelliteResponse>>("/satellite/sources", { params: filters }).then((r) => r.data),
 
   refreshSatelliteRegion: (filters: EmissionFilters) =>
-    api.get<ApiResponse<any>>("/satellite/refresh", { params: filters }).then((r) => r.data),
+    api.get<ApiResponse<SatelliteResponse>>("/satellite/refresh", { params: filters }).then((r) => r.data),
 
   getSatellitePlumes: (sourceId: string) =>
     api.get<ApiResponse<any[]>>(`/satellite/plumes/${sourceId}`).then((r) => r.data),
@@ -95,10 +184,18 @@ export const emissionsApi = {
     longitude: number;
     sector?: string;
     region?: string;
+    state?: string;
+    lga?: string;
+    oilBlock?: string;
+    operator?: string;
+    facilityType?: string;
   }) => api.post<ApiResponse<Facility>>("/facilities", data).then((r) => r.data),
 
   deleteFacility: (id: string) =>
     api.delete<ApiResponse<Facility>>(`/facilities/${id}`).then((r) => r.data),
+
+  updateFacilityThreshold: (id: string, alertThreshold: number | null) =>
+    api.put<ApiResponse<Facility>>(`/facilities/${id}/threshold`, { alertThreshold }).then((r) => r.data),
 
   createAlert: (data: {
     facilityId: string;
@@ -119,4 +216,45 @@ export const emissionsApi = {
 
   setEmailAlerts: (enabled: boolean) =>
     api.post<ApiResponse<any>>("/settings/email-alerts", { enabled }).then((r) => r.data),
+
+  // Geofences
+  getGeofences: () =>
+    api.get<ApiResponse<Geofence[]>>("/geofences").then((r) => r.data),
+
+  createGeofence: (data: { name: string; geometry: any; alertEnabled?: boolean; threshold?: number }) =>
+    api.post<ApiResponse<Geofence>>("/geofences", data).then((r) => r.data),
+
+  updateGeofence: (id: string, data: { name?: string; alertEnabled?: boolean; threshold?: number | null }) =>
+    api.put<ApiResponse<Geofence>>(`/geofences/${id}`, data).then((r) => r.data),
+
+  deleteGeofence: (id: string) =>
+    api.delete<ApiResponse<Geofence>>(`/geofences/${id}`).then((r) => r.data),
+
+  // Field Submissions
+  createFieldSubmission: (data: {
+    facilityId: string;
+    photos?: string[];
+    latitude: number;
+    longitude: number;
+    weatherConditions?: string;
+    equipmentUsed?: string;
+    notes?: string;
+    methaneReading: number;
+  }) => api.post<ApiResponse<FieldSubmission>>("/field-submissions", data).then((r) => r.data),
+
+  getFieldSubmissions: (facilityId?: string) =>
+    api.get<ApiResponse<FieldSubmission[]>>("/field-submissions", { params: { facilityId } }).then((r) => r.data),
+
+  reviewFieldSubmission: (id: string, status: "approved" | "rejected") =>
+    api.put<ApiResponse<FieldSubmission>>(`/field-submissions/${id}/review`, { status }).then((r) => r.data),
+
+  // Dashboard
+  getDashboardSummary: () =>
+    api.get<ApiResponse<DashboardSummary>>("/dashboard/summary").then((r) => r.data),
+
+  getFacilityFilterOptions: () =>
+    api.get<ApiResponse<FacilityFilterOptions>>("/facilities/filter-options").then((r) => r.data),
+
+  getEmissionAggregations: () =>
+    api.get<ApiResponse<EmissionAggregations>>("/emissions/aggregations").then((r) => r.data),
 };

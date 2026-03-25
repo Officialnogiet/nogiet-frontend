@@ -19,7 +19,7 @@ interface DashboardState {
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
-  activeView: "LIVE_MAP",
+  activeView: "DASHBOARD_HOME",
   setActiveView: (view) => set({ activeView: view, isFilterOpen: false }),
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),

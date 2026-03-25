@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { emissionsApi } from "../api/emissions.api";
+import type { EmissionFilters } from "../api/emissions.api";
 import { submitGroundDataSchema, emissionFiltersSchema } from "../validations/emission.schema";
 import type { SubmitGroundDataInput, EmissionFiltersInput } from "../validations/emission.schema";
 
-export function useFacilities() {
+export function useFacilities(filters?: Partial<EmissionFilters>) {
   return useQuery({
-    queryKey: ["facilities"],
-    queryFn: () => emissionsApi.getFacilities(),
+    queryKey: ["facilities", filters],
+    queryFn: () => emissionsApi.getFacilities(filters),
     select: (res) => res.data,
   });
 }
@@ -96,7 +97,7 @@ export function useSubmitGroundData() {
 export function useCreateFacility() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; latitude: number; longitude: number; sector?: string; region?: string }) =>
+    mutationFn: (data: { name: string; latitude: number; longitude: number; sector?: string; region?: string; state?: string; lga?: string; oilBlock?: string; operator?: string; facilityType?: string }) =>
       emissionsApi.createFacility(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["facilities"] });
@@ -113,6 +114,17 @@ export function useDeleteFacility() {
       qc.invalidateQueries({ queryKey: ["facilities"] });
       qc.invalidateQueries({ queryKey: ["emission-stats"] });
       qc.invalidateQueries({ queryKey: ["ground-data"] });
+    },
+  });
+}
+
+export function useUpdateFacilityThreshold() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, threshold }: { id: string; threshold: number | null }) =>
+      emissionsApi.updateFacilityThreshold(id, threshold),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["facilities"] });
     },
   });
 }
@@ -157,5 +169,113 @@ export function useSetAlertThreshold() {
 export function useSetEmailAlerts() {
   return useMutation({
     mutationFn: (enabled: boolean) => emissionsApi.setEmailAlerts(enabled),
+  });
+}
+
+// Geofences
+export function useGeofences() {
+  return useQuery({
+    queryKey: ["geofences"],
+    queryFn: () => emissionsApi.getGeofences(),
+    select: (res) => res.data,
+  });
+}
+
+export function useCreateGeofence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; geometry: any; alertEnabled?: boolean; threshold?: number }) =>
+      emissionsApi.createGeofence(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["geofences"] });
+    },
+  });
+}
+
+export function useUpdateGeofence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; name?: string; alertEnabled?: boolean; threshold?: number | null }) =>
+      emissionsApi.updateGeofence(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["geofences"] });
+    },
+  });
+}
+
+export function useDeleteGeofence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => emissionsApi.deleteGeofence(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["geofences"] });
+    },
+  });
+}
+
+// Field Submissions
+export function useFieldSubmissions(facilityId?: string) {
+  return useQuery({
+    queryKey: ["field-submissions", facilityId],
+    queryFn: () => emissionsApi.getFieldSubmissions(facilityId),
+    select: (res) => res.data,
+  });
+}
+
+export function useCreateFieldSubmission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      facilityId: string;
+      photos?: string[];
+      latitude: number;
+      longitude: number;
+      weatherConditions?: string;
+      equipmentUsed?: string;
+      notes?: string;
+      methaneReading: number;
+    }) => emissionsApi.createFieldSubmission(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["field-submissions"] });
+    },
+  });
+}
+
+export function useReviewFieldSubmission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "approved" | "rejected" }) =>
+      emissionsApi.reviewFieldSubmission(id, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["field-submissions"] });
+    },
+  });
+}
+
+// Dashboard
+export function useDashboardSummary() {
+  return useQuery({
+    queryKey: ["dashboard-summary"],
+    queryFn: () => emissionsApi.getDashboardSummary(),
+    select: (res) => res.data,
+    staleTime: 60_000,
+  });
+}
+
+export function useFacilityFilterOptions() {
+  return useQuery({
+    queryKey: ["facility-filter-options"],
+    queryFn: () => emissionsApi.getFacilityFilterOptions(),
+    select: (res) => res.data,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useEmissionAggregations() {
+  return useQuery({
+    queryKey: ["emission-aggregations"],
+    queryFn: () => emissionsApi.getEmissionAggregations(),
+    select: (res) => res.data,
+    staleTime: 2 * 60_000,
   });
 }

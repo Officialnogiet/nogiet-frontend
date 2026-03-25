@@ -2,6 +2,8 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api/v1";
 
+console.log(BASE_URL, "Base URL");
+
 const AUTH_ROUTES = ["/auth/login", "/auth/forgot-password", "/auth/verify-code", "/auth/reset-password"];
 
 export const api = axios.create({

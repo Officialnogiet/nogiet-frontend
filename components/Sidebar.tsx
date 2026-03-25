@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { DashboardView } from '../types';
+import { useAuthStore } from '../src/stores/auth.store';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -15,7 +16,15 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({
   collapsed, onToggle, activeView, onViewChange, onLogout, darkMode, onToggleDarkMode
 }) => {
-  const menuItems = [
+  const user = useAuthStore((s) => s.user);
+  const isFacilityOwner = user?.role === 'facility_owner';
+
+  const allMenuItems = [
+    {
+      id: 'DASHBOARD_HOME' as DashboardView, label: 'Dashboard', icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" /></svg>
+      )
+    },
     {
       id: 'LIVE_MAP' as DashboardView, label: 'Live Map', icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>
@@ -24,6 +33,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'DATA_COMPARISON' as DashboardView, label: 'Data Comparison', icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+      )
+    },
+    {
+      id: 'DATA_TABS' as DashboardView, label: 'Data Explorer', icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
       )
     },
     {
@@ -37,11 +51,23 @@ const Sidebar: React.FC<SidebarProps> = ({
       )
     },
     {
+      id: 'FIELD_DATA' as DashboardView, label: 'Field Data', icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+      )
+    },
+    {
       id: 'USER_MANAGEMENT' as DashboardView, label: 'User Management', icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
       )
     },
   ];
+
+  const menuItems = useMemo(() => {
+    if (isFacilityOwner) {
+      return allMenuItems.filter(item => item.id === 'FIELD_DATA');
+    }
+    return allMenuItems;
+  }, [isFacilityOwner]);
 
   const bgColor = darkMode ? 'bg-[#0b0e14]' : 'bg-white';
   const borderColor = darkMode ? 'border-[#1e2430]' : 'border-gray-100';
@@ -120,11 +146,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       <div className={`p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-50'} space-y-4`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="w-10 h-10 rounded-full bg-[#009688] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">JO</div>
+          <div className="w-10 h-10 rounded-full bg-[#009688] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+            {(user?.fullName ?? 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+          </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className={`font-bold text-sm ${darkMode ? 'text-[#009688]' : 'text-[#009688]'} truncate`}>Jerry Okechukwu</p>
-              <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'} font-medium`}>Super admin</p>
+              <p className={`font-bold text-sm text-[#009688] truncate`}>{user?.fullName ?? 'User'}</p>
+              <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'} font-medium capitalize`}>
+                {user?.role?.replace('_', ' ') ?? 'member'}
+              </p>
             </div>
           )}
         </div>

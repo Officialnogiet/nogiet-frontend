@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { EmissionUnit } from "../utils/unit-conversion";
 
 interface SettingsState {
   emailAlerts: boolean;
@@ -9,6 +10,7 @@ interface SettingsState {
   exportFormat: string;
   defaultRegion: string;
   mapStyle: "dark" | "light" | "satellite";
+  emissionUnit: EmissionUnit;
 
   setEmailAlerts: (v: boolean) => void;
   setPushNotifications: (v: boolean) => void;
@@ -17,6 +19,7 @@ interface SettingsState {
   setExportFormat: (v: string) => void;
   setDefaultRegion: (v: string) => void;
   setMapStyle: (v: "dark" | "light" | "satellite") => void;
+  setEmissionUnit: (v: EmissionUnit) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -29,6 +32,7 @@ export const useSettingsStore = create<SettingsState>()(
       exportFormat: "CSV",
       defaultRegion: "Nigeria (Full)",
       mapStyle: "dark",
+      emissionUnit: "kg/hr",
 
       setEmailAlerts: (v) => set({ emailAlerts: v }),
       setPushNotifications: (v) => set({ pushNotifications: v }),
@@ -37,6 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
       setExportFormat: (v) => set({ exportFormat: v }),
       setDefaultRegion: (v) => set({ defaultRegion: v }),
       setMapStyle: (v) => set({ mapStyle: v }),
+      setEmissionUnit: (v) => set({ emissionUnit: v }),
     }),
     { name: "nogiet-settings" },
   ),

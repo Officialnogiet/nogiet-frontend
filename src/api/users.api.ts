@@ -29,7 +29,7 @@ export const usersApi = {
   getById: (id: string) =>
     api.get<ApiResponse<User>>(`/users/${id}`).then((r) => r.data),
 
-  create: (data: { fullName: string; email: string; role: string }) =>
+  create: (data: { fullName: string; email: string; role: string; tempPassword?: string }) =>
     api.post<ApiResponse<User>>("/users", data).then((r) => r.data),
 
   update: (id: string, data: Partial<{ fullName: string; email: string; role: string }>) =>

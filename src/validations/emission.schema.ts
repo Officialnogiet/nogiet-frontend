@@ -16,6 +16,7 @@ export const emissionFiltersSchema = z.object({
   sector: z.string().optional(),
   gasType: z.string().optional(),
   instrument: z.string().optional(),
+  provider: z.string().optional(),
   minEmissionRate: z.coerce.number().optional(),
   maxEmissionRate: z.coerce.number().optional(),
   minPlumes: z.coerce.number().optional(),
@@ -25,5 +26,10 @@ export const emissionFiltersSchema = z.object({
   page: z.coerce.number().optional(),
   limit: z.coerce.number().optional(),
   bbox: z.string().optional(),
+  state: z.string().optional(),
+  lga: z.string().optional(),
+  oilBlock: z.string().optional(),
+  operator: z.string().optional(),
+  facilityType: z.string().optional(),
 });
 export type EmissionFiltersInput = z.infer<typeof emissionFiltersSchema>;
