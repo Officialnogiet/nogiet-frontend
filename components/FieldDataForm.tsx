@@ -219,7 +219,7 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
 
   return (
     <div className={`flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 ${darkMode ? "bg-[#0b0e14] text-white" : "bg-gray-50 text-gray-900"}`}>
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-420">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Field Data Collection</h1>
         <p className={`mt-1 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
           Submit on-site methane readings and review past submissions.
@@ -227,7 +227,7 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
           {/* LEFT — Form */}
-          <div className="w-full lg:w-[480px] lg:flex-shrink-0">
+          <div className="w-full lg:w-[680px] lg:flex-shrink-0">
             <div className={`rounded-2xl border p-4 shadow-sm sm:p-6 ${shell}`}>
               <h2 className="text-base font-bold tracking-tight sm:text-lg">New submission</h2>
 

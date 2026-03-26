@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 
 const ROLES = [
-  { label: 'Member', value: 'member' },
-  { label: 'Admin', value: 'admin' },
   { label: 'Super Admin', value: 'super_admin' },
+  { label: 'Admin', value: 'admin' },
+  { label: 'Regulator', value: 'regulator' },
+  { label: 'Facility Owner (Field Agent)', value: 'facility_owner' },
+  { label: 'Viewer', value: 'viewer' },
 ];
 
 function displayRoleToValue(display: string): string {

@@ -117,7 +117,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
 
   const filteredSortedSatellite = useMemo(() => {
     const q = searchSat.trim().toLowerCase();
-    let rows = features.filter((f) => {
+    let rows = features.filter((f: any) => {
       if (!q) return true;
       const blob = [
         f.name,
@@ -180,7 +180,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
 
   const filteredSortedRates = useMemo(() => {
     const q = searchRates.trim().toLowerCase();
-    let rows = features.filter((f) => {
+    let rows = features.filter((f: any) => {
       if (!q) return true;
       const blob = [f.name, f.provider, f.emissionRate, f.gas, f.persistence, f.plumeCount]
         .map((x) => String(x ?? ""))
@@ -351,7 +351,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSortedSatellite.map((f) => (
+                    {filteredSortedSatellite.map((f: any) => (
                       <tr key={f.id} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
                         <td className={`px-3 py-2 font-medium ${tdCls}`}>{f.name}</td>
                         <td className={`px-3 py-2 ${tdCls}`}>{providerLabel(f.provider)}</td>
@@ -461,7 +461,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSortedRates.map((f) => (
+                    {filteredSortedRates.map((f: any) => (
                       <tr key={f.id} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
                         <td className={`px-3 py-2 font-medium ${tdCls}`}>{f.name}</td>
                         <td className={`px-3 py-2 ${tdCls}`}>{providerLabel(f.provider)}</td>

@@ -16,6 +16,7 @@ import SettingsPage from '../components/SettingsPage';
 import DashboardHome from '../components/DashboardHome';
 import FieldDataForm from '../components/FieldDataForm';
 import ScreenGuide from '../components/ScreenGuide';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 interface DashboardProps {
   onNavigate: (screen: AuthScreen) => void;
@@ -41,28 +42,56 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   };
 
   const renderContent = () => {
+    let content: React.ReactNode;
+    let label = 'Screen';
+
     switch (activeView) {
       case 'DASHBOARD_HOME':
-        return <DashboardHome darkMode={darkMode} />;
+        content = <DashboardHome darkMode={darkMode} />;
+        label = 'Dashboard';
+        break;
       case 'LIVE_MAP':
-        return <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} filters={mapFilters} />;
+        content = <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} filters={mapFilters} />;
+        label = 'Live Map';
+        break;
       case 'DATA_COMPARISON':
-        return <DataComparison darkMode={darkMode} />;
+        content = <DataComparison darkMode={darkMode} />;
+        label = 'Data Comparison';
+        break;
       case 'DATA_TABS':
-        return <DataTabs darkMode={darkMode} />;
+        content = <DataTabs darkMode={darkMode} />;
+        label = 'Data Tabs';
+        break;
       case 'MANAGE_DATA':
-        return <ManageData darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} />;
+        content = <ManageData darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} />;
+        label = 'Manage Data';
+        break;
       case 'ALERTS':
-        return <AlertsDashboard darkMode={darkMode} />;
+        content = <AlertsDashboard darkMode={darkMode} />;
+        label = 'Alerts';
+        break;
       case 'FIELD_DATA':
-        return <FieldDataForm darkMode={darkMode} />;
+        content = <FieldDataForm darkMode={darkMode} />;
+        label = 'Field Data';
+        break;
       case 'USER_MANAGEMENT':
-        return <UserManagement darkMode={darkMode} />;
+        content = <UserManagement darkMode={darkMode} />;
+        label = 'User Management';
+        break;
       case 'SETTINGS':
-        return <SettingsPage darkMode={darkMode} />;
+        content = <SettingsPage darkMode={darkMode} />;
+        label = 'Settings';
+        break;
       default:
-        return <DashboardHome darkMode={darkMode} />;
+        content = <DashboardHome darkMode={darkMode} />;
+        label = 'Dashboard';
     }
+
+    return (
+      <ErrorBoundary darkMode={darkMode} screenName={label}>
+        {content}
+      </ErrorBoundary>
+    );
   };
 
   return (

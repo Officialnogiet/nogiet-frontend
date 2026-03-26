@@ -12,7 +12,8 @@ import EmissionSummaryCard from './live-map/EmissionSummaryCard';
 import FacilityPopup from './live-map/FacilityPopup';
 import FacilityDetailModal from './live-map/FacilityDetailModal';
 import MapDataLoader from './live-map/MapDataLoader';
-import LayerTogglePanel, { DEFAULT_LAYERS, type MapLayerState } from './live-map/LayerTogglePanel';
+import LayerTogglePanel from './live-map/LayerTogglePanel';
+import { useDashboardStore, DEFAULT_LAYERS, type MapLayerState } from '../src/stores/dashboard.store';
 import type { FacilityData } from './live-map/FacilityPopup';
 import { DEFAULT_FILTERS, type MapFilters } from './FilterPanel';
 import { useFacilities, useAlerts, useGroundData, useSatelliteSources, useUnreadAlertCount, useMarkAllAlertsRead } from '../src/hooks/useEmissions';
@@ -20,6 +21,11 @@ import { emissionsApi } from '../src/api/emissions.api';
 import { useSocketUpdates } from '../src/hooks/useSocket';
 import { useSatelliteStore } from '../src/stores/satellite.store';
 import { useSettingsStore } from '../src/stores/settings.store';
+import {
+  addStatesLayer, removeStatesLayer,
+  addLGAsLayer, removeLGAsLayer,
+  addPipelinesLayer, removePipelinesLayer,
+} from './live-map/boundaryLayers';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -47,6 +53,96 @@ const GROUND_SCATTER_DOT = 'ground-scatter-dot';
 const HOVER_CONNECTOR_SRC = 'hover-connector-src';
 const HOVER_CONNECTOR_LINE = 'hover-connector-line';
 const HOVER_CONNECTOR_DOT = 'hover-connector-dot';
+const OIL_BLOCK_SOURCE = 'oil-blocks-source';
+const OIL_BLOCK_FILL = 'oil-blocks-fill';
+const OIL_BLOCK_BORDER = 'oil-blocks-border';
+const OIL_BLOCK_LABEL = 'oil-blocks-label';
+
+const OIL_BLOCK_COLORS = [
+  '#f59e0b', '#3b82f6', '#ef4444', '#10b981', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1',
+];
+
+function createCircleCoords(lng: number, lat: number, radius: number, segments: number): [number, number][] {
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * 2 * Math.PI;
+    coords.push([lng + radius * Math.cos(angle), lat + radius * Math.sin(angle) * 0.85]);
+  }
+  return coords;
+}
+
+function convexHull(points: [number, number][]): [number, number][] {
+  if (points.length <= 1) return createCircleCoords(points[0]?.[0] ?? 0, points[0]?.[1] ?? 0, 0.15, 24);
+  if (points.length === 2) {
+    const [a, b] = points;
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = (-dy / len) * 0.06, ny = (dx / len) * 0.06;
+    return [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny], [a[0] + nx, a[1] + ny]];
+  }
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: [number, number][] = [];
+  for (const p of sorted) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
+  const upper: [number, number][] = [];
+  for (const p of [...sorted].reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
+  lower.pop(); upper.pop();
+  const hull = lower.concat(upper);
+  hull.push(hull[0]);
+  return hull;
+}
+
+function bufferPolygon(coords: [number, number][], buffer: number): [number, number][] {
+  const n = coords.length - 1;
+  let cx = 0, cy = 0;
+  for (let i = 0; i < n; i++) { cx += coords[i][0]; cy += coords[i][1]; }
+  cx /= n; cy /= n;
+  return coords.map(([x, y]) => {
+    const dx = x - cx, dy = y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) return [x + buffer, y] as [number, number];
+    const scale = (dist + buffer) / dist;
+    return [cx + dx * scale, cy + dy * scale] as [number, number];
+  });
+}
+
+function buildOilBlockGeoJSON(facilities: any[]): GeoJSON.FeatureCollection {
+  const groups = new Map<string, any[]>();
+  facilities.forEach(f => {
+    const block = f.oilBlock;
+    if (!block) return;
+    if (!groups.has(block)) groups.set(block, []);
+    groups.get(block)!.push(f);
+  });
+
+  const features: GeoJSON.Feature[] = [];
+  let colorIdx = 0;
+  groups.forEach((facs, blockName) => {
+    const color = OIL_BLOCK_COLORS[colorIdx % OIL_BLOCK_COLORS.length];
+    const id = colorIdx;
+    colorIdx++;
+    if (facs.length === 1) {
+      const f = facs[0];
+      features.push({
+        type: 'Feature', id,
+        geometry: { type: 'Polygon', coordinates: [createCircleCoords(f.longitude, f.latitude, 0.45, 32)] },
+        properties: { name: blockName, color, facilityCount: 1 },
+      });
+    } else {
+      const points = facs.map((f: any) => [f.longitude, f.latitude] as [number, number]);
+      const hull = convexHull(points);
+      const buffered = bufferPolygon(hull, 0.25);
+      features.push({
+        type: 'Feature', id,
+        geometry: { type: 'Polygon', coordinates: [buffered] },
+        properties: { name: blockName, color, facilityCount: facs.length },
+      });
+    }
+  });
+  return { type: 'FeatureCollection', features };
+}
 
 function snapBBox(w: number, s: number, e: number, n: number): string {
   return `${Math.floor(w)},${Math.floor(s)},${Math.ceil(e)},${Math.ceil(n)}`;
@@ -170,12 +266,12 @@ function buildSatelliteGeoJSON(features: any[]): GeoJSON.FeatureCollection {
   };
 }
 
-function getMapStyleUrl(mapStyle: string, darkMode: boolean): string {
+function getMapStyleUrl(mapStyle: string): string {
   switch (mapStyle) {
     case 'satellite': return 'mapbox://styles/mapbox/satellite-streets-v12';
     case 'light': return 'mapbox://styles/mapbox/light-v11';
     case 'dark': return 'mapbox://styles/mapbox/dark-v11';
-    default: return darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
+    default: return 'mapbox://styles/mapbox/dark-v11';
   }
 }
 
@@ -213,9 +309,16 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const { mapStyle } = useSettingsStore();
   const mapFilters = filters ?? DEFAULT_FILTERS;
   const prevFiltersRef = useRef(mapFilters);
+  const darkModeRef = useRef(darkMode);
+  darkModeRef.current = darkMode;
+  const mapStyleRef = useRef(mapStyle);
+  mapStyleRef.current = mapStyle;
+  const filteredSatRef = useRef<any[]>([]);
 
   const [showLayerPanel, setShowLayerPanel] = useState(false);
-  const [mapLayers, setMapLayers] = useState<MapLayerState>(DEFAULT_LAYERS);
+  const mapLayers = useDashboardStore((s) => s.mapLayers);
+  const toggleMapLayer = useDashboardStore((s) => s.toggleMapLayer);
+  const [styleReloadCount, setStyleReloadCount] = useState(0);
 
   useSocketUpdates();
 
@@ -314,6 +417,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     });
     return features;
   }, [globalSatSources, searchQuery, mapFilters]);
+  filteredSatRef.current = filteredSatellite;
 
   const totalSources = filteredFacilities.length + filteredSatellite.length;
   const totalPlumes = filteredSatellite.reduce((sum: number, s: any) => sum + (s.plumeCount ?? s.plume_count ?? 0), 0);
@@ -450,9 +554,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     }
     const m = map.current;
     if (!m) return;
-    if (m.getLayer(PULSE_LAYER)) m.removeLayer(PULSE_LAYER);
-    if (m.getLayer(PULSE_OUTER_LAYER)) m.removeLayer(PULSE_OUTER_LAYER);
-    if (m.getSource(PULSE_SOURCE)) m.removeSource(PULSE_SOURCE);
+    try {
+      if (m.getLayer(PULSE_LAYER)) m.removeLayer(PULSE_LAYER);
+      if (m.getLayer(PULSE_OUTER_LAYER)) m.removeLayer(PULSE_OUTER_LAYER);
+      if (m.getSource(PULSE_SOURCE)) m.removeSource(PULSE_SOURCE);
+    } catch { /* map destroyed */ }
   }
 
   const handleExportCSV = () => {
@@ -542,27 +648,34 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     setActiveBBox(bbox);
   }, []);
 
-  useEffect(() => {
-    if (map.current) {
-      map.current.setStyle(getMapStyleUrl(mapStyle, darkMode));
-    }
-  }, [darkMode, mapStyle]);
-
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-    const m = map.current;
-
-    const onStyleData = () => {
-      if (breatheAnimRef.current) { cancelAnimationFrame(breatheAnimRef.current); breatheAnimRef.current = null; }
-      satLayerReady.current = false;
-      groundLayerReady.current = false;
+  const rebuildAllLayers = useCallback((m: mapboxgl.Map) => {
+    if (breatheAnimRef.current) { cancelAnimationFrame(breatheAnimRef.current); breatheAnimRef.current = null; }
+    satLayerReady.current = false;
+    groundLayerReady.current = false;
+    try {
       initSatelliteLayers(m);
-      updateSatelliteSource(m, filteredSatellite);
-    };
+      updateSatelliteSource(m, filteredSatRef.current);
+    } catch { /* ignore */ }
+    setStyleReloadCount(c => c + 1);
 
-    m.on('style.load', onStyleData);
-    return () => { m.off('style.load', onStyleData); };
-  }, [mapLoaded, darkMode, filteredSatellite]);
+    const layers = useDashboardStore.getState().mapLayers;
+    const isDark = mapStyleRef.current !== 'light';
+    if (layers.states) addStatesLayer(m, undefined, isDark);
+    if (layers.lgas) addLGAsLayer(m, undefined, isDark);
+    if (layers.pipelines) addPipelinesLayer(m, undefined, isDark);
+  }, []);
+
+  const styleInitRef = useRef(false);
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+    if (!styleInitRef.current) {
+      styleInitRef.current = true;
+      return;
+    }
+    m.once('style.load', () => rebuildAllLayers(m));
+    m.setStyle(getMapStyleUrl(mapStyle));
+  }, [mapStyle, mapLoaded, rebuildAllLayers]);
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -571,7 +684,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: getMapStyleUrl(mapStyle, darkMode),
+        style: getMapStyleUrl(mapStyle),
         center: [8.6753, 9.082], zoom: 5.8,
         attributionControl: false, failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: true,
       });
@@ -582,6 +695,12 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         initSatelliteLayers(m);
         setupSatelliteClickHandler(m);
         setupHoverConnectors(m);
+
+        const layers = useDashboardStore.getState().mapLayers;
+        const isDark = mapStyleRef.current !== 'light';
+        if (layers.states) addStatesLayer(m, undefined, isDark);
+        if (layers.lgas) addLGAsLayer(m, undefined, isDark);
+        if (layers.pipelines) addPipelinesLayer(m, undefined, isDark);
       });
 
       m.on('error', (e) => {
@@ -623,6 +742,148 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     });
   }, [mapLoaded, mapLayers.emissionHotspots]);
 
+  // Oil Blocks layer
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+
+    const removeOilBlockLayers = () => {
+      try {
+        [OIL_BLOCK_LABEL, OIL_BLOCK_BORDER, OIL_BLOCK_FILL].forEach(id => {
+          if (m.getLayer(id)) m.removeLayer(id);
+        });
+        if (m.getSource(OIL_BLOCK_SOURCE)) m.removeSource(OIL_BLOCK_SOURCE);
+      } catch { /* map already destroyed */ }
+    };
+
+    if (!mapLayers.oilBlocks) {
+      removeOilBlockLayers();
+      return;
+    }
+
+    const geojson = buildOilBlockGeoJSON(facilities as any[]);
+    if (geojson.features.length === 0) {
+      removeOilBlockLayers();
+      return;
+    }
+
+    if (m.getSource(OIL_BLOCK_SOURCE)) {
+      (m.getSource(OIL_BLOCK_SOURCE) as mapboxgl.GeoJSONSource).setData(geojson);
+      return;
+    }
+
+    m.addSource(OIL_BLOCK_SOURCE, { type: 'geojson', data: geojson });
+
+    const firstLayerBefore = m.getLayer(SAT_LAYER_GLOW) ? SAT_LAYER_GLOW : undefined;
+
+    m.addLayer({
+      id: OIL_BLOCK_FILL, type: 'fill', source: OIL_BLOCK_SOURCE,
+      paint: {
+        'fill-color': ['get', 'color'],
+        'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.35, 0.15],
+      },
+    }, firstLayerBefore);
+
+    m.addLayer({
+      id: OIL_BLOCK_BORDER, type: 'line', source: OIL_BLOCK_SOURCE,
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 4, 2],
+        'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, 0.6],
+        'line-dasharray': [3, 2],
+      },
+    }, firstLayerBefore);
+
+    m.addLayer({
+      id: OIL_BLOCK_LABEL, type: 'symbol', source: OIL_BLOCK_SOURCE,
+      layout: {
+        'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['get', 'facilityCount']], ' facilities'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 4, 10, 7, 13, 10, 15],
+        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+        'text-allow-overlap': false,
+      },
+      paint: {
+        'text-color': ['get', 'color'],
+        'text-halo-color': 'rgba(0,0,0,0.8)',
+        'text-halo-width': 1.5,
+        'text-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1],
+      },
+    });
+
+    let hoveredId: string | number | null = null;
+    const blockPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: 'plume-popup' });
+
+    const onMouseMove = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+      if (!e.features?.length) return;
+      const feat = e.features[0];
+      if (hoveredId !== null) m.setFeatureState({ source: OIL_BLOCK_SOURCE, id: hoveredId }, { hover: false });
+      hoveredId = feat.id ?? null;
+      if (hoveredId !== null) m.setFeatureState({ source: OIL_BLOCK_SOURCE, id: hoveredId }, { hover: true });
+      m.getCanvas().style.cursor = 'pointer';
+      const props = feat.properties!;
+      blockPopup.setLngLat(e.lngLat)
+        .setHTML(`<div style="font-size:12px;font-weight:700;line-height:1.6;padding:2px 0;"><div style="color:${props.color};">${props.name}</div><div style="color:#e2e8f0;font-size:11px;">${props.facilityCount} ${Number(props.facilityCount) === 1 ? 'facility' : 'facilities'}</div></div>`)
+        .addTo(m);
+    };
+
+    const onMouseLeave = () => {
+      if (hoveredId !== null) m.setFeatureState({ source: OIL_BLOCK_SOURCE, id: hoveredId }, { hover: false });
+      hoveredId = null;
+      m.getCanvas().style.cursor = '';
+      blockPopup.remove();
+    };
+
+    m.on('mousemove', OIL_BLOCK_FILL, onMouseMove);
+    m.on('mouseleave', OIL_BLOCK_FILL, onMouseLeave);
+
+    return () => {
+      m.off('mousemove', OIL_BLOCK_FILL, onMouseMove);
+      m.off('mouseleave', OIL_BLOCK_FILL, onMouseLeave);
+      blockPopup.remove();
+    };
+  }, [mapLoaded, mapLayers.oilBlocks, facilities, styleReloadCount]);
+
+  // --- Boundary layers: only respond to checkbox toggles ---
+  // Style reloads are handled by onStyleData directly (no effect race).
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+    const isDark = mapStyleRef.current !== 'light';
+    try {
+      if (mapLayers.states) {
+        addStatesLayer(m, undefined, isDark);
+      } else {
+        removeStatesLayer(m);
+      }
+    } catch { /* map destroyed */ }
+  }, [mapLoaded, mapLayers.states]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+    const isDark = mapStyleRef.current !== 'light';
+    try {
+      if (mapLayers.lgas) {
+        addLGAsLayer(m, undefined, isDark);
+      } else {
+        removeLGAsLayer(m);
+      }
+    } catch { /* map destroyed */ }
+  }, [mapLoaded, mapLayers.lgas]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+    const isDark = mapStyleRef.current !== 'light';
+    try {
+      if (mapLayers.pipelines) {
+        addPipelinesLayer(m, undefined, isDark);
+      } else {
+        removePipelinesLayer(m);
+      }
+    } catch { /* map destroyed */ }
+  }, [mapLoaded, mapLayers.pipelines]);
+
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
 
@@ -642,7 +903,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const countLabel = gdCount > 0
         ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:${dotSize > 24 ? 11 : 9}px;font-weight:800;color:white;z-index:3;line-height:1;">${gdCount}</span>`
         : '';
-      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${dotSize}px;height:${dotSize}px;background:#14b8a6;border-radius:50%;border:2px solid white;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${countLabel}</div><span style="position:absolute;top:100%;margin-top:6px;font-size:11px;font-weight:700;color:${darkMode ? '#9ca3af' : '#1f2937'};white-space:nowrap;pointer-events:none;">${f.name}</span></div>`;
+      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${dotSize}px;height:${dotSize}px;background:#14b8a6;border-radius:50%;border:2px solid white;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${countLabel}</div><span style="position:absolute;top:100%;margin-top:6px;font-size:11px;font-weight:700;color:${darkMode ? '#9ca3af' : '#0f766e'};white-space:nowrap;pointer-events:none;">${f.name}</span></div>`;
       el.addEventListener('click', (e) => { e.stopPropagation(); handleFacilityClick(facility); });
       const marker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([f.longitude, f.latitude]).addTo(map.current!);
       facilityMarkersRef.current.push(marker);
@@ -841,21 +1102,20 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   }, [selectedFacility]);
 
   function clearPlumeLayers(m: mapboxgl.Map) {
-    [PLUME_LAYER_DOT, PLUME_LAYER_GLOW, PLUME_LAYER_LINE].forEach(id => {
-      if (m.getLayer(id)) m.removeLayer(id);
-    });
-    if (m.getSource(PLUME_SOURCE)) m.removeSource(PLUME_SOURCE);
-    // Restore scatter layers
-    [SCATTER_DOT, SCATTER_GLOW, SCATTER_HAZE, GROUND_SCATTER_DOT, GROUND_SCATTER_GLOW, GROUND_SCATTER_HAZE].forEach(id => {
-      if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', 'visible');
-    });
-    // Remove satellite source filters (show all sources again)
-    [SAT_LAYER_POINT, SAT_LAYER_GLOW, SAT_COUNT_LABEL].forEach(id => {
-      if (m.getLayer(id)) m.setFilter(id, null);
-    });
-    if (m.getLayer(SAT_COUNT_LABEL)) m.setFilter(SAT_COUNT_LABEL, ['>', ['get', 'plume_count'], 1]);
-    if (m.getLayer(SAT_LAYER_LABEL)) m.setFilter(SAT_LAYER_LABEL, null);
-    // Restore facility DOM markers
+    try {
+      [PLUME_LAYER_DOT, PLUME_LAYER_GLOW, PLUME_LAYER_LINE].forEach(id => {
+        if (m.getLayer(id)) m.removeLayer(id);
+      });
+      if (m.getSource(PLUME_SOURCE)) m.removeSource(PLUME_SOURCE);
+      [SCATTER_DOT, SCATTER_GLOW, SCATTER_HAZE, GROUND_SCATTER_DOT, GROUND_SCATTER_GLOW, GROUND_SCATTER_HAZE].forEach(id => {
+        if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', 'visible');
+      });
+      [SAT_LAYER_POINT, SAT_LAYER_GLOW, SAT_COUNT_LABEL].forEach(id => {
+        if (m.getLayer(id)) m.setFilter(id, null);
+      });
+      if (m.getLayer(SAT_COUNT_LABEL)) m.setFilter(SAT_COUNT_LABEL, ['>', ['get', 'plume_count'], 1]);
+      if (m.getLayer(SAT_LAYER_LABEL)) m.setFilter(SAT_LAYER_LABEL, null);
+    } catch { /* map destroyed */ }
     facilityMarkersRef.current.forEach(mk => {
       const el = mk.getElement();
       el.style.opacity = '1';
@@ -864,12 +1124,14 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   }
 
   function cleanupAllSatLayers(m: mapboxgl.Map) {
-    [GROUND_SCATTER_DOT, GROUND_SCATTER_GLOW, GROUND_SCATTER_HAZE, SCATTER_DOT, SCATTER_GLOW, SCATTER_HAZE, SAT_LAYER_LABEL, SAT_COUNT_LABEL, SAT_LAYER_POINT, SAT_LAYER_GLOW].forEach(id => {
-      if (m.getLayer(id)) m.removeLayer(id);
-    });
-    if (m.getSource(GROUND_SCATTER_SRC)) m.removeSource(GROUND_SCATTER_SRC);
-    if (m.getSource(SCATTER_SOURCE)) m.removeSource(SCATTER_SOURCE);
-    if (m.getSource(SAT_SOURCE_ID)) m.removeSource(SAT_SOURCE_ID);
+    try {
+      [GROUND_SCATTER_DOT, GROUND_SCATTER_GLOW, GROUND_SCATTER_HAZE, SCATTER_DOT, SCATTER_GLOW, SCATTER_HAZE, SAT_LAYER_LABEL, SAT_COUNT_LABEL, SAT_LAYER_POINT, SAT_LAYER_GLOW].forEach(id => {
+        if (m.getLayer(id)) m.removeLayer(id);
+      });
+      if (m.getSource(GROUND_SCATTER_SRC)) m.removeSource(GROUND_SCATTER_SRC);
+      if (m.getSource(SCATTER_SOURCE)) m.removeSource(SCATTER_SOURCE);
+      if (m.getSource(SAT_SOURCE_ID)) m.removeSource(SAT_SOURCE_ID);
+    } catch { /* map destroyed */ }
     groundLayerReady.current = false;
   }
 
@@ -1131,9 +1393,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   }
 
   function clearHoverConnectors(m: mapboxgl.Map) {
-    if (m.getLayer(HOVER_CONNECTOR_DOT)) m.removeLayer(HOVER_CONNECTOR_DOT);
-    if (m.getLayer(HOVER_CONNECTOR_LINE)) m.removeLayer(HOVER_CONNECTOR_LINE);
-    if (m.getSource(HOVER_CONNECTOR_SRC)) m.removeSource(HOVER_CONNECTOR_SRC);
+    try {
+      if (m.getLayer(HOVER_CONNECTOR_DOT)) m.removeLayer(HOVER_CONNECTOR_DOT);
+      if (m.getLayer(HOVER_CONNECTOR_LINE)) m.removeLayer(HOVER_CONNECTOR_LINE);
+      if (m.getSource(HOVER_CONNECTOR_SRC)) m.removeSource(HOVER_CONNECTOR_SRC);
+    } catch { /* map destroyed */ }
   }
 
   function setupHoverConnectors(m: mapboxgl.Map) {
@@ -1301,15 +1565,15 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         darkMode={darkMode}
         layers={mapLayers}
         onToggle={(layer) => {
-          setMapLayers(prev => {
-            const next = { ...prev, [layer]: !prev[layer] };
-            if (layer === 'satelliteView' && map.current) {
-              map.current.setStyle(next.satelliteView
-                ? 'mapbox://styles/mapbox/satellite-streets-v12'
-                : getMapStyleUrl(mapStyle, darkMode));
-            }
-            return next;
-          });
+          if (layer === 'satelliteView' && map.current) {
+            const m = map.current;
+            const willEnable = !mapLayers.satelliteView;
+            m.once('style.load', () => rebuildAllLayers(m));
+            m.setStyle(willEnable
+              ? 'mapbox://styles/mapbox/satellite-streets-v12'
+              : getMapStyleUrl(mapStyle));
+          }
+          toggleMapLayer(layer);
         }}
         visible={showLayerPanel}
         onClose={() => setShowLayerPanel(false)}

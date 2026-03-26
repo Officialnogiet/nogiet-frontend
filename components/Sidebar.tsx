@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { DashboardView } from '../types';
 import { useAuthStore } from '../src/stores/auth.store';
+import { useSettingsStore } from '../src/stores/settings.store';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -18,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const user = useAuthStore((s) => s.user);
   const isFacilityOwner = user?.role === 'facility_owner';
+  const { mapStyle, setMapStyle } = useSettingsStore();
 
   const allMenuItems = [
     {
@@ -138,6 +140,30 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all ${darkMode ? 'left-6' : 'left-1'}`}></div>
                 </button>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-3 py-2.5">
+              <div className="flex items-center gap-3">
+                <svg className={`w-5 h-5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                {!collapsed && <span className={`font-medium text-sm ${darkMode ? 'text-white' : 'text-gray-500'}`}>Map Theme</span>}
+              </div>
+              {!collapsed && (
+                <div className="flex gap-1">
+                  {([['dark', 'D'], ['light', 'L'], ['satellite', 'S']] as const).map(([style, label]) => (
+                    <button
+                      key={style}
+                      onClick={() => setMapStyle(style)}
+                      className={`w-7 h-5 rounded text-[10px] font-bold transition-all ${
+                        mapStyle === style
+                          ? 'bg-[#009688] text-white'
+                          : darkMode ? 'bg-[#1e2430] text-gray-400 hover:bg-[#2a3040]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                      title={style.charAt(0).toUpperCase() + style.slice(1)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>

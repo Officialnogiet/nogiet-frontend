@@ -24,8 +24,8 @@ const ManageData: React.FC<ManageDataProps> = ({ darkMode }) => {
           Add facilities and manage emission data entries.
         </p>
 
-        <div className="mt-8 flex flex-col lg:flex-row gap-10">
-          <div className="w-full lg:w-[420px]">
+        <div className="mt-6 flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-[520px]">
             <AddFacilityForm darkMode={!!darkMode} />
           </div>
           <div className="flex-1">

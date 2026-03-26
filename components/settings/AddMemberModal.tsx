@@ -9,9 +9,10 @@ interface AddMemberModalProps {
 }
 
 const ROLES = [
-  { label: 'Member', value: 'member' },
   { label: 'Admin', value: 'admin' },
+  { label: 'Regulator', value: 'regulator' },
   { label: 'Facility Owner (Field Agent)', value: 'facility_owner' },
+  { label: 'Viewer', value: 'viewer' },
   { label: 'Super Admin', value: 'super_admin' },
 ];
 

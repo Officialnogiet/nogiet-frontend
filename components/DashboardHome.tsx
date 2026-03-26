@@ -23,14 +23,14 @@ import {
   getUnitLabel,
 } from "../src/utils/unit-conversion";
 
-const TREND_PLACEHOLDER_KG_HR = [
-  { day: "Mon", valueKgHr: 42 },
-  { day: "Tue", valueKgHr: 38 },
-  { day: "Wed", valueKgHr: 55 },
-  { day: "Thu", valueKgHr: 48 },
-  { day: "Fri", valueKgHr: 62 },
-  { day: "Sat", valueKgHr: 51 },
-  { day: "Sun", valueKgHr: 58 },
+const TREND_FALLBACK = [
+  { day: "Mon", valueKgHr: 0 },
+  { day: "Tue", valueKgHr: 0 },
+  { day: "Wed", valueKgHr: 0 },
+  { day: "Thu", valueKgHr: 0 },
+  { day: "Fri", valueKgHr: 0 },
+  { day: "Sat", valueKgHr: 0 },
+  { day: "Sun", valueKgHr: 0 },
 ];
 
 interface DashboardHomeProps {
@@ -69,14 +69,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
       .slice(0, 5);
   }, [data?.recentAlerts]);
 
-  const trendData = useMemo(
-    () =>
-      TREND_PLACEHOLDER_KG_HR.map((d) => ({
+  const hasLiveTrend = (data?.dailyTrend ?? []).length > 0;
+
+  const trendData = useMemo(() => {
+    if (hasLiveTrend) {
+      return (data!.dailyTrend as { day: string; totalRate: number }[]).map((d) => ({
         day: d.day,
-        value: convertEmission(d.valueKgHr, emissionUnit),
-      })),
-    [emissionUnit],
-  );
+        value: convertEmission(d.totalRate, emissionUnit),
+      }));
+    }
+    return TREND_FALLBACK.map((d) => ({
+      day: d.day,
+      value: convertEmission(d.valueKgHr, emissionUnit),
+    }));
+  }, [emissionUnit, hasLiveTrend, data?.dailyTrend]);
 
   const cardBase = dm
     ? "rounded-xl border border-[#1e2430] bg-[#1a1f2b] text-white shadow-lg shadow-black/20"
@@ -180,11 +186,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
       <div className={cardBase}>
         <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
           <h2 className={`text-lg font-semibold ${sectionTitle}`}>
-            Emission trend (sample)
+            Emission trend (7 days)
           </h2>
           <p className={`mt-1 text-sm ${muted}`}>
-            Placeholder time series ({getUnitLabel(emissionUnit)}) until live data
-            is available.
+            {hasLiveTrend
+              ? `Alert emission rates aggregated daily (${getUnitLabel(emissionUnit)})`
+              : `No alert data yet — chart will populate as emissions are detected (${getUnitLabel(emissionUnit)})`}
           </p>
         </div>
         <div className={`h-72 p-4 ${innerMutedBg}`}>
@@ -264,7 +271,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
                     </td>
                   </tr>
                 ) : (
-                  summary.topFacilities.map((row) => (
+                  summary.topFacilities.map((row: any) => (
                     <tr
                       key={row.facilityId}
                       className={`border-b ${tableRowBorder} last:border-0`}

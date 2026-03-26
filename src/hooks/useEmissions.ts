@@ -3,11 +3,31 @@ import { emissionsApi } from "../api/emissions.api";
 import type { EmissionFilters } from "../api/emissions.api";
 import { submitGroundDataSchema, emissionFiltersSchema } from "../validations/emission.schema";
 import type { SubmitGroundDataInput, EmissionFiltersInput } from "../validations/emission.schema";
+import {
+  cacheFacilities, getCachedFacilities,
+  cacheAlerts, getCachedAlerts,
+  cacheEmissions, getCachedEmissions,
+  queuePendingSubmission, isOffline,
+} from "../utils/offline-storage";
 
 export function useFacilities(filters?: Partial<EmissionFilters>) {
   return useQuery({
     queryKey: ["facilities", filters],
-    queryFn: () => emissionsApi.getFacilities(filters),
+    queryFn: async () => {
+      try {
+        const res = await emissionsApi.getFacilities(filters);
+        if (res.data && !filters) {
+          cacheFacilities(res.data).catch(() => {});
+        }
+        return res;
+      } catch (err) {
+        if (isOffline() && !filters) {
+          const cached = await getCachedFacilities();
+          if (cached.length) return { data: cached };
+        }
+        throw err;
+      }
+    },
     select: (res) => res.data,
   });
 }
@@ -15,7 +35,21 @@ export function useFacilities(filters?: Partial<EmissionFilters>) {
 export function useAlerts(limit = 20) {
   return useQuery({
     queryKey: ["alerts", limit],
-    queryFn: () => emissionsApi.getAlerts(limit),
+    queryFn: async () => {
+      try {
+        const res = await emissionsApi.getAlerts(limit);
+        if (res.data) {
+          cacheAlerts(res.data).catch(() => {});
+        }
+        return res;
+      } catch (err) {
+        if (isOffline()) {
+          const cached = await getCachedAlerts();
+          if (cached.length) return { data: cached.slice(0, limit) };
+        }
+        throw err;
+      }
+    },
     select: (res) => res.data,
   });
 }
@@ -31,9 +65,22 @@ export function useEmissionStats() {
 export function useSatelliteSources(filters: EmissionFiltersInput) {
   return useQuery({
     queryKey: ["satellite-sources", filters],
-    queryFn: () => {
+    queryFn: async () => {
       const parsed = emissionFiltersSchema.parse(filters);
-      return emissionsApi.getSatelliteSources(parsed);
+      const cacheKey = `sat-${JSON.stringify(parsed)}`;
+      try {
+        const res = await emissionsApi.getSatelliteSources(parsed);
+        if (res.data) {
+          cacheEmissions(cacheKey, res.data).catch(() => {});
+        }
+        return res;
+      } catch (err) {
+        if (isOffline()) {
+          const cached = await getCachedEmissions(cacheKey);
+          if (cached) return { data: cached };
+        }
+        throw err;
+      }
     },
     select: (res) => res.data,
     enabled: !!filters,
@@ -83,8 +130,12 @@ export function useSubmitGroundData() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: SubmitGroundDataInput) => {
+    mutationFn: async (data: SubmitGroundDataInput) => {
       const parsed = submitGroundDataSchema.parse(data);
+      if (isOffline()) {
+        await queuePendingSubmission(parsed);
+        return { data: null, message: "Queued offline — will sync when online" };
+      }
       return emissionsApi.submitGroundData(parsed);
     },
     onSuccess: () => {
@@ -225,7 +276,7 @@ export function useFieldSubmissions(facilityId?: string) {
 export function useCreateFieldSubmission() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
+    mutationFn: async (data: {
       facilityId: string;
       photos?: string[];
       latitude: number;
@@ -234,7 +285,13 @@ export function useCreateFieldSubmission() {
       equipmentUsed?: string;
       notes?: string;
       methaneReading: number;
-    }) => emissionsApi.createFieldSubmission(data),
+    }) => {
+      if (isOffline()) {
+        await queuePendingSubmission({ ...data, type: "field-submission" });
+        return { data: null, message: "Queued offline — will sync when online" };
+      }
+      return emissionsApi.createFieldSubmission(data);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["field-submissions"] });
     },
@@ -256,7 +313,21 @@ export function useReviewFieldSubmission() {
 export function useDashboardSummary() {
   return useQuery({
     queryKey: ["dashboard-summary"],
-    queryFn: () => emissionsApi.getDashboardSummary(),
+    queryFn: async () => {
+      try {
+        const res = await emissionsApi.getDashboardSummary();
+        if (res.data) {
+          cacheEmissions("dashboard-summary", res.data).catch(() => {});
+        }
+        return res;
+      } catch (err) {
+        if (isOffline()) {
+          const cached = await getCachedEmissions("dashboard-summary");
+          if (cached) return { data: cached };
+        }
+        throw err;
+      }
+    },
     select: (res) => res.data,
     staleTime: 60_000,
   });

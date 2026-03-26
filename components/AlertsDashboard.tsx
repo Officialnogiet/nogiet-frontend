@@ -43,7 +43,7 @@ const AlertsDashboard: React.FC<AlertsDashboardProps> = ({ darkMode = true }) =>
 
   return (
     <div className={`flex-1 overflow-y-auto p-10 transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'}`}>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>

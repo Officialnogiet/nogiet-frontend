@@ -1,23 +1,8 @@
 import React from 'react';
 import { Layers, Map, Grid3x3, Hexagon, Activity, Thermometer } from 'lucide-react';
+import { type MapLayerState } from '../../src/stores/dashboard.store';
 
-export interface MapLayerState {
-  states: boolean;
-  lgas: boolean;
-  oilBlocks: boolean;
-  pipelines: boolean;
-  satelliteView: boolean;
-  emissionHotspots: boolean;
-}
-
-export const DEFAULT_LAYERS: MapLayerState = {
-  states: false,
-  lgas: false,
-  oilBlocks: false,
-  pipelines: false,
-  satelliteView: false,
-  emissionHotspots: true,
-};
+export type { MapLayerState };
 
 interface LayerTogglePanelProps {
   darkMode: boolean;
