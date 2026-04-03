@@ -159,7 +159,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   const { data: facilities = [], isLoading: loadingFac, isError: errFac } = useFacilities();
   const { data: aggregations, isLoading: loadingAgg, isError: errAgg } = useEmissionAggregations();
 
-  const features = satelliteRes?.features ?? [];
+  const features: NormalizedSource[] = satelliteRes?.features ?? [];
 
   const sortAll = useSortState("name");
   const sortRates = useSortState("name");
