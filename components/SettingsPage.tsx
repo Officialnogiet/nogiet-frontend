@@ -1,14 +1,15 @@
 import React, { useCallback, useRef } from 'react';
-import { Settings, Bell, Shield, Globe, Palette } from 'lucide-react';
+import { Settings, Bell, Shield, Globe, Palette, X } from 'lucide-react';
 import { useDashboardStore } from '../src/stores/dashboard.store';
 import { useSettingsStore } from '../src/stores/settings.store';
 import { useSetAlertThreshold, useSetEmailAlerts } from '../src/hooks/useEmissions';
 
 interface SettingsPageProps {
   darkMode?: boolean;
+  onClose?: () => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true, onClose }) => {
   const { toggleDarkMode } = useDashboardStore();
   const settings = useSettingsStore();
   const setThresholdMut = useSetAlertThreshold();
@@ -46,10 +47,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true }) => {
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-[#009688]/10' : 'bg-teal-50'}`}>
             <Settings className="text-[#009688]" size={28} />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
             <p className={`text-sm mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Configure your application preferences</p>
           </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-[#1e2430] text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+            >
+              <X size={22} />
+            </button>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -109,9 +118,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true }) => {
                 onChange={(e) => settings.setDefaultRegion(e.target.value)}
                 className={`px-4 py-2 rounded-xl border text-sm font-bold ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}
               >
-                <option>Nigeria (Full)</option>
-                <option>Niger Delta</option>
-                <option>Lagos Region</option>
+                <optgroup label="Nigeria">
+                  <option>Nigeria (Full)</option>
+                  <option>Niger Delta</option>
+                  <option>Lagos Region</option>
+                  <option>South South</option>
+                  <option>South West</option>
+                  <option>South East</option>
+                  <option>North Central</option>
+                  <option>North East</option>
+                  <option>North West</option>
+                </optgroup>
+                <optgroup label="Continental">
+                  <option>West Africa</option>
+                  <option>East Africa</option>
+                  <option>North Africa</option>
+                  <option>Southern Africa</option>
+                  <option>Africa</option>
+                </optgroup>
+                <optgroup label="Global">
+                  <option>World</option>
+                </optgroup>
               </select>
             </SettingsRow>
             <SettingsRow darkMode={darkMode} label="Map Style" description="Default map tile style" last>

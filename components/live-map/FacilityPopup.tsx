@@ -10,6 +10,7 @@ export interface FacilityData {
   region?: string | null;
   isSatellite?: boolean;
   emissionRate?: number;
+  emissionUncertainty?: number;
   plumeCount?: number;
   persistence?: number;
   instrument?: string;
@@ -25,7 +26,7 @@ interface FacilityPopupProps {
 }
 
 const FacilityPopup: React.FC<FacilityPopupProps> = ({ darkMode, facility, onExpand, onClose }) => (
-  <div className={`absolute top-1/2 left-[55%] -translate-y-1/2 ml-4 rounded-3xl shadow-2xl w-72 p-6 border z-50 transition-colors animate-in fade-in slide-in-from-right-4 duration-300 ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-100'}`}>
+  <div className={`fixed bottom-16 left-0 right-0 mx-auto w-[92%] md:absolute md:bottom-auto md:left-[55%] md:right-auto md:top-1/2 md:-translate-y-1/2 md:ml-4 md:w-72 md:mx-0 rounded-3xl shadow-2xl p-6 border z-50 transition-colors animate-in fade-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-300 ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-100'}`}>
     <button onClick={onClose} className={`absolute top-3 right-3 p-1.5 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'}`}>
       <X size={16} />
     </button>
@@ -58,8 +59,20 @@ const FacilityPopup: React.FC<FacilityPopupProps> = ({ darkMode, facility, onExp
       <PopupRow darkMode={darkMode} label="Sector" value={facility.sector} />
       {facility.region && <PopupRow darkMode={darkMode} label="Region" value={facility.region} />}
       <PopupRow darkMode={darkMode} label="Gas Type" value="CH₄" />
-      {facility.isSatellite && facility.emissionRate != null && (
-        <PopupRow darkMode={darkMode} label="Emission Rate" value={`${facility.emissionRate.toFixed(1)} kg/hr`} />
+      {facility.isSatellite && (
+        <PopupRow
+          darkMode={darkMode}
+          label="Emission Rate"
+          value={facility.emissionRate && facility.emissionRate > 0
+            ? `${facility.emissionRate.toFixed(1)} kg/hr`
+            : 'N/A'}
+        />
+      )}
+      {facility.isSatellite && facility.emissionUncertainty != null && facility.emissionUncertainty > 0 && (
+        <PopupRow darkMode={darkMode} label="Uncertainty" value={`± ${facility.emissionUncertainty.toFixed(1)} kg/hr`} />
+      )}
+      {facility.isSatellite && (facility.persistence ?? 0) > 0 && (
+        <PopupRow darkMode={darkMode} label="Persistence" value={`${((facility.persistence ?? 0) * 100).toFixed(0)}%`} />
       )}
       {(facility.plumeCount ?? 0) > 0 && (
         <PopupRow darkMode={darkMode} label={facility.isSatellite ? 'Plume Count' : 'Measurements'} value={String(facility.plumeCount)} border={false} />

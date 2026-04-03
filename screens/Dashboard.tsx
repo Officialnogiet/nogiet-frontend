@@ -5,6 +5,7 @@ import { useDashboardStore } from '../src/stores/dashboard.store';
 import { useLogout } from '../src/hooks/useAuth';
 import { useAuthStore } from '../src/stores/auth.store';
 import Sidebar from '../components/Sidebar';
+import MobileBottomNav from '../components/MobileBottomNav';
 import LiveMap from '../components/LiveMap';
 import DataComparison from '../components/DataComparison';
 import DataTabs from '../components/DataTabs';
@@ -47,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
     switch (activeView) {
       case 'DASHBOARD_HOME':
-        content = <DashboardHome darkMode={darkMode} />;
+        content = <DashboardHome darkMode={darkMode} onNavigate={(v) => setActiveView(v as any)} />;
         label = 'Dashboard';
         break;
       case 'LIVE_MAP':
@@ -79,11 +80,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         label = 'User Management';
         break;
       case 'SETTINGS':
-        content = <SettingsPage darkMode={darkMode} />;
+        content = <SettingsPage darkMode={darkMode} onClose={() => setActiveView('DASHBOARD_HOME')} />;
         label = 'Settings';
         break;
       default:
-        content = <DashboardHome darkMode={darkMode} />;
+        content = <DashboardHome darkMode={darkMode} onNavigate={(v) => setActiveView(v as any)} />;
         label = 'Dashboard';
     }
 
@@ -96,20 +97,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   return (
     <div className={`flex h-screen transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'} overflow-hidden`}>
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggle={toggleSidebar}
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onLogout={handleLogout}
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-      />
-      <main className="flex-1 relative overflow-hidden flex flex-col">
-        {renderContent()}
+      <div className="hidden md:flex">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          onLogout={handleLogout}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+      </div>
+      <main className="flex-1 relative overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom)] md:pb-0">
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeView !== 'LIVE_MAP' ? 'pb-16 md:pb-0' : ''}`}>
+          {renderContent()}
+        </div>
         {isFilterOpen && <FilterPanel onClose={() => setFilterOpen(false)} darkMode={darkMode} filters={mapFilters} onApply={setMapFilters} />}
         <ScreenGuide darkMode={darkMode} screenKey={activeView} />
       </main>
+      <div className="md:hidden">
+        <MobileBottomNav
+          activeView={activeView}
+          onViewChange={setActiveView}
+          onLogout={handleLogout}
+          darkMode={darkMode}
+        />
+      </div>
     </div>
   );
 };

@@ -25,6 +25,9 @@ import {
   addStatesLayer, removeStatesLayer,
   addLGAsLayer, removeLGAsLayer,
   addPipelinesLayer, removePipelinesLayer,
+  addOilBlocksLayer, removeOilBlocksLayer,
+  uninstallBoundaryHover,
+  setBoundaryTheme,
 } from './live-map/boundaryLayers';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -53,96 +56,6 @@ const GROUND_SCATTER_DOT = 'ground-scatter-dot';
 const HOVER_CONNECTOR_SRC = 'hover-connector-src';
 const HOVER_CONNECTOR_LINE = 'hover-connector-line';
 const HOVER_CONNECTOR_DOT = 'hover-connector-dot';
-const OIL_BLOCK_SOURCE = 'oil-blocks-source';
-const OIL_BLOCK_FILL = 'oil-blocks-fill';
-const OIL_BLOCK_BORDER = 'oil-blocks-border';
-const OIL_BLOCK_LABEL = 'oil-blocks-label';
-
-const OIL_BLOCK_COLORS = [
-  '#f59e0b', '#3b82f6', '#ef4444', '#10b981', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1',
-];
-
-function createCircleCoords(lng: number, lat: number, radius: number, segments: number): [number, number][] {
-  const coords: [number, number][] = [];
-  for (let i = 0; i <= segments; i++) {
-    const angle = (i / segments) * 2 * Math.PI;
-    coords.push([lng + radius * Math.cos(angle), lat + radius * Math.sin(angle) * 0.85]);
-  }
-  return coords;
-}
-
-function convexHull(points: [number, number][]): [number, number][] {
-  if (points.length <= 1) return createCircleCoords(points[0]?.[0] ?? 0, points[0]?.[1] ?? 0, 0.15, 24);
-  if (points.length === 2) {
-    const [a, b] = points;
-    const dx = b[0] - a[0], dy = b[1] - a[1];
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    const nx = (-dy / len) * 0.06, ny = (dx / len) * 0.06;
-    return [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny], [a[0] + nx, a[1] + ny]];
-  }
-  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
-    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lower: [number, number][] = [];
-  for (const p of sorted) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
-  const upper: [number, number][] = [];
-  for (const p of [...sorted].reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
-  lower.pop(); upper.pop();
-  const hull = lower.concat(upper);
-  hull.push(hull[0]);
-  return hull;
-}
-
-function bufferPolygon(coords: [number, number][], buffer: number): [number, number][] {
-  const n = coords.length - 1;
-  let cx = 0, cy = 0;
-  for (let i = 0; i < n; i++) { cx += coords[i][0]; cy += coords[i][1]; }
-  cx /= n; cy /= n;
-  return coords.map(([x, y]) => {
-    const dx = x - cx, dy = y - cy;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist === 0) return [x + buffer, y] as [number, number];
-    const scale = (dist + buffer) / dist;
-    return [cx + dx * scale, cy + dy * scale] as [number, number];
-  });
-}
-
-function buildOilBlockGeoJSON(facilities: any[]): GeoJSON.FeatureCollection {
-  const groups = new Map<string, any[]>();
-  facilities.forEach(f => {
-    const block = f.oilBlock;
-    if (!block) return;
-    if (!groups.has(block)) groups.set(block, []);
-    groups.get(block)!.push(f);
-  });
-
-  const features: GeoJSON.Feature[] = [];
-  let colorIdx = 0;
-  groups.forEach((facs, blockName) => {
-    const color = OIL_BLOCK_COLORS[colorIdx % OIL_BLOCK_COLORS.length];
-    const id = colorIdx;
-    colorIdx++;
-    if (facs.length === 1) {
-      const f = facs[0];
-      features.push({
-        type: 'Feature', id,
-        geometry: { type: 'Polygon', coordinates: [createCircleCoords(f.longitude, f.latitude, 0.45, 32)] },
-        properties: { name: blockName, color, facilityCount: 1 },
-      });
-    } else {
-      const points = facs.map((f: any) => [f.longitude, f.latitude] as [number, number]);
-      const hull = convexHull(points);
-      const buffered = bufferPolygon(hull, 0.25);
-      features.push({
-        type: 'Feature', id,
-        geometry: { type: 'Polygon', coordinates: [buffered] },
-        properties: { name: blockName, color, facilityCount: facs.length },
-      });
-    }
-  });
-  return { type: 'FeatureCollection', features };
-}
 
 function snapBBox(w: number, s: number, e: number, n: number): string {
   return `${Math.floor(w)},${Math.floor(s)},${Math.ceil(e)},${Math.ceil(n)}`;
@@ -255,6 +168,7 @@ function buildSatelliteGeoJSON(features: any[]): GeoJSON.FeatureCollection {
         provider: src.provider ?? 'carbon_mapper',
         sector: src.sector ?? 'Unknown',
         emission_rate: src.emissionRate ?? src.emission_rate ?? 0,
+        emission_uncertainty: src.metadata?.emissionUncertainty ?? src.emissionUncertainty ?? 0,
         plume_count: src.plumeCount ?? src.plume_count ?? 0,
         gas: src.gas ?? 'CH4',
         persistence: src.persistence ?? 0,
@@ -265,6 +179,24 @@ function buildSatelliteGeoJSON(features: any[]): GeoJSON.FeatureCollection {
     })),
   };
 }
+
+const REGION_COORDS: Record<string, { center: [number, number]; zoom: number }> = {
+  'Nigeria (Full)': { center: [8.0, 9.0], zoom: 6.5 },
+  'Niger Delta': { center: [6.2, 5.2], zoom: 7.5 },
+  'Lagos Region': { center: [3.4, 6.5], zoom: 10 },
+  'South South': { center: [6.0, 5.5], zoom: 7.5 },
+  'South West': { center: [4.0, 7.0], zoom: 7.5 },
+  'South East': { center: [7.5, 6.0], zoom: 8 },
+  'North Central': { center: [7.5, 9.0], zoom: 7.5 },
+  'North East': { center: [12.0, 10.5], zoom: 7 },
+  'North West': { center: [6.0, 12.0], zoom: 7 },
+  'West Africa': { center: [-2.0, 10.0], zoom: 4 },
+  'East Africa': { center: [37.0, 0.0], zoom: 4 },
+  'North Africa': { center: [15.0, 28.0], zoom: 4 },
+  'Southern Africa': { center: [25.0, -15.0], zoom: 4 },
+  'Africa': { center: [20.0, 5.0], zoom: 3 },
+  'World': { center: [10.0, 20.0], zoom: 2 },
+};
 
 function getMapStyleUrl(mapStyle: string): string {
   switch (mapStyle) {
@@ -306,11 +238,12 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const scatterPopupRef = useRef<mapboxgl.Popup | null>(null);
   const groundPopupRef = useRef<mapboxgl.Popup | null>(null);
   const groundLayerReady = useRef(false);
-  const { mapStyle } = useSettingsStore();
+  const { mapStyle, defaultRegion } = useSettingsStore();
   const mapFilters = filters ?? DEFAULT_FILTERS;
   const prevFiltersRef = useRef(mapFilters);
   const darkModeRef = useRef(darkMode);
   darkModeRef.current = darkMode;
+  setBoundaryTheme(darkMode);
   const mapStyleRef = useRef(mapStyle);
   mapStyleRef.current = mapStyle;
   const filteredSatRef = useRef<any[]>([]);
@@ -453,8 +386,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       return;
     }
     const q = searchQuery.toLowerCase();
+    const m = map.current;
 
-    // Check facilities first
+    // Check facilities
     const matchedFacility = (facilities as any[]).find((f: any) =>
       f.name?.toLowerCase().includes(q) || f.region?.toLowerCase().includes(q)
     );
@@ -471,6 +405,35 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     if (matchedSat) {
       flyToAndPulse(matchedSat.longitude ?? matchedSat.lon, matchedSat.latitude ?? matchedSat.lat);
       return;
+    }
+
+    // Search boundary layers (oil blocks, states, LGAs) via GeoJSON sources
+    const boundarySearchLayers = [
+      { source: 'nigeria-oil-blocks-source', nameKey: 'name' },
+      { source: 'nigeria-states-source', nameKey: 'shapeName' },
+      { source: 'nigeria-lgas-source', nameKey: 'shapeName' },
+    ];
+    for (const { source, nameKey } of boundarySearchLayers) {
+      const src = m.getSource(source) as mapboxgl.GeoJSONSource | undefined;
+      if (!src) continue;
+      try {
+        const data = (src as any)._data;
+        if (!data?.features) continue;
+        const match = data.features.find((f: any) =>
+          (f.properties?.[nameKey] ?? '').toLowerCase().includes(q)
+        );
+        if (match) {
+          const coords = match.geometry?.coordinates;
+          if (!coords) continue;
+          const flat = match.geometry.type === 'Polygon' ? coords[0] : coords[0]?.[0] ?? coords[0];
+          if (!flat?.length) continue;
+          let cLng = 0, cLat = 0;
+          for (const [ln, lt] of flat) { cLng += ln; cLat += lt; }
+          cLng /= flat.length; cLat /= flat.length;
+          flyToAndPulse(cLng, cLat);
+          return;
+        }
+      } catch { /* source data not directly accessible, skip */ }
     }
 
     clearPulse();
@@ -607,7 +570,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         body: [
           ['Source Name', selectedFacility.name],
           ['Sector', selectedFacility.sector],
-          ['Emission Rate', `${(selectedFacility.emissionRate ?? 0).toFixed(1)} kg/hr`],
+          ['Emission Rate', (selectedFacility.emissionRate ?? 0) > 0 ? `${(selectedFacility.emissionRate ?? 0).toFixed(1)} kg/hr` : 'N/A'],
           ['Plume Count', String(selectedFacility.plumeCount ?? 0)],
           ['Persistence', `${((selectedFacility.persistence ?? 0) * 100).toFixed(0)}%`],
           ['Instrument', selectedFacility.instrument || 'N/A'],
@@ -660,6 +623,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
 
     const layers = useDashboardStore.getState().mapLayers;
     const isDark = mapStyleRef.current !== 'light';
+    if (layers.oilBlocks) addOilBlocksLayer(m, undefined, isDark);
     if (layers.states) addStatesLayer(m, undefined, isDark);
     if (layers.lgas) addLGAsLayer(m, undefined, isDark);
     if (layers.pipelines) addPipelinesLayer(m, undefined, isDark);
@@ -685,7 +649,8 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: getMapStyleUrl(mapStyle),
-        center: [8.6753, 9.082], zoom: 5.8,
+        center: (REGION_COORDS[defaultRegion] ?? REGION_COORDS['Niger Delta']).center,
+        zoom: (REGION_COORDS[defaultRegion] ?? REGION_COORDS['Niger Delta']).zoom,
         attributionControl: false, failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: true,
       });
 
@@ -698,6 +663,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
 
         const layers = useDashboardStore.getState().mapLayers;
         const isDark = mapStyleRef.current !== 'light';
+        if (layers.oilBlocks) addOilBlocksLayer(m, undefined, isDark);
         if (layers.states) addStatesLayer(m, undefined, isDark);
         if (layers.lgas) addLGAsLayer(m, undefined, isDark);
         if (layers.pipelines) addPipelinesLayer(m, undefined, isDark);
@@ -723,6 +689,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     } catch { setError('Failed to create Mapbox instance.'); }
     return () => {
       if (breatheAnimRef.current) { cancelAnimationFrame(breatheAnimRef.current); breatheAnimRef.current = null; }
+      uninstallBoundaryHover();
       map.current?.remove(); map.current = null;
     };
   }, []);
@@ -742,106 +709,19 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     });
   }, [mapLoaded, mapLayers.emissionHotspots]);
 
-  // Oil Blocks layer
+  // Oil Blocks layer (real boundary data from GeoJSON)
   useEffect(() => {
     const m = map.current;
     if (!m || !mapLoaded) return;
-
-    const removeOilBlockLayers = () => {
-      try {
-        [OIL_BLOCK_LABEL, OIL_BLOCK_BORDER, OIL_BLOCK_FILL].forEach(id => {
-          if (m.getLayer(id)) m.removeLayer(id);
-        });
-        if (m.getSource(OIL_BLOCK_SOURCE)) m.removeSource(OIL_BLOCK_SOURCE);
-      } catch { /* map already destroyed */ }
-    };
-
-    if (!mapLayers.oilBlocks) {
-      removeOilBlockLayers();
-      return;
-    }
-
-    const geojson = buildOilBlockGeoJSON(facilities as any[]);
-    if (geojson.features.length === 0) {
-      removeOilBlockLayers();
-      return;
-    }
-
-    if (m.getSource(OIL_BLOCK_SOURCE)) {
-      (m.getSource(OIL_BLOCK_SOURCE) as mapboxgl.GeoJSONSource).setData(geojson);
-      return;
-    }
-
-    m.addSource(OIL_BLOCK_SOURCE, { type: 'geojson', data: geojson });
-
-    const firstLayerBefore = m.getLayer(SAT_LAYER_GLOW) ? SAT_LAYER_GLOW : undefined;
-
-    m.addLayer({
-      id: OIL_BLOCK_FILL, type: 'fill', source: OIL_BLOCK_SOURCE,
-      paint: {
-        'fill-color': ['get', 'color'],
-        'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.35, 0.15],
-      },
-    }, firstLayerBefore);
-
-    m.addLayer({
-      id: OIL_BLOCK_BORDER, type: 'line', source: OIL_BLOCK_SOURCE,
-      paint: {
-        'line-color': ['get', 'color'],
-        'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 4, 2],
-        'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, 0.6],
-        'line-dasharray': [3, 2],
-      },
-    }, firstLayerBefore);
-
-    m.addLayer({
-      id: OIL_BLOCK_LABEL, type: 'symbol', source: OIL_BLOCK_SOURCE,
-      layout: {
-        'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['get', 'facilityCount']], ' facilities'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 4, 10, 7, 13, 10, 15],
-        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-        'text-allow-overlap': false,
-      },
-      paint: {
-        'text-color': ['get', 'color'],
-        'text-halo-color': 'rgba(0,0,0,0.8)',
-        'text-halo-width': 1.5,
-        'text-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1],
-      },
-    });
-
-    let hoveredId: string | number | null = null;
-    const blockPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: 'plume-popup' });
-
-    const onMouseMove = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
-      if (!e.features?.length) return;
-      const feat = e.features[0];
-      if (hoveredId !== null) m.setFeatureState({ source: OIL_BLOCK_SOURCE, id: hoveredId }, { hover: false });
-      hoveredId = feat.id ?? null;
-      if (hoveredId !== null) m.setFeatureState({ source: OIL_BLOCK_SOURCE, id: hoveredId }, { hover: true });
-      m.getCanvas().style.cursor = 'pointer';
-      const props = feat.properties!;
-      blockPopup.setLngLat(e.lngLat)
-        .setHTML(`<div style="font-size:12px;font-weight:700;line-height:1.6;padding:2px 0;"><div style="color:${props.color};">${props.name}</div><div style="color:#e2e8f0;font-size:11px;">${props.facilityCount} ${Number(props.facilityCount) === 1 ? 'facility' : 'facilities'}</div></div>`)
-        .addTo(m);
-    };
-
-    const onMouseLeave = () => {
-      if (hoveredId !== null) m.setFeatureState({ source: OIL_BLOCK_SOURCE, id: hoveredId }, { hover: false });
-      hoveredId = null;
-      m.getCanvas().style.cursor = '';
-      blockPopup.remove();
-    };
-
-    m.on('mousemove', OIL_BLOCK_FILL, onMouseMove);
-    m.on('mouseleave', OIL_BLOCK_FILL, onMouseLeave);
-
-    return () => {
-      m.off('mousemove', OIL_BLOCK_FILL, onMouseMove);
-      m.off('mouseleave', OIL_BLOCK_FILL, onMouseLeave);
-      blockPopup.remove();
-    };
-  }, [mapLoaded, mapLayers.oilBlocks, facilities, styleReloadCount]);
+    const isDark = mapStyleRef.current !== 'light';
+    try {
+      if (mapLayers.oilBlocks) {
+        addOilBlocksLayer(m, undefined, isDark);
+      } else {
+        removeOilBlocksLayer(m);
+      }
+    } catch { /* map destroyed */ }
+  }, [mapLoaded, mapLayers.oilBlocks, styleReloadCount]);
 
   // --- Boundary layers: only respond to checkbox toggles ---
   // Style reloads are handled by onStyleData directly (no effect race).
@@ -1082,8 +962,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const p = e.features[0].properties!;
       const coords = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number];
       const label = isSat ? 'Plume' : 'Measurement';
+      const rateStr = Number(p.rate) > 0 ? `${Number(p.rate).toFixed(1)} kg/hr` : 'N/A';
       hlPopup.setLngLat(coords)
-        .setHTML(`<div style="font-size:11px;font-weight:600;line-height:1.6;padding:2px 0;"><div style="color:${color};">${label} ${p.idx} of ${p.total}</div><div style="color:#e2e8f0;">${Number(p.rate).toFixed(1)} kg/hr</div><div style="color:#94a3b8;font-size:10px;">${coords[1].toFixed(5)}° N, ${coords[0].toFixed(5)}° E</div></div>`)
+        .setHTML(`<div style="font-size:11px;font-weight:600;line-height:1.6;padding:2px 0;"><div style="color:${color};">${label} ${p.idx} of ${p.total}</div><div style="color:#e2e8f0;">${rateStr}</div><div style="color:#94a3b8;font-size:10px;">${coords[1].toFixed(5)}° N, ${coords[0].toFixed(5)}° E</div></div>`)
         .addTo(m);
     });
     m.on('mouseleave', PLUME_LAYER_DOT, () => { m.getCanvas().style.cursor = ''; hlPopup.remove(); });
@@ -1266,8 +1147,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       if (!e.features?.length) return;
       const p = e.features[0].properties!;
       const coords = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+      const scatterRateStr = Number(p.rate) > 0 ? `${Number(p.rate).toFixed(1)} kg/hr` : 'N/A';
       scatterPopup.setLngLat(coords)
-        .setHTML(`<div style="font-size:11px;font-weight:600;line-height:1.6;padding:2px 0;"><div style="color:#fb923c;">Plume ${p.plume_idx} of ${p.total}</div><div style="color:#e2e8f0;">${Number(p.rate).toFixed(1)} kg/hr</div><div style="color:#94a3b8;font-size:10px;">${coords[1].toFixed(5)}° N, ${coords[0].toFixed(5)}° E</div><div style="color:#6b7280;font-size:10px;">${p.source_name}</div></div>`)
+        .setHTML(`<div style="font-size:11px;font-weight:600;line-height:1.6;padding:2px 0;"><div style="color:#fb923c;">Plume ${p.plume_idx} of ${p.total}</div><div style="color:#e2e8f0;">${scatterRateStr}</div><div style="color:#94a3b8;font-size:10px;">${coords[1].toFixed(5)}° N, ${coords[0].toFixed(5)}° E</div><div style="color:#6b7280;font-size:10px;">${p.source_name}</div></div>`)
         .addTo(m);
     });
     m.on('mouseleave', SCATTER_DOT, () => { m.getCanvas().style.cursor = ''; scatterPopup.remove(); });
@@ -1315,8 +1197,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const p = e.features[0].properties!;
       const coords = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number];
       const dateStr = p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+      const groundRateStr = Number(p.reading) > 0 ? `${Number(p.reading).toFixed(1)} kg/hr` : 'N/A';
       groundPopup.setLngLat(coords)
-        .setHTML(`<div style="font-size:11px;font-weight:600;line-height:1.6;padding:2px 0;"><div style="color:#14b8a6;">Measurement ${p.measurement_idx} of ${p.total}</div><div style="color:#5eead4;">${Number(p.reading).toFixed(1)} kg/hr</div><div style="color:#94a3b8;font-size:10px;">${coords[1].toFixed(5)}° N, ${coords[0].toFixed(5)}° E</div><div style="color:#6b7280;font-size:10px;">${dateStr} &bull; ${p.methodology || ''}</div><div style="color:#6b7280;font-size:10px;">${p.facility_name}</div></div>`)
+        .setHTML(`<div style="font-size:11px;font-weight:600;line-height:1.6;padding:2px 0;"><div style="color:#14b8a6;">Measurement ${p.measurement_idx} of ${p.total}</div><div style="color:#5eead4;">${groundRateStr}</div><div style="color:#94a3b8;font-size:10px;">${coords[1].toFixed(5)}° N, ${coords[0].toFixed(5)}° E</div><div style="color:#6b7280;font-size:10px;">${dateStr} &bull; ${p.methodology || ''}</div><div style="color:#6b7280;font-size:10px;">${p.facility_name}</div></div>`)
         .addTo(m);
     });
     m.on('mouseleave', GROUND_SCATTER_DOT, () => { m.getCanvas().style.cursor = ''; groundPopup.remove(); });
@@ -1383,6 +1266,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         latitude: coords[1], longitude: coords[0],
         sector: props.sector ?? 'Unknown', region: null,
         isSatellite: true, emissionRate: props.emission_rate ?? 0,
+        emissionUncertainty: props.emission_uncertainty ?? 0,
         plumeCount: props.plume_count ?? 0, persistence: props.persistence ?? 0,
         instrument: props.instrument ?? '', firstDetected: props.first_detected ?? '',
         lastDetected: props.last_detected ?? '',
@@ -1538,9 +1422,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
 
       <MapSearchBar darkMode={darkMode} onOpenFilters={onOpenFilters} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <div className="absolute top-28 left-6 z-40">
+      <div className="absolute top-20 md:top-28 left-3 md:left-6 z-40">
         <button onClick={() => { setShowAlerts(!showAlerts); if (!showAlerts) markAllRead.mutate(); }}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all ${showAlerts ? 'bg-red-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}>
+          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showAlerts ? 'bg-red-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}>
           <AlertCircle size={24} />
           {!isLoadingAlerts && unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">{unreadCount}</span>
@@ -1552,10 +1436,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       <EmissionSummaryCard darkMode={darkMode} totalSources={totalSources} totalPlumes={totalPlumes} facilityCount={filteredFacilities.length} satelliteCount={filteredSatellite.length} />
 
       {/* Layer toggle button */}
-      <div className="absolute top-28 right-6 z-40">
+      <div className="absolute top-20 md:top-28 right-3 md:right-6 z-40">
         <button
           onClick={() => setShowLayerPanel(v => !v)}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all ${showLayerPanel ? 'bg-teal-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}
+          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showLayerPanel ? 'bg-teal-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}
         >
           <Layers size={22} />
         </button>

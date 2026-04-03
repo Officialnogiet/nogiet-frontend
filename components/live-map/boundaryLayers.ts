@@ -20,20 +20,11 @@ export const PIPELINES_HIGHLIGHT = 'nigeria-pipelines-highlight';
 export const PIPELINES_LINE = 'nigeria-pipelines-line';
 export const PIPELINES_LABEL = 'nigeria-pipelines-label';
 
-// --- Shared popup singleton — only one boundary popup visible at a time ---
-let sharedPopup: mapboxgl.Popup | null = null;
+export const OIL_BLOCKS_SOURCE = 'nigeria-oil-blocks-source';
+export const OIL_BLOCKS_FILL = 'nigeria-oil-blocks-fill';
+export const OIL_BLOCKS_BORDER = 'nigeria-oil-blocks-border';
+export const OIL_BLOCKS_LABEL = 'nigeria-oil-blocks-label';
 
-function getSharedPopup(): mapboxgl.Popup {
-  if (!sharedPopup) {
-    sharedPopup = new mapboxgl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 12,
-      className: 'plume-popup',
-    });
-  }
-  return sharedPopup;
-}
 
 // --- State → geopolitical zone mapping ---
 const STATE_ZONES: Record<string, string> = {
@@ -63,6 +54,7 @@ function getZone(stateName: string): string {
 
 let statesGeoJSON: any = null;
 let lgasGeoJSON: any = null;
+let oilBlocksGeoJSON: any = null;
 
 async function loadStatesGeoJSON() {
   if (statesGeoJSON) return statesGeoJSON;
@@ -78,76 +70,227 @@ async function loadLGAsGeoJSON() {
   return lgasGeoJSON;
 }
 
+async function loadOilBlocksGeoJSON() {
+  if (oilBlocksGeoJSON) return oilBlocksGeoJSON;
+  const res = await fetch('/geojson/oil-blocks.geojson');
+  if (!res.ok) return null;
+  oilBlocksGeoJSON = await res.json();
+  return oilBlocksGeoJSON;
+}
+
+// --- Theme tracking for popup colors ---
+
+let currentThemeDark = true;
+
+export function setBoundaryTheme(dark: boolean) {
+  currentThemeDark = dark;
+}
+
+function themeColors() {
+  return currentThemeDark
+    ? { bg: '#1a1f2b', text: '#e2e8f0', muted: '#94a3b8', label: '#cbd5e1', border: 'rgba(100,116,139,0.3)' }
+    : { bg: '#ffffff', text: '#1e293b', muted: '#64748b', label: '#334155', border: 'rgba(203,213,225,0.6)' };
+}
+
 // --- Popup HTML builders ---
 
 function statePopupHTML(name: string, lng: number, lat: number): string {
   const zone = getZone(name);
+  const t = themeColors();
+  const accent = currentThemeDark ? '#34d399' : '#059669';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
-    <div style="font-weight:800;font-size:14px;color:#2563eb;margin-bottom:2px;">${name} State</div>
-    <div style="color:#64748b;"><span style="font-weight:600;color:#475569;">Region:</span> ${zone}</div>
-    <div style="color:#64748b;"><span style="font-weight:600;color:#475569;">Lat:</span> ${lat.toFixed(4)}°N &nbsp; <span style="font-weight:600;color:#475569;">Lng:</span> ${lng.toFixed(4)}°E</div>
+    <div style="font-weight:800;font-size:14px;color:${accent};margin-bottom:2px;">${name} State</div>
+    <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Region:</span> ${zone}</div>
+    <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Lat:</span> ${lat.toFixed(4)}°N &nbsp; <span style="font-weight:600;color:${t.label};">Lng:</span> ${lng.toFixed(4)}°E</div>
   </div>`;
 }
 
 function lgaPopupHTML(name: string, lng: number, lat: number): string {
+  const t = themeColors();
+  const accent = currentThemeDark ? '#a78bfa' : '#7c3aed';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
-    <div style="font-weight:800;font-size:13px;color:#7c3aed;margin-bottom:2px;">${name}</div>
-    <div style="color:#64748b;"><span style="font-weight:600;color:#475569;">Type:</span> Local Government Area</div>
-    <div style="color:#64748b;"><span style="font-weight:600;color:#475569;">Lat:</span> ${lat.toFixed(4)}°N &nbsp; <span style="font-weight:600;color:#475569;">Lng:</span> ${lng.toFixed(4)}°E</div>
+    <div style="font-weight:800;font-size:13px;color:${accent};margin-bottom:2px;">${name}</div>
+    <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Type:</span> Local Government Area</div>
+    <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Lat:</span> ${lat.toFixed(4)}°N &nbsp; <span style="font-weight:600;color:${t.label};">Lng:</span> ${lng.toFixed(4)}°E</div>
   </div>`;
 }
 
 function pipelinePopupHTML(name: string, lng: number, lat: number): string {
+  const t = themeColors();
+  const accent = currentThemeDark ? '#f87171' : '#dc2626';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
-    <div style="font-weight:800;font-size:13px;color:#dc2626;margin-bottom:2px;">${name}</div>
-    <div style="color:#64748b;"><span style="font-weight:600;color:#475569;">Type:</span> Oil &amp; Gas Pipeline</div>
-    <div style="color:#64748b;"><span style="font-weight:600;color:#475569;">Lat:</span> ${lat.toFixed(4)}°N &nbsp; <span style="font-weight:600;color:#475569;">Lng:</span> ${lng.toFixed(4)}°E</div>
+    <div style="font-weight:800;font-size:13px;color:${accent};margin-bottom:2px;">${name}</div>
+    <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Type:</span> Oil &amp; Gas Pipeline</div>
+    <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Lat:</span> ${lat.toFixed(4)}°N &nbsp; <span style="font-weight:600;color:${t.label};">Lng:</span> ${lng.toFixed(4)}°E</div>
   </div>`;
 }
 
-// --- Shared hover + popup helper (uses the singleton popup) ---
+function oilBlockPopupHTML(props: Record<string, any>, _lng: number, _lat: number): string {
+  const name = props.name ?? 'Unknown';
+  const t = themeColors();
+  const accent = currentThemeDark ? '#38bdf8' : '#0284c7';
+  const operator = props.operator || '';
+  const area = props.area_sqkm ? `${Number(props.area_sqkm).toLocaleString()} km²` : '';
+  const basin = props.basin || '';
+  const terrain = props.terrain || '';
+  const status = props.status || '';
+  const awardDate = props.award_date || '';
+  const contract = props.contract || '';
+  const rights = props.rights || '';
+  const blockType = props.type || '';
 
-type PopupBuilder = (name: string, lng: number, lat: number) => string;
+  const row = (label: string, value: string) =>
+    value ? `<div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">${label}:</span> ${value}</div>` : '';
 
-function setupHoverWithPopup(
-  m: mapboxgl.Map,
-  layerId: string,
-  sourceId: string,
-  buildHTML: PopupBuilder,
-  nameKey = 'shapeName',
-) {
-  let hoveredId: string | number | null = null;
-  const popup = getSharedPopup();
-
-  const onMove = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
-    if (!e.features?.length) return;
-    const feat = e.features[0];
-    if (hoveredId !== null) {
-      try { m.setFeatureState({ source: sourceId, id: hoveredId }, { hover: false }); } catch { /* */ }
-    }
-    hoveredId = feat.id ?? null;
-    if (hoveredId !== null) {
-      try { m.setFeatureState({ source: sourceId, id: hoveredId }, { hover: true }); } catch { /* */ }
-    }
-    m.getCanvas().style.cursor = 'pointer';
-    const name = feat.properties?.[nameKey] ?? 'Unknown';
-    popup.setLngLat(e.lngLat).setHTML(buildHTML(name, e.lngLat.lng, e.lngLat.lat)).addTo(m);
-  };
-
-  const onLeave = () => {
-    if (hoveredId !== null) {
-      try { m.setFeatureState({ source: sourceId, id: hoveredId }, { hover: false }); } catch { /* */ }
-    }
-    hoveredId = null;
-    m.getCanvas().style.cursor = '';
-    popup.remove();
-  };
-
-  m.on('mousemove', layerId, onMove);
-  m.on('mouseleave', layerId, onLeave);
-
-  return { onMove, onLeave, popup };
+  let html = `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">`;
+  html += `<div style="font-weight:800;font-size:14px;color:${accent};margin-bottom:4px;">${name}</div>`;
+  html += row('Area', area + (basin ? `, basin: <b>${basin}</b>` : ''));
+  html += row('Terrain', terrain);
+  html += row('Status', status);
+  html += row('Operator', operator);
+  html += row('Type', blockType);
+  html += row('Awarded on', awardDate);
+  html += row('Contract', contract);
+  html += row('Rights', rights);
+  html += `<div style="color:${t.muted};opacity:0.6;font-size:10px;margin-top:4px;font-style:italic;">Data from 2011</div>`;
+  html += `</div>`;
+  return html;
 }
+
+// --- Unified boundary hover: queries ALL visible fill layers at cursor and builds combined popup ---
+
+interface HoveredEntry { source: string; id: string | number }
+
+const BOUNDARY_QUERY_LAYERS = [
+  { layer: PIPELINES_LINE, source: PIPELINES_SOURCE, kind: 'pipeline' as const },
+  { layer: OIL_BLOCKS_FILL, source: OIL_BLOCKS_SOURCE, kind: 'oilBlock' as const },
+  { layer: LGAS_FILL, source: LGAS_SOURCE, kind: 'lga' as const },
+  { layer: STATES_FILL, source: STATES_SOURCE, kind: 'state' as const },
+];
+
+let boundaryHandlerInstalled = false;
+let hoveredEntries: HoveredEntry[] = [];
+
+function clearAllHoverStates(m: mapboxgl.Map) {
+  for (const entry of hoveredEntries) {
+    try { m.setFeatureState({ source: entry.source, id: entry.id }, { hover: false }); } catch { /* */ }
+  }
+  hoveredEntries = [];
+}
+
+function buildCombinedPopupHTML(
+  hits: { kind: string; feature: mapboxgl.MapboxGeoJSONFeature }[],
+  lng: number,
+  lat: number,
+): string {
+  const sections: string[] = [];
+
+  for (const { kind, feature } of hits) {
+    const p = feature.properties ?? {};
+    if (kind === 'pipeline') {
+      sections.push(pipelinePopupHTML(p.name ?? 'Unknown', lng, lat));
+    } else if (kind === 'oilBlock') {
+      sections.push(oilBlockPopupHTML(p, lng, lat));
+    } else if (kind === 'state') {
+      sections.push(statePopupHTML(p.shapeName ?? 'Unknown', lng, lat));
+    } else if (kind === 'lga') {
+      sections.push(lgaPopupHTML(p.shapeName ?? 'Unknown', lng, lat));
+    }
+  }
+
+  const t = themeColors();
+  const divider = `<hr style="border:none;border-top:1px solid ${t.border};margin:8px 0;">`;
+  const inner = sections.length <= 1 ? (sections[0] ?? '') : sections.join(divider);
+  return `<div style="background:${t.bg};color:${t.text};border-radius:14px;padding:14px 16px;margin:-10px -10px;min-width:200px;box-shadow:0 4px 24px rgba(0,0,0,0.15);">${inner}</div>`;
+}
+
+let boundaryPopup: mapboxgl.Popup | null = null;
+
+function getBoundaryPopup(): mapboxgl.Popup {
+  if (!boundaryPopup) {
+    boundaryPopup = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 12,
+      className: 'boundary-popup',
+      maxWidth: '360px',
+    });
+  }
+  return boundaryPopup;
+}
+
+function queryBoundaryHits(m: mapboxgl.Map, point: mapboxgl.Point) {
+  const hits: { kind: string; feature: mapboxgl.MapboxGeoJSONFeature }[] = [];
+  for (const { layer, source, kind } of BOUNDARY_QUERY_LAYERS) {
+    if (!m.getLayer(layer)) continue;
+    try {
+      const features = m.queryRenderedFeatures(point, { layers: [layer] });
+      if (features.length > 0) {
+        hits.push({ kind, feature: features[0] });
+      }
+    } catch { /* layer may have been removed */ }
+  }
+  return hits;
+}
+
+function applyHoverStates(m: mapboxgl.Map, hits: { kind: string; feature: mapboxgl.MapboxGeoJSONFeature }[]) {
+  for (const { kind, feature } of hits) {
+    const cfg = BOUNDARY_QUERY_LAYERS.find(b => b.kind === kind);
+    if (cfg && feature.id != null) {
+      try { m.setFeatureState({ source: cfg.source, id: feature.id }, { hover: true }); } catch { /* */ }
+      hoveredEntries.push({ source: cfg.source, id: feature.id });
+    }
+  }
+}
+
+export function installBoundaryHover(m: mapboxgl.Map) {
+  if (boundaryHandlerInstalled) return;
+  boundaryHandlerInstalled = true;
+
+  const popup = getBoundaryPopup();
+  let isShowingBoundary = false;
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  if (isTouch) {
+    m.on('click', (e: mapboxgl.MapMouseEvent) => {
+      const hits = queryBoundaryHits(m, e.point);
+      clearAllHoverStates(m);
+
+      if (hits.length === 0) {
+        if (isShowingBoundary) { popup.remove(); isShowingBoundary = false; }
+        return;
+      }
+
+      applyHoverStates(m, hits);
+      const t = themeColors();
+      const closeBtn = `<div style="text-align:right;margin:-8px -8px 4px 0;"><button onclick="this.closest('.mapboxgl-popup').remove()" style="background:none;border:none;cursor:pointer;color:${t.muted};font-size:18px;line-height:1;padding:2px 6px;">×</button></div>`;
+      const html = buildCombinedPopupHTML(hits, e.lngLat.lng, e.lngLat.lat);
+      const wrappedHtml = html.replace(/^<div /, `<div data-touch="1" `) .replace(/>/, `>${closeBtn}`);
+      popup.setLngLat(e.lngLat).setHTML(wrappedHtml).addTo(m);
+      isShowingBoundary = true;
+    });
+  } else {
+    m.on('mousemove', (e: mapboxgl.MapMouseEvent) => {
+      const hits = queryBoundaryHits(m, e.point);
+      clearAllHoverStates(m);
+
+      if (hits.length === 0) {
+        if (isShowingBoundary) { popup.remove(); isShowingBoundary = false; }
+        return;
+      }
+
+      applyHoverStates(m, hits);
+      const html = buildCombinedPopupHTML(hits, e.lngLat.lng, e.lngLat.lat);
+      popup.setLngLat(e.lngLat).setHTML(html).addTo(m);
+      isShowingBoundary = true;
+    });
+  }
+}
+
+export function uninstallBoundaryHover() {
+  boundaryHandlerInstalled = false;
+}
+
 
 // --- States Layer ---
 
@@ -164,9 +307,9 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
   const data = await loadStatesGeoJSON();
   if (!data || !isMapAlive(m)) return;
 
-  const borderColor = isDark ? '#60a5fa' : '#2563eb';
-  const fillColor = isDark ? '#60a5fa' : '#3b82f6';
-  const labelColor = isDark ? '#93bbfd' : '#1e40af';
+  const borderColor = isDark ? '#34d399' : '#059669';
+  const fillColor = isDark ? '#10b981' : '#059669';
+  const labelColor = isDark ? '#6ee7b7' : '#065f46';
   const haloColor = isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)';
 
   m.addSource(STATES_SOURCE, { type: 'geojson', data, generateId: true });
@@ -175,7 +318,7 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
     id: STATES_FILL, type: 'fill', source: STATES_SOURCE,
     paint: {
       'fill-color': fillColor,
-      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.2, 0.04],
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.25, 0.1],
     },
   }, beforeLayer);
 
@@ -183,8 +326,8 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
     id: STATES_BORDER, type: 'line', source: STATES_SOURCE,
     paint: {
       'line-color': borderColor,
-      'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3, 1.2],
-      'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, isDark ? 0.6 : 0.7],
+      'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3.5, 1.8],
+      'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, isDark ? 0.75 : 0.85],
     },
   }, beforeLayer);
 
@@ -205,7 +348,7 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
     },
   });
 
-  setupHoverWithPopup(m, STATES_FILL, STATES_SOURCE, statePopupHTML, 'shapeName');
+  installBoundaryHover(m);
 }
 
 // --- LGAs Layer ---
@@ -265,7 +408,7 @@ export async function addLGAsLayer(m: mapboxgl.Map, beforeLayer?: string, isDark
     },
   });
 
-  setupHoverWithPopup(m, LGAS_FILL, LGAS_SOURCE, lgaPopupHTML, 'shapeName');
+  installBoundaryHover(m);
 }
 
 // --- Pipelines Layer ---
@@ -374,5 +517,76 @@ export function addPipelinesLayer(m: mapboxgl.Map, _beforeLayer?: string, isDark
     },
   });
 
-  setupHoverWithPopup(m, PIPELINES_LINE, PIPELINES_SOURCE, pipelinePopupHTML, 'name');
+  installBoundaryHover(m);
+}
+
+// --- Oil Blocks Layer ---
+
+export function removeOilBlocksLayer(m: mapboxgl.Map) {
+  if (!isMapAlive(m)) return;
+  [OIL_BLOCKS_LABEL, OIL_BLOCKS_BORDER, OIL_BLOCKS_FILL].forEach(id => {
+    if (m.getLayer(id)) m.removeLayer(id);
+  });
+  if (m.getSource(OIL_BLOCKS_SOURCE)) m.removeSource(OIL_BLOCKS_SOURCE);
+}
+
+export async function addOilBlocksLayer(m: mapboxgl.Map, beforeLayer?: string, isDark = true) {
+  removeOilBlocksLayer(m);
+  const data = await loadOilBlocksGeoJSON();
+  if (!data || !isMapAlive(m)) return;
+
+  const labelColor = isDark ? '#7dd3fc' : '#075985';
+  const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
+
+  const fillColorExpr: mapboxgl.Expression = [
+    'case',
+    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#1e40af' : '#1e3a8a',
+    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#1d4ed8' : '#2563eb',
+    isDark ? '#0ea5e9' : '#0284c7',
+  ];
+  const borderColorExpr: mapboxgl.Expression = [
+    'case',
+    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#60a5fa' : '#3b82f6',
+    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#38bdf8' : '#0284c7',
+    isDark ? '#38bdf8' : '#0284c7',
+  ];
+
+  m.addSource(OIL_BLOCKS_SOURCE, { type: 'geojson', data, generateId: true });
+
+  m.addLayer({
+    id: OIL_BLOCKS_FILL, type: 'fill', source: OIL_BLOCKS_SOURCE,
+    paint: {
+      'fill-color': fillColorExpr,
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.35, 0.15],
+    },
+  }, beforeLayer);
+
+  m.addLayer({
+    id: OIL_BLOCKS_BORDER, type: 'line', source: OIL_BLOCKS_SOURCE,
+    paint: {
+      'line-color': borderColorExpr,
+      'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3, 1.5],
+      'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, isDark ? 0.75 : 0.85],
+    },
+  }, beforeLayer);
+
+  m.addLayer({
+    id: OIL_BLOCKS_LABEL, type: 'symbol', source: OIL_BLOCKS_SOURCE,
+    minzoom: 7,
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 7, 8, 10, 11, 13, 14],
+      'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+      'text-allow-overlap': false,
+      'text-max-width': 8,
+    },
+    paint: {
+      'text-color': labelColor,
+      'text-halo-color': haloColor,
+      'text-halo-width': isDark ? 1.2 : 1.8,
+      'text-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 10, 0.9],
+    },
+  });
+
+  installBoundaryHover(m);
 }

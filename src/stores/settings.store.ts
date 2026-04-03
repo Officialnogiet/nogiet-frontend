@@ -30,7 +30,7 @@ export const useSettingsStore = create<SettingsState>()(
       alertThreshold: 20,
       dataRetention: "24 hours",
       exportFormat: "CSV",
-      defaultRegion: "Nigeria (Full)",
+      defaultRegion: "Niger Delta",
       mapStyle: "dark",
       emissionUnit: "kg/hr",
 
@@ -43,6 +43,15 @@ export const useSettingsStore = create<SettingsState>()(
       setMapStyle: (v) => set({ mapStyle: v }),
       setEmissionUnit: (v) => set({ emissionUnit: v }),
     }),
-    { name: "nogiet-settings" },
+    {
+      name: "nogiet-settings",
+      version: 2,
+      migrate: (persisted: any, version: number) => {
+        if (version < 2 && persisted?.defaultRegion === "Nigeria (Full)") {
+          persisted.defaultRegion = "Niger Delta";
+        }
+        return persisted;
+      },
+    },
   ),
 );

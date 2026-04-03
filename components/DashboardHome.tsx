@@ -14,9 +14,17 @@ import {
   Flame,
   Loader2,
   Satellite,
+  Map,
+  Hexagon,
+  ArrowRight,
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { useDashboardSummary } from "../src/hooks/useEmissions";
 import { useSettingsStore } from "../src/stores/settings.store";
+import { useDashboardStore } from "../src/stores/dashboard.store";
 import {
   convertEmission,
   formatEmission,
@@ -35,6 +43,7 @@ const TREND_FALLBACK = [
 
 interface DashboardHomeProps {
   darkMode: boolean;
+  onNavigate?: (view: string) => void;
 }
 
 function severityBadgeClass(severity: string, dark: boolean): string {
@@ -54,10 +63,11 @@ function severityBadgeClass(severity: string, dark: boolean): string {
     : "bg-gray-100 text-gray-700 border-gray-200";
 }
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) => {
   const dm = darkMode;
   const { data, isLoading, isError, error } = useDashboardSummary();
   const emissionUnit = useSettingsStore((s) => s.emissionUnit);
+  const setActiveView = useDashboardStore((s) => s.setActiveView);
 
   const topFiveAlerts = useMemo(() => {
     const list = data?.recentAlerts ?? [];
@@ -139,33 +149,51 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
       label: "Total Facilities",
       value: summary.totalFacilities.toLocaleString(),
       icon: Building2,
+      subtitle: "Registered ground facilities",
     },
     {
-      label: "Active Satellite Sources",
+      label: "Satellite-Detected Sources",
       value: summary.activeSatelliteSources.toLocaleString(),
       icon: Satellite,
+      subtitle: "Emission points detected by all satellite providers",
     },
     {
       label: "Total Emission Rate",
       value: emissionDisplay,
       icon: Flame,
+      subtitle: "Aggregated from satellite observations",
     },
     {
       label: "Alerts This Week",
       value: summary.alertsThisWeek.toLocaleString(),
       icon: Bell,
+      subtitle: "Threshold exceedances this week",
     },
+  ];
+
+  const providers = (summary as any)?.providers ?? [];
+
+  const quickActions = [
+    { label: "View Live Map", icon: Map, view: "LIVE_MAP" as const },
+    { label: "View Alerts", icon: AlertTriangle, view: "ALERTS" as const },
+    { label: "Manage Data", icon: FileText, view: "MANAGE_DATA" as const },
+  ];
+
+  const dataSources = [
+    { name: "Carbon Mapper", id: "carbon_mapper", desc: "Satellite methane detection" },
+    { name: "UNEP IMEO", id: "imeo", desc: "International Methane Observatory" },
+    { name: "TROPOMI", id: "tropomi", desc: "Sentinel-5P satellite data" },
   ];
 
   return (
     <div
-      className={`space-y-6 p-4 sm:p-6 ${
+      className={`space-y-6 p-4 sm:p-6 pb-16 overflow-y-auto ${
         dm ? "bg-[#12161f] text-white" : "bg-gray-50 text-gray-900"
       }`}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map(({ label, value, icon: Icon }) => (
-          <div key={label} className={`${cardBase} p-5`}>
+        {kpis.map(({ label, value, icon: Icon, subtitle }) => (
+          <div key={label} className={`${cardBase} p-5`} title={subtitle}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className={`text-sm font-medium ${muted}`}>{label}</p>
@@ -174,6 +202,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
                 >
                   {value}
                 </p>
+                <p className={`mt-1 text-xs ${muted} opacity-70`}>{subtitle}</p>
               </div>
               <div className="rounded-lg bg-teal-600/15 p-2.5 text-teal-500">
                 <Icon className="h-5 w-5" strokeWidth={2} />
@@ -334,6 +363,63 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode }) => {
               ))
             )}
           </ul>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className={cardBase}>
+        <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
+          <h2 className={`text-lg font-semibold ${sectionTitle}`}>Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5">
+          {quickActions.map(({ label, icon: Icon, view }) => (
+            <button
+              key={view}
+              onClick={() => { onNavigate?.(view); setActiveView(view); }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all group ${
+                dm
+                  ? "border-[#1e2430] hover:border-teal-500/40 hover:bg-teal-500/5"
+                  : "border-gray-200 hover:border-teal-300 hover:bg-teal-50"
+              }`}
+            >
+              <div className="rounded-lg bg-teal-600/15 p-2 text-teal-500">
+                <Icon className="h-4 w-4" strokeWidth={2} />
+              </div>
+              <span className={`text-sm font-medium ${dm ? "text-gray-200" : "text-gray-700"}`}>{label}</span>
+              <ArrowRight className={`h-3.5 w-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity ${muted}`} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Data Sources Status */}
+      <div className={cardBase}>
+        <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
+          <h2 className={`text-lg font-semibold ${sectionTitle}`}>Data Sources</h2>
+          <p className={`mt-1 text-sm ${muted}`}>Connection status for emission data providers</p>
+        </div>
+        <div className="divide-y divide-inherit">
+          {dataSources.map((src) => {
+            const connected = providers.includes(src.id);
+            return (
+              <div key={src.id} className="flex items-center gap-4 px-5 py-4">
+                <div className={`flex-shrink-0 ${connected ? "text-emerald-500" : dm ? "text-gray-600" : "text-gray-300"}`}>
+                  {connected ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${dm ? "text-gray-200" : "text-gray-800"}`}>{src.name}</p>
+                  <p className={`text-xs ${muted}`}>{src.desc}</p>
+                </div>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                  connected
+                    ? dm ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-50 text-emerald-700"
+                    : dm ? "bg-gray-500/15 text-gray-500" : "bg-gray-100 text-gray-400"
+                }`}>
+                  {connected ? "Connected" : "Not configured"}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

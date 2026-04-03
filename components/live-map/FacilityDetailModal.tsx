@@ -90,13 +90,20 @@ const MetadataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }> = (
 };
 
 const SatelliteDataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }> = ({ darkMode, facility }) => {
+  const rateValue = (facility.emissionRate ?? 0) > 0
+    ? `${(facility.emissionRate ?? 0).toFixed(1)} kg/hr`
+    : 'N/A';
+  const uncertaintyStr = (facility.emissionUncertainty ?? 0) > 0
+    ? `± ${(facility.emissionUncertainty ?? 0).toFixed(1)} kg/hr`
+    : '';
+
   const cards = [
-    { icon: <Gauge size={20} />, label: 'Emission Rate', value: `${(facility.emissionRate ?? 0).toFixed(1)} kg/hr`, accent: 'text-orange-400' },
-    { icon: <Activity size={20} />, label: 'Plume Count', value: String(facility.plumeCount ?? 0), accent: 'text-teal-400' },
-    { icon: <Satellite size={20} />, label: 'Persistence', value: `${((facility.persistence ?? 0) * 100).toFixed(0)}%`, accent: 'text-blue-400' },
-    { icon: <Satellite size={20} />, label: 'Instrument', value: facility.instrument || 'N/A', accent: 'text-purple-400' },
-    { icon: <Calendar size={20} />, label: 'First Detected', value: facility.firstDetected || 'N/A', accent: 'text-gray-400' },
-    { icon: <Calendar size={20} />, label: 'Last Detected', value: facility.lastDetected || 'N/A', accent: 'text-gray-400' },
+    { icon: <Gauge size={20} />, label: 'Emission Rate', value: rateValue, sub: uncertaintyStr, accent: 'text-orange-400' },
+    { icon: <Activity size={20} />, label: 'Plume Count', value: String(facility.plumeCount ?? 0), sub: '', accent: 'text-teal-400' },
+    { icon: <Satellite size={20} />, label: 'Persistence', value: `${((facility.persistence ?? 0) * 100).toFixed(0)}%`, sub: '', accent: 'text-blue-400' },
+    { icon: <Satellite size={20} />, label: 'Instrument', value: facility.instrument || 'N/A', sub: '', accent: 'text-purple-400' },
+    { icon: <Calendar size={20} />, label: 'First Detected', value: facility.firstDetected || 'N/A', sub: '', accent: 'text-gray-400' },
+    { icon: <Calendar size={20} />, label: 'Last Detected', value: facility.lastDetected || 'N/A', sub: '', accent: 'text-gray-400' },
   ];
 
   return (
@@ -108,6 +115,7 @@ const SatelliteDataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }
             <div className={`mb-3 ${card.accent}`}>{card.icon}</div>
             <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{card.label}</p>
             <p className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>{card.value}</p>
+            {card.sub && <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{card.sub}</p>}
           </div>
         ))}
       </div>

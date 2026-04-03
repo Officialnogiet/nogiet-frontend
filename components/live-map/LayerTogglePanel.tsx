@@ -13,9 +13,9 @@ interface LayerTogglePanelProps {
 }
 
 const LAYER_ITEMS: { key: keyof MapLayerState; label: string; icon: React.ReactNode; color: string }[] = [
-  { key: 'states', label: 'State Boundaries', icon: <Map size={16} />, color: '#60a5fa' },
+  { key: 'states', label: 'State Boundaries', icon: <Map size={16} />, color: '#10b981' },
   { key: 'lgas', label: 'LGA Boundaries', icon: <Grid3x3 size={16} />, color: '#a78bfa' },
-  { key: 'oilBlocks', label: 'Oil Blocks', icon: <Hexagon size={16} />, color: '#f59e0b' },
+  { key: 'oilBlocks', label: 'Oil Blocks', icon: <Hexagon size={16} />, color: '#0ea5e9' },
   { key: 'pipelines', label: 'Pipelines', icon: <Activity size={16} />, color: '#ef4444' },
   { key: 'satelliteView', label: 'Satellite Imagery', icon: <Layers size={16} />, color: '#10b981' },
   { key: 'emissionHotspots', label: 'Emission Hotspots', icon: <Thermometer size={16} />, color: '#f97316' },
@@ -30,7 +30,7 @@ const LayerTogglePanel: React.FC<LayerTogglePanelProps> = ({ darkMode, layers, o
   const subText = darkMode ? 'text-gray-400' : 'text-gray-500';
 
   return (
-    <div className={`absolute top-44 right-4 z-30 ${bg} backdrop-blur-sm rounded-xl border ${border} shadow-xl p-4 w-56`}>
+    <div className={`absolute top-32 md:top-44 right-2 md:right-4 z-30 ${bg} backdrop-blur-sm rounded-xl border ${border} shadow-xl p-3 md:p-4 w-48 md:w-56`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Layers size={16} className="text-teal-500" />

@@ -32,3 +32,17 @@ html, body, #root {
 .ground-popup .mapboxgl-popup-tip {
   border-top-color: rgba(18, 22, 31, 0.95);
 }
+
+/* Boundary layer popup (oil blocks, states, LGAs) — theme handled via inline styles */
+.boundary-popup .mapboxgl-popup-content {
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+.boundary-popup .mapboxgl-popup-tip {
+  display: none;
+}
