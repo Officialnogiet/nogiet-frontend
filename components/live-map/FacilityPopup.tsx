@@ -65,17 +65,26 @@ const FacilityPopup: React.FC<FacilityPopupProps> = ({ darkMode, facility, onExp
           label="Emission Rate"
           value={facility.emissionRate && facility.emissionRate > 0
             ? `${facility.emissionRate.toFixed(1)} kg/hr`
-            : 'N/A'}
+            : 'Detected (rate pending)'}
         />
       )}
       {facility.isSatellite && facility.emissionUncertainty != null && facility.emissionUncertainty > 0 && (
         <PopupRow darkMode={darkMode} label="Uncertainty" value={`± ${facility.emissionUncertainty.toFixed(1)} kg/hr`} />
       )}
+      {facility.isSatellite && (
+        <PopupRow darkMode={darkMode} label="Plume Count" value={String(facility.plumeCount ?? 0)} />
+      )}
       {facility.isSatellite && (facility.persistence ?? 0) > 0 && (
         <PopupRow darkMode={darkMode} label="Persistence" value={`${((facility.persistence ?? 0) * 100).toFixed(0)}%`} />
       )}
-      {(facility.plumeCount ?? 0) > 0 && (
-        <PopupRow darkMode={darkMode} label={facility.isSatellite ? 'Plume Count' : 'Measurements'} value={String(facility.plumeCount)} border={false} />
+      {facility.isSatellite && facility.instrument && (
+        <PopupRow darkMode={darkMode} label="Instrument" value={facility.instrument} />
+      )}
+      {facility.isSatellite && facility.lastDetected && (
+        <PopupRow darkMode={darkMode} label="Last Detected" value={new Date(facility.lastDetected).toLocaleDateString()} border={false} />
+      )}
+      {!facility.isSatellite && (facility.plumeCount ?? 0) > 0 && (
+        <PopupRow darkMode={darkMode} label="Measurements" value={String(facility.plumeCount)} border={false} />
       )}
     </div>
 

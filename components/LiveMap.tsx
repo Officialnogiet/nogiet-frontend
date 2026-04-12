@@ -672,8 +672,6 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       m.on('error', (e) => {
         const msg = e.error?.message ?? '';
         if (msg.includes('token')) setError('Invalid Mapbox access token.');
-        else if (msg.includes('style')) setError('Failed to load map style.');
-        // Silently log other errors (tile, sprite, layer) without blocking the map
         else console.warn('[Mapbox]', msg);
       });
 
@@ -780,10 +778,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const el = document.createElement('div');
       const dotSize = gdCount > 0 ? Math.min(18 + gdCount * 2, 32) : 18;
       el.style.cssText = 'width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;';
+      const buildingSvg = `<svg style="width:${Math.max(12, dotSize - 6)}px;height:${Math.max(12, dotSize - 6)}px;" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M4 21V9l8-4 8 4v12H4zm2-2h3v-3h6v3h3V10l-6-3-6 3v9zm5-5h2v2h-2v-2zm-3-3h2v2H8v-2zm6 0h2v2h-2v-2zm-3 0h2v2h-2v-2z"/></svg>`;
       const countLabel = gdCount > 0
-        ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:${dotSize > 24 ? 11 : 9}px;font-weight:800;color:white;z-index:3;line-height:1;">${gdCount}</span>`
+        ? `<span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;z-index:4;padding:0 3px;border:1.5px solid white;">${gdCount}</span>`
         : '';
-      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${dotSize}px;height:${dotSize}px;background:#14b8a6;border-radius:50%;border:2px solid white;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${countLabel}</div><span style="position:absolute;top:100%;margin-top:6px;font-size:11px;font-weight:700;color:${darkMode ? '#9ca3af' : '#0f766e'};white-space:nowrap;pointer-events:none;">${f.name}</span></div>`;
+      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${dotSize}px;height:${dotSize}px;background:#0f766e;border-radius:6px;border:2px solid white;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${buildingSvg}${countLabel}</div><span style="position:absolute;top:100%;margin-top:6px;font-size:10px;font-weight:700;color:${darkMode ? '#9ca3af' : '#0f766e'};white-space:nowrap;pointer-events:none;">${f.name}</span></div>`;
       el.addEventListener('click', (e) => { e.stopPropagation(); handleFacilityClick(facility); });
       const marker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([f.longitude, f.latitude]).addTo(map.current!);
       facilityMarkersRef.current.push(marker);
@@ -854,17 +853,26 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const measurements = groundDataMapRef.current.get(selectedFacility.id) ?? [];
       if (measurements.length === 0) return;
 
-      const fIdx = filteredFacilities.findIndex((f: any) => f.id === selectedFacility.id);
+      // Use the same index as buildGroundScatterGeoJSON so dots stay in the same position
+      const allFacs = filteredFacilities as any[];
+      const fIdx = allFacs.findIndex((f: any) => f.id === selectedFacility.id);
       const seed = fIdx >= 0 ? fIdx : 0;
       const goldenAngle = Math.PI * (3 - Math.sqrt(5));
       const maxR = 0.015 + Math.min(measurements.length, 15) * 0.002;
 
       measurements.forEach((gd: any, i: number) => {
-        const angle = i * goldenAngle + seededRand(seed * 100) * Math.PI * 2;
-        const r = maxR * Math.sqrt((i + 1) / measurements.length);
-        const jitter = seededRand(seed * 1000 + i * 7) * 0.003;
-        const pLng = sourceLng + (r + jitter) * Math.cos(angle);
-        const pLat = sourceLat + (r + jitter) * Math.sin(angle);
+        const hasRealCoords = typeof gd.latitude === 'number' && typeof gd.longitude === 'number';
+        let pLng: number, pLat: number;
+        if (hasRealCoords) {
+          pLng = gd.longitude;
+          pLat = gd.latitude;
+        } else {
+          const angle = i * goldenAngle + seededRand(seed * 100) * Math.PI * 2;
+          const r = maxR * Math.sqrt((i + 1) / measurements.length);
+          const jitter = seededRand(seed * 1000 + i * 7) * 0.003;
+          pLng = sourceLng + (r + jitter) * Math.cos(angle);
+          pLat = sourceLat + (r + jitter) * Math.sin(angle);
+        }
 
         pointFeatures.push({
           type: 'Feature',
@@ -1038,41 +1046,56 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     });
 
     // Scatter haze: large soft cloud visible at low zoom, clusters tight
+    const plumeColorExpr: mapboxgl.Expression = [
+      'interpolate', ['linear'], ['get', 'rate'],
+      0, '#fbbf24',
+      50, '#f97316',
+      200, '#ef4444',
+      500, '#dc2626',
+    ];
+
     m.addLayer({
       id: SCATTER_HAZE, type: 'circle', source: SCATTER_SOURCE,
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 4, 7, 8, 10, 14, 13, 22],
-        'circle-color': '#fb923c',
+        'circle-color': plumeColorExpr,
         'circle-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.25, 7, 0.18, 10, 0.12, 13, 0.08],
         'circle-blur': ['interpolate', ['linear'], ['zoom'], 4, 1.4, 7, 1, 10, 0.6, 13, 0.3],
       },
     });
 
-    // Scatter glow: medium ring around each scatter dot
     m.addLayer({
       id: SCATTER_GLOW, type: 'circle', source: SCATTER_SOURCE,
       minzoom: 7,
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 5, 10, 10, 13, 16],
-        'circle-color': '#f97316',
+        'circle-color': plumeColorExpr,
         'circle-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.06, 10, 0.12, 13, 0.18],
         'circle-blur': 0.7,
       },
     });
 
-    // Scatter dot: crisp point, fades in as you zoom
     m.addLayer({
       id: SCATTER_DOT, type: 'circle', source: SCATTER_SOURCE,
       minzoom: 7.5,
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 7.5, 1.5, 10, 3.5, 13, 5.5],
-        'circle-color': '#fdba74',
+        'circle-color': plumeColorExpr,
         'circle-opacity': ['interpolate', ['linear'], ['zoom'], 7.5, 0.3, 9, 0.6, 12, 0.85],
         'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7.5, 0, 10, 0.8, 13, 1.5],
         'circle-stroke-color': '#ffffff',
         'circle-stroke-opacity': ['interpolate', ['linear'], ['zoom'], 7.5, 0, 10, 0.3, 13, 0.6],
       },
     });
+
+    const emissionColorExpr: mapboxgl.Expression = [
+      'interpolate', ['linear'], ['get', 'emission_rate'],
+      0, '#fbbf24',
+      50, '#f97316',
+      200, '#ef4444',
+      500, '#dc2626',
+      1000, '#991b1b',
+    ];
 
     // Main source glow: ambient halo — zoom responsive
     m.addLayer({
@@ -1084,13 +1107,13 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           9, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 14, 1, 20, 5, 34, 10, 44, 20, 58],
           12, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 18, 1, 26, 5, 44, 10, 57, 20, 75],
         ],
-        'circle-color': '#fb923c',
+        'circle-color': emissionColorExpr,
         'circle-opacity': ['interpolate', ['linear'], ['get', 'plume_count'], 0, 0.06, 1, 0.1, 3, 0.15, 10, 0.22, 20, 0.3],
         'circle-blur': 1,
       },
     });
 
-    // Main source dot — zoom responsive
+    // Main source dot — zoom responsive, color-coded by emission rate
     m.addLayer({
       id: SAT_LAYER_POINT, type: 'circle', source: SAT_SOURCE_ID,
       paint: {
@@ -1100,7 +1123,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           9, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 6, 1, 8, 5, 13, 10, 16, 20, 20],
           12, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 8, 1, 10, 5, 17, 10, 21, 20, 26],
         ],
-        'circle-color': '#fb923c',
+        'circle-color': emissionColorExpr,
         'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 7, 1.5, 12, 2],
         'circle-stroke-color': '#ffffff',
       },
@@ -1407,17 +1430,23 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       )}
 
       {error && (
-        <div className={`absolute inset-0 flex items-center justify-center z-50 p-6 ${darkMode ? 'bg-[#0b0e14]/90' : 'bg-red-50/90'}`}>
-          <div className={`p-8 rounded-2xl shadow-xl max-w-md text-center border ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white'}`}>
+        <div className={`absolute inset-0 flex items-center justify-center z-50 p-6 ${darkMode ? 'bg-[#0b0e14]/90' : 'bg-red-50/90'}`} onClick={() => setError(null)}>
+          <div className={`p-8 rounded-2xl shadow-xl max-w-md text-center border relative ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setError(null)} className={`absolute top-3 right-3 p-1.5 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'}`}>
+              <X size={18} />
+            </button>
             <AlertCircle className="mx-auto text-red-500" size={48} />
             <h3 className={`mt-4 text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Map Error</h3>
             <p className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
+            <button onClick={() => setError(null)} className={`mt-4 px-6 py-2 rounded-xl text-sm font-bold transition-all ${darkMode ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              Dismiss
+            </button>
           </div>
         </div>
       )}
 
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none z-10">
-        <div className="w-full h-full" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div className="absolute inset-0 opacity-[0.12] pointer-events-none z-10">
+        <div className="w-full h-full" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.7) 1px, transparent 1px)', backgroundSize: '100px 100px' }} />
       </div>
 
       <MapSearchBar darkMode={darkMode} onOpenFilters={onOpenFilters} searchQuery={searchQuery} onSearchChange={setSearchQuery} />

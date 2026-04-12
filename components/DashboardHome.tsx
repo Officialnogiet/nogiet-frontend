@@ -30,6 +30,7 @@ import {
   formatEmission,
   getUnitLabel,
 } from "../src/utils/unit-conversion";
+import Preloader from "./Preloader";
 
 const TREND_FALLBACK = [
   { day: "Mon", valueKgHr: 0 },
@@ -112,13 +113,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
   if (isLoading) {
     return (
       <div
-        className={`flex min-h-[320px] items-center justify-center rounded-xl border p-8 ${
+        className={`flex min-h-screen items-center justify-center ${
           dm
             ? "border-[#1e2430] bg-[#12161f] text-slate-300"
             : "border-gray-200 bg-gray-50 text-gray-600"
         }`}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+        <Preloader darkMode={dm} mapLoaded={false} isLoadingData={isLoading} />
       </div>
     );
   }
