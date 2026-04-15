@@ -1445,8 +1445,8 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         </div>
       )}
 
-      <div className="absolute inset-0 opacity-[0.12] pointer-events-none z-10">
-        <div className="w-full h-full" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.7) 1px, transparent 1px)', backgroundSize: '100px 100px' }} />
+      <div className={`absolute inset-0 pointer-events-none z-10 ${darkMode ? 'opacity-[0.12]' : 'opacity-[0.25]'}`}>
+        <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(${darkMode ? 'rgba(148,163,184,1)' : 'rgba(30,41,59,1)'} 1px, transparent 1px), linear-gradient(90deg, ${darkMode ? 'rgba(148,163,184,1)' : 'rgba(30,41,59,1)'} 1px, transparent 1px)`, backgroundSize: '100px 100px' }} />
       </div>
 
       <MapSearchBar darkMode={darkMode} onOpenFilters={onOpenFilters} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
