@@ -18,4 +18,5 @@ export type DashboardView =
   | 'ALERTS'
   | 'USER_MANAGEMENT'
   | 'FIELD_DATA'
-  | 'SETTINGS';
+  | 'SETTINGS'
+  | 'DOCS';

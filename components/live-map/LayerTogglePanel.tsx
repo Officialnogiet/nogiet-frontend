@@ -12,14 +12,22 @@ interface LayerTogglePanelProps {
   onClose: () => void;
 }
 
-const LAYER_ITEMS: { key: keyof MapLayerState; label: string; icon: React.ReactNode; color: string }[] = [
-  { key: 'emissionGrid', label: 'Emissions Grid', icon: <Square size={16} />, color: '#d97a4d' },
-  { key: 'states', label: 'State Boundaries', icon: <Map size={16} />, color: '#10b981' },
-  { key: 'lgas', label: 'LGA Boundaries', icon: <Grid3x3 size={16} />, color: '#a78bfa' },
-  { key: 'oilBlocks', label: 'Oil Blocks', icon: <Hexagon size={16} />, color: '#0ea5e9' },
-  { key: 'pipelines', label: 'Pipelines', icon: <Activity size={16} />, color: '#ef4444' },
-  { key: 'satelliteView', label: 'Satellite Imagery', icon: <Layers size={16} />, color: '#10b981' },
-  { key: 'emissionHotspots', label: 'Emission Hotspots', icon: <Thermometer size={16} />, color: '#f97316' },
+interface LayerItem {
+  key: keyof MapLayerState;
+  label: string;
+  icon: React.ReactNode;
+  /** Swatch colour — paired with `boundaryLayers.ts` so the legend matches the map. */
+  color: { dark: string; light: string };
+}
+
+const LAYER_ITEMS: LayerItem[] = [
+  { key: 'emissionGrid', label: 'Emissions Grid', icon: <Square size={16} />, color: { dark: '#d97a4d', light: '#d97a4d' } },
+  { key: 'states', label: 'State Boundaries', icon: <Map size={16} />, color: { dark: '#2dd4bf', light: '#115e59' } },
+  { key: 'lgas', label: 'LGA Boundaries', icon: <Grid3x3 size={16} />, color: { dark: '#64748b', light: '#cbd5e1' } },
+  { key: 'oilBlocks', label: 'Oil Blocks', icon: <Hexagon size={16} />, color: { dark: '#94a3b8', light: '#475569' } },
+  { key: 'pipelines', label: 'Pipelines', icon: <Activity size={16} />, color: { dark: '#ef4444', light: '#dc2626' } },
+  { key: 'satelliteView', label: 'Satellite Imagery', icon: <Layers size={16} />, color: { dark: '#10b981', light: '#10b981' } },
+  { key: 'emissionHotspots', label: 'Emission Hotspots', icon: <Thermometer size={16} />, color: { dark: '#f97316', light: '#f97316' } },
 ];
 
 const LayerTogglePanel: React.FC<LayerTogglePanelProps> = ({ darkMode, layers, onToggle, visible, onClose }) => {
@@ -42,27 +50,30 @@ const LayerTogglePanel: React.FC<LayerTogglePanelProps> = ({ darkMode, layers, o
         </button>
       </div>
       <div className="space-y-1">
-        {LAYER_ITEMS.map(item => (
-          <button
-            key={item.key}
-            onClick={() => onToggle(item.key)}
-            className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-all ${
-              layers[item.key]
-                ? darkMode ? 'bg-white/5' : 'bg-gray-50'
-                : ''
-            } ${darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
-          >
-            <div
-              className="w-3 h-3 rounded-sm flex-shrink-0 border"
-              style={{
-                backgroundColor: layers[item.key] ? item.color : 'transparent',
-                borderColor: item.color,
-              }}
-            />
-            <span className={`${item.icon ? subText : ''}`}>{item.icon}</span>
-            <span className={`text-xs font-medium ${layers[item.key] ? text : subText}`}>{item.label}</span>
-          </button>
-        ))}
+        {LAYER_ITEMS.map(item => {
+          const swatch = darkMode ? item.color.dark : item.color.light;
+          return (
+            <button
+              key={item.key}
+              onClick={() => onToggle(item.key)}
+              className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-all ${
+                layers[item.key]
+                  ? darkMode ? 'bg-white/5' : 'bg-gray-50'
+                  : ''
+              } ${darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+            >
+              <div
+                className="w-3 h-3 rounded-sm flex-shrink-0 border"
+                style={{
+                  backgroundColor: layers[item.key] ? swatch : 'transparent',
+                  borderColor: swatch,
+                }}
+              />
+              <span className={`${item.icon ? subText : ''}`}>{item.icon}</span>
+              <span className={`text-xs font-medium ${layers[item.key] ? text : subText}`}>{item.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

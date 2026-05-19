@@ -97,7 +97,10 @@ function themeColors() {
 function statePopupHTML(name: string, lng: number, lat: number): string {
   const zone = getZone(name);
   const t = themeColors();
-  const accent = currentThemeDark ? '#34d399' : '#059669';
+  // Brand-aligned: state = the most important admin context, so it gets the app's teal.
+  // Dark: a mid teal that reads on navy without glowing.
+  // Light: a deep desaturated teal that feels sophisticated, not loud.
+  const accent = currentThemeDark ? '#5eead4' : '#115e59';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
     <div style="font-weight:800;font-size:14px;color:${accent};margin-bottom:2px;">${name} State</div>
     <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Region:</span> ${zone}</div>
@@ -107,7 +110,9 @@ function statePopupHTML(name: string, lng: number, lat: number): string {
 
 function lgaPopupHTML(name: string, lng: number, lat: number): string {
   const t = themeColors();
-  const accent = currentThemeDark ? '#a78bfa' : '#7c3aed';
+  // Tertiary admin tier — quiet slate on both themes. Always one luminance step lighter
+  // than the oil-block layer so the hierarchy reads at a glance.
+  const accent = currentThemeDark ? '#94a3b8' : '#64748b';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
     <div style="font-weight:800;font-size:13px;color:${accent};margin-bottom:2px;">${name}</div>
     <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Type:</span> Local Government Area</div>
@@ -128,7 +133,8 @@ function pipelinePopupHTML(name: string, lng: number, lat: number): string {
 function oilBlockPopupHTML(props: Record<string, any>, _lng: number, _lat: number): string {
   const name = props.name ?? 'Unknown';
   const t = themeColors();
-  const accent = currentThemeDark ? '#38bdf8' : '#0284c7';
+  // Match the slate oil-block strokes — popup accent stays in the secondary tier.
+  const accent = currentThemeDark ? '#cbd5e1' : '#334155';
   const operator = props.operator || '';
   const area = props.area_sqkm ? `${Number(props.area_sqkm).toLocaleString()} km²` : '';
   const basin = props.basin || '';
@@ -307,10 +313,14 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
   const data = await loadStatesGeoJSON();
   if (!data || !isMapAlive(m)) return;
 
-  const borderColor = isDark ? '#34d399' : '#059669';
-  const fillColor = isDark ? '#10b981' : '#059669';
-  const labelColor = isDark ? '#6ee7b7' : '#065f46';
-  const haloColor = isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)';
+  // Brand-aligned primary admin tier. Uses the app's teal in theme-appropriate weights:
+  //   Dark  → mid teal that reads on navy without glowing or competing with sidebar accents.
+  //   Light → deep, almost-petrol teal that feels editorial, not a neon highlight.
+  //   Satellite handled by either branch + strong text halo so labels survive imagery.
+  const borderColor = isDark ? '#2dd4bf' : '#115e59';
+  const fillColor = isDark ? '#14b8a6' : '#0d9488';
+  const labelColor = isDark ? '#5eead4' : '#134e4a';
+  const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)';
 
   m.addSource(STATES_SOURCE, { type: 'geojson', data, generateId: true });
 
@@ -318,7 +328,9 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
     id: STATES_FILL, type: 'fill', source: STATES_SOURCE,
     paint: {
       'fill-color': fillColor,
-      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.25, 0.1],
+      // Resting fill is barely-there on both themes — the brand-teal border carries the
+      // boundary, the fill only confirms shape on hover.
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], isDark ? 0.18 : 0.1, isDark ? 0.06 : 0.03],
     },
   }, beforeLayer);
 
@@ -366,10 +378,12 @@ export async function addLGAsLayer(m: mapboxgl.Map, beforeLayer?: string, isDark
   const data = await loadLGAsGeoJSON();
   if (!data || !isMapAlive(m)) return;
 
-  const borderColor = isDark ? '#a78bfa' : '#7c3aed';
-  const fillColor = isDark ? '#a78bfa' : '#8b5cf6';
-  const labelColor = isDark ? '#c4b5fd' : '#5b21b6';
-  const haloColor = isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)';
+  // Tertiary admin tier. Quiet cool slate on both themes — by far the lightest weight
+  // in the boundary hierarchy so it only appears when you zoom in, never dominates.
+  const borderColor = isDark ? '#64748b' : '#cbd5e1';
+  const fillColor = isDark ? '#64748b' : '#cbd5e1';
+  const labelColor = isDark ? '#94a3b8' : '#64748b';
+  const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)';
 
   m.addSource(LGAS_SOURCE, { type: 'geojson', data, generateId: true });
 
@@ -377,7 +391,7 @@ export async function addLGAsLayer(m: mapboxgl.Map, beforeLayer?: string, isDark
     id: LGAS_FILL, type: 'fill', source: LGAS_SOURCE,
     paint: {
       'fill-color': fillColor,
-      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.2, 0.03],
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], isDark ? 0.2 : 0.14, isDark ? 0.03 : 0.03],
     },
   }, beforeLayer);
 
@@ -535,20 +549,25 @@ export async function addOilBlocksLayer(m: mapboxgl.Map, beforeLayer?: string, i
   const data = await loadOilBlocksGeoJSON();
   if (!data || !isMapAlive(m)) return;
 
-  const labelColor = isDark ? '#7dd3fc' : '#075985';
-  const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
+  // Secondary operational tier — quiet cool slate. Sits between the brand-teal state
+  // border and the lightest-grey LGA border, so the three layers form a clear hierarchy:
+  //   State (teal, primary) > Oil Blocks (mid-slate, secondary) > LGA (light slate, tertiary).
+  const labelColor = isDark ? '#cbd5e1' : '#334155';
+  const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)';
 
+  // Terrain variants kept but flattened to pure luminance steps — no hue change, just
+  // darker-for-deeper. Keeps the overall map calm.
   const fillColorExpr: mapboxgl.Expression = [
     'case',
-    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#1e40af' : '#1e3a8a',
-    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#1d4ed8' : '#2563eb',
-    isDark ? '#0ea5e9' : '#0284c7',
+    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#1e293b' : '#64748b',
+    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#334155' : '#94a3b8',
+    isDark ? '#475569' : '#94a3b8',
   ];
   const borderColorExpr: mapboxgl.Expression = [
     'case',
-    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#60a5fa' : '#3b82f6',
-    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#38bdf8' : '#0284c7',
-    isDark ? '#38bdf8' : '#0284c7',
+    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#94a3b8' : '#334155',
+    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#64748b' : '#475569',
+    isDark ? '#64748b' : '#475569',
   ];
 
   m.addSource(OIL_BLOCKS_SOURCE, { type: 'geojson', data, generateId: true });

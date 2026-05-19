@@ -41,6 +41,7 @@ import EmissionGridLegend, { type ProviderSourcesSummary, type ProviderInstrumen
 import SourceLegendHint from './live-map/SourceLegendHint';
 import { ALL_GRID_PROVIDERS, type GridProvider } from '../src/stores/dashboard.store';
 import { feedColor, normalizeInstrument, shortInstrument } from './methane-trends/feeds';
+import oilStationIcon from '../assets/oil-station.png';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -1022,6 +1023,34 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     facilityMarkersRef.current.forEach((m) => m.remove());
     facilityMarkersRef.current = [];
 
+    // Decide how to render the oil-station icon per basemap so it always stays
+    // legible. The map style is the source of truth (the dashboard `darkMode`
+    // toggle only affects UI chrome, not the basemap):
+    //   - light     → render the original colored artwork
+    //   - dark      → recolor to a white silhouette
+    //   - satellite → recolor to a gold-yellow silhouette
+    // We use CSS `mask-image` + `background-color` instead of brightness/invert
+    // filters so we can pick *any* exact color (gold can't be reached cleanly
+    // from a brightness/invert chain).
+    const basemap: 'light' | 'satellite' | 'dark' =
+      mapStyle === 'light' ? 'light' :
+      mapStyle === 'satellite' ? 'satellite' :
+      'dark';
+    const iconColor =
+      basemap === 'satellite' ? '#fbbf24' :   // amber-400
+      basemap === 'dark' ? '#ffffff' :
+      null;                                    // light → keep original artwork
+    const labelColor =
+      basemap === 'light' ? '#0f766e' :
+      basemap === 'satellite' ? '#fde047' :    // yellow-300
+      '#e5e7eb';
+    const labelShadow = basemap === 'light'
+      ? '0 1px 2px rgba(255,255,255,0.8)'
+      : '0 1px 2px rgba(0,0,0,0.85)';
+    const iconShadow = basemap === 'light'
+      ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))'
+      : 'drop-shadow(0 2px 4px rgba(0,0,0,0.55))';
+
     filteredFacilities.forEach((f: any) => {
       const gdCount = groundDataMapRef.current.get(f.id)?.length ?? 0;
       const facility: FacilityData = {
@@ -1030,13 +1059,15 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         plumeCount: gdCount,
       };
       const el = document.createElement('div');
-      const dotSize = gdCount > 0 ? Math.min(18 + gdCount * 2, 32) : 18;
-      el.style.cssText = 'width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;';
-      const buildingSvg = `<svg style="width:${Math.max(12, dotSize - 6)}px;height:${Math.max(12, dotSize - 6)}px;" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M4 21V9l8-4 8 4v12H4zm2-2h3v-3h6v3h3V10l-6-3-6 3v9zm5-5h2v2h-2v-2zm-3-3h2v2H8v-2zm6 0h2v2h-2v-2zm-3 0h2v2h-2v-2z"/></svg>`;
+      const iconSize = gdCount > 0 ? Math.min(32 + gdCount * 2, 48) : 32;
+      el.style.cssText = 'width:56px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;';
       const countLabel = gdCount > 0
-        ? `<span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;z-index:4;padding:0 3px;border:1.5px solid white;">${gdCount}</span>`
+        ? `<span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;z-index:4;padding:0 3px;border:1.5px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${gdCount}</span>`
         : '';
-      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${dotSize}px;height:${dotSize}px;background:#0f766e;border-radius:6px;border:2px solid white;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${buildingSvg}${countLabel}</div><span style="position:absolute;top:100%;margin-top:6px;font-size:10px;font-weight:700;color:${darkMode ? '#9ca3af' : '#0f766e'};white-space:nowrap;pointer-events:none;">${f.name}</span></div>`;
+      const iconMarkup = iconColor
+        ? `<div role="img" aria-label="Oil facility" style="width:100%;height:100%;background-color:${iconColor};-webkit-mask:url(${oilStationIcon}) center/contain no-repeat;mask:url(${oilStationIcon}) center/contain no-repeat;pointer-events:none;filter:${iconShadow};"></div>`
+        : `<img src="${oilStationIcon}" alt="Oil facility" style="width:100%;height:100%;object-fit:contain;pointer-events:none;filter:${iconShadow};" draggable="false" />`;
+      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${iconSize}px;height:${iconSize}px;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${iconMarkup}${countLabel}</div><span style="position:absolute;top:100%;margin-top:4px;font-size:10px;font-weight:700;color:${labelColor};white-space:nowrap;pointer-events:none;text-shadow:${labelShadow};">${f.name}</span></div>`;
       el.addEventListener('click', (e) => { e.stopPropagation(); handleFacilityClick(facility); });
       const marker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([f.longitude, f.latitude]).addTo(map.current!);
       facilityMarkersRef.current.push(marker);
@@ -1055,7 +1086,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     scaleFacMarkers();
     m.on('zoom', scaleFacMarkers);
     return () => { m.off('zoom', scaleFacMarkers); };
-  }, [mapLoaded, filteredFacilities, darkMode, handleFacilityClick, groundDataVersion]);
+  }, [mapLoaded, filteredFacilities, darkMode, mapStyle, handleFacilityClick, groundDataVersion]);
 
   // Highlight plumes/measurements around selected source with connecting lines
   useEffect(() => {

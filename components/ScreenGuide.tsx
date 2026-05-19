@@ -104,6 +104,17 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
       'Change map style between standard, satellite, light, and dark views.',
     ],
   },
+  DOCS: {
+    title: 'Documentation',
+    description: 'A page-by-page narrative of the NOGIET portal — what each screen does, the data behind it, and how the satellite integrations work.',
+    tips: [
+      'Start with the Overview to get the elevator pitch — problem, users, and what success looks like.',
+      'Walk through the Walkthrough section to see every screen explained the way you would demo it.',
+      'Search the entire docs from the sidebar — matches title, summary, and the raw markdown body.',
+      'The right-hand "On this page" panel jumps to any section; headings have copyable # links.',
+      'The Reference group has the Carbon Mapper / IMEO / TROPOMI integration deep-dive and the system architecture.',
+    ],
+  },
 };
 
 interface ScreenGuideProps {

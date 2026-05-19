@@ -53,6 +53,7 @@ const MORE_ITEMS: { id: DashboardView; label: string }[] = [
   { id: 'DATA_COMPARISON', label: 'Data Comparison' },
   { id: 'FIELD_DATA', label: 'Field Data' },
   { id: 'USER_MANAGEMENT', label: 'User Management' },
+  { id: 'DOCS', label: 'Documentation' },
   { id: 'SETTINGS', label: 'Settings' },
 ];
 

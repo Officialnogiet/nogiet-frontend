@@ -19,6 +19,7 @@ import DashboardHome from '../components/DashboardHome';
 import FieldDataForm from '../components/FieldDataForm';
 import ScreenGuide from '../components/ScreenGuide';
 import ErrorBoundary from '../components/ErrorBoundary';
+import Docs from './docs/Docs';
 
 interface DashboardProps {
   onNavigate: (screen: AuthScreen) => void;
@@ -87,6 +88,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       case 'SETTINGS':
         content = <SettingsPage darkMode={darkMode} onClose={() => setActiveView('DASHBOARD_HOME')} />;
         label = 'Settings';
+        break;
+      case 'DOCS':
+        content = <Docs darkMode={darkMode} />;
+        label = 'Documentation';
         break;
       default:
         content = <DashboardHome darkMode={darkMode} onNavigate={(v) => setActiveView(v as any)} />;
