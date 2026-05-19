@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { AlertCircle, RefreshCw, X, Satellite, Layers } from 'lucide-react';
+import { AlertCircle, RefreshCw, X, Satellite, Layers, Info } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useQueryClient } from '@tanstack/react-query';
@@ -29,6 +29,18 @@ import {
   uninstallBoundaryHover,
   setBoundaryTheme,
 } from './live-map/boundaryLayers';
+import {
+  addEmissionGridLayer,
+  updateEmissionGridLayer,
+  removeEmissionGridLayer,
+  setEmissionGridTheme,
+  EMISSION_GRID_FILL,
+} from './live-map/emissionGridLayer';
+import { buildEmissionGrid, cellDegForZoom, type EmissionPoint } from './live-map/emissionGrid';
+import EmissionGridLegend, { type ProviderSourcesSummary, type ProviderInstrumentSummary } from './live-map/EmissionGridLegend';
+import SourceLegendHint from './live-map/SourceLegendHint';
+import { ALL_GRID_PROVIDERS, type GridProvider } from '../src/stores/dashboard.store';
+import { feedColor, normalizeInstrument, shortInstrument } from './methane-trends/feeds';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -78,6 +90,8 @@ function buildPlumeScatterGeoJSON(satellites: any[]): GeoJSON.FeatureCollection 
     const lat = src.latitude ?? src.lat;
     const baseRate = src.emissionRate ?? src.emission_rate ?? 0;
     const maxR = 0.02 + Math.min(count, 20) * 0.002;
+    const provider = (src.provider ?? 'carbon_mapper') as 'carbon_mapper' | 'imeo' | 'tropomi';
+    const sourceColor = feedColor(provider, src.instrument ?? '');
 
     for (let i = 0; i < count; i++) {
       const angle = i * goldenAngle + seededRand(srcIdx * 100) * Math.PI * 2;
@@ -97,6 +111,8 @@ function buildPlumeScatterGeoJSON(satellites: any[]): GeoJSON.FeatureCollection 
         },
         properties: {
           source_name: src.name ?? src.source_name ?? '',
+          provider,
+          feed_color: sourceColor,
           plume_idx: i + 1,
           total: count,
           rate: plumeRate,
@@ -160,24 +176,55 @@ function buildGroundScatterGeoJSON(facilities: any[], allGroundData: Map<string,
 function buildSatelliteGeoJSON(features: any[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: (features ?? []).map((src: any) => ({
-      type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [src.longitude ?? src.lon, src.latitude ?? src.lat] },
-      properties: {
-        source_name: src.name ?? src.source_name ?? '',
-        provider: src.provider ?? 'carbon_mapper',
-        sector: src.sector ?? 'Unknown',
-        emission_rate: src.emissionRate ?? src.emission_rate ?? 0,
-        emission_uncertainty: src.metadata?.emissionUncertainty ?? src.emissionUncertainty ?? 0,
-        plume_count: src.plumeCount ?? src.plume_count ?? 0,
-        gas: src.gas ?? 'CH4',
-        persistence: src.persistence ?? 0,
-        instrument: src.instrument ?? '',
-        first_detected: src.firstDetected ?? src.first_detected ?? '',
-        last_detected: src.lastDetected ?? src.last_detected ?? '',
-      },
-    })),
+    features: (features ?? []).map((src: any) => {
+      const provider = (src.provider ?? 'carbon_mapper') as 'carbon_mapper' | 'imeo' | 'tropomi';
+      const instrument = src.instrument ?? '';
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [src.longitude ?? src.lon, src.latitude ?? src.lat] },
+        properties: {
+          feature_id: src.id ?? '',
+          source_name: src.name ?? src.source_name ?? '',
+          provider,
+          sector: src.sector ?? 'Unknown',
+          emission_rate: src.emissionRate ?? src.emission_rate ?? 0,
+          emission_uncertainty: src.metadata?.emissionUncertainty ?? src.emissionUncertainty ?? 0,
+          plume_count: src.plumeCount ?? src.plume_count ?? 0,
+          gas: src.gas ?? 'CH4',
+          persistence: src.persistence ?? 0,
+          instrument,
+          // Per-source color resolved here (provider canonical for CM/TROPOMI,
+          // instrument-hashed palette for IMEO). Mapbox reads this directly via
+          // ['get', 'feed_color'] so we don't need a giant `match` expression.
+          feed_color: feedColor(provider, instrument),
+          first_detected: src.firstDetected ?? src.first_detected ?? '',
+          last_detected: src.lastDetected ?? src.last_detected ?? '',
+          plume_image_url: src.metadata?.plumeImageUrl ?? '',
+        },
+      };
+    }),
   };
+}
+
+function satelliteProviderAttribution(provider: string | undefined): string {
+  switch (provider) {
+    case 'imeo': return 'UNEP IMEO (methanedata.unep.org)';
+    case 'tropomi': return 'Sentinel-5P TROPOMI';
+    default: return 'Carbon Mapper (carbonmapper.org)';
+  }
+}
+
+const PROVIDER_SHORT_LABEL: Record<string, string> = {
+  carbon_mapper: 'Carbon Mapper',
+  imeo: 'IMEO',
+  tropomi: 'TROPOMI',
+};
+
+/** "All providers" / "IMEO + Carbon Mapper" / "Carbon Mapper" / "None". */
+function providerSummary(providers: string[]): string {
+  if (providers.length === 0) return 'None';
+  if (providers.length === ALL_GRID_PROVIDERS.length) return 'All providers';
+  return providers.map((p) => PROVIDER_SHORT_LABEL[p] ?? p).join(' + ');
 }
 
 const REGION_COORDS: Record<string, { center: [number, number]; zoom: number }> = {
@@ -249,8 +296,12 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const filteredSatRef = useRef<any[]>([]);
 
   const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [showGridLegend, setShowGridLegend] = useState(true);
   const mapLayers = useDashboardStore((s) => s.mapLayers);
   const toggleMapLayer = useDashboardStore((s) => s.toggleMapLayer);
+  const gridControls = useDashboardStore((s) => s.gridControls);
+  const setGridControls = useDashboardStore((s) => s.setGridControls);
+  const [mapZoom, setMapZoom] = useState<number>(7);
   const [styleReloadCount, setStyleReloadCount] = useState(0);
 
   useSocketUpdates();
@@ -321,6 +372,16 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     return result;
   }, [facilities, searchQuery, mapFilters.showFacilities, mapFilters.sectors]);
 
+  // Defensive accessors — declared once here so both `filteredSatellite` (above) and
+  // the grid logic (below) share a single computation. Persisted snapshots that
+  // predate the v7 store migration can be missing these fields, so we guard.
+  const providerSet = useMemo(
+    () => new Set(gridControls.providers ?? []),
+    [gridControls.providers],
+  );
+  const allProvidersSelected = providerSet.size === ALL_GRID_PROVIDERS.length;
+  const instrumentsByProvider = gridControls.instrumentsByProvider ?? {};
+
   const filteredSatellite = useMemo(() => {
     if (!mapFilters.showSatellite) return [];
     let features: any[] = globalSatSources;
@@ -340,6 +401,17 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     if (mapFilters.providers && mapFilters.providers.length > 0) {
       features = features.filter((s: any) => mapFilters.providers.includes(s.provider ?? 'carbon_mapper'));
     }
+    // Source-legend parity: when the user unchecks a provider OR an individual
+    // IMEO instrument in the grid legend, that source must disappear from the
+    // map entirely — not just from the grid layer.
+    features = features.filter((s: any) => {
+      const provider = (s.provider ?? 'carbon_mapper') as GridProvider;
+      if (!providerSet.has(provider)) return false;
+      const allowedList = instrumentsByProvider[provider];
+      if (allowedList == null) return true;
+      if (allowedList.length === 0) return false;
+      return allowedList.includes(normalizeInstrument(s.instrument));
+    });
     features = features.filter((s: any) => {
       const rate = s.emissionRate ?? s.emission_rate ?? 0;
       const plumes = s.plumeCount ?? s.plume_count ?? 0;
@@ -349,7 +421,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         && persist >= mapFilters.minPersistence && persist <= mapFilters.maxPersistence;
     });
     return features;
-  }, [globalSatSources, searchQuery, mapFilters]);
+  }, [globalSatSources, searchQuery, mapFilters, providerSet, instrumentsByProvider]);
   filteredSatRef.current = filteredSatellite;
 
   const totalSources = filteredFacilities.length + filteredSatellite.length;
@@ -576,7 +648,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           ['Instrument', selectedFacility.instrument || 'N/A'],
           ['First Detected', selectedFacility.firstDetected || 'N/A'],
           ['Last Detected', selectedFacility.lastDetected || 'N/A'],
-          ['Data Source', 'CarbonMapper.org'],
+          ['Data Source', satelliteProviderAttribution(selectedFacility.satelliteProvider)],
         ],
         theme: 'striped',
         headStyles: { fillColor: [251, 146, 60] },
@@ -611,6 +683,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     setActiveBBox(bbox);
   }, []);
 
+  // Latest grid GeoJSON kept in a ref so the stable rebuildAllLayers can re-attach it
+  // after a Mapbox style swap (style change wipes all sources/layers, so we need to
+  // recreate them from scratch — including the emissions grid the user wants persisted).
+  const gridGeoJSONRef = useRef<ReturnType<typeof buildEmissionGrid> | null>(null);
+
   const rebuildAllLayers = useCallback((m: mapboxgl.Map) => {
     if (breatheAnimRef.current) { cancelAnimationFrame(breatheAnimRef.current); breatheAnimRef.current = null; }
     satLayerReady.current = false;
@@ -627,6 +704,14 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     if (layers.states) addStatesLayer(m, undefined, isDark);
     if (layers.lgas) addLGAsLayer(m, undefined, isDark);
     if (layers.pipelines) addPipelinesLayer(m, undefined, isDark);
+
+    // Re-attach the square emissions grid (style swap removed it from the map).
+    if (layers.emissionGrid && gridGeoJSONRef.current) {
+      try {
+        const beforeId = m.getLayer(SAT_LAYER_GLOW) ? SAT_LAYER_GLOW : undefined;
+        addEmissionGridLayer(m, gridGeoJSONRef.current as any, { darkMode: isDark, beforeLayerId: beforeId });
+      } catch { /* ignore */ }
+    }
   }, []);
 
   const styleInitRef = useRef(false);
@@ -684,6 +769,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           setRegionChanged(true);
         }
       });
+
+      m.on('zoomend', () => {
+        if (!map.current) return;
+        setMapZoom(Math.round(map.current.getZoom() * 10) / 10);
+      });
     } catch { setError('Failed to create Mapbox instance.'); }
     return () => {
       if (breatheAnimRef.current) { cancelAnimationFrame(breatheAnimRef.current); breatheAnimRef.current = null; }
@@ -706,6 +796,170 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', vis);
     });
   }, [mapLoaded, mapLayers.emissionHotspots]);
+
+  // ----- Square emissions grid (ppb-themed cells) -----
+  // `providerSet` / `instrumentsByProvider` declared once above (used by both the
+  // grid AND the satellite-point filter so the legend's checkboxes drive both).
+
+  /**
+   * Discover every (provider, instrument) pair returned by the API for the current viewport,
+   * with point counts. No truncation — every distinct instrument is exposed to the legend so
+   * the user can pick precisely which ones drive the grid.
+   */
+  const providerSourceSummaries = useMemo<ProviderSourcesSummary[]>(() => {
+    const counts: Record<GridProvider, Map<string, number>> = {
+      carbon_mapper: new Map(),
+      imeo: new Map(),
+      tropomi: new Map(),
+    };
+    for (const s of filteredSatellite) {
+      const prov = (s.provider ?? 'carbon_mapper') as GridProvider;
+      if (!counts[prov]) continue;
+      const inst = normalizeInstrument(s.instrument ?? null);
+      counts[prov].set(inst, (counts[prov].get(inst) ?? 0) + 1);
+    }
+    return ALL_GRID_PROVIDERS.map<ProviderSourcesSummary>((provider) => {
+      const map = counts[provider];
+      const instruments: ProviderInstrumentSummary[] = [...map.entries()]
+        .sort(([, a], [, b]) => b - a)
+        .map(([instrument, count]) => ({
+          instrument,
+          shortLabel: shortInstrument(instrument),
+          color: feedColor(provider, instrument),
+          count,
+        }));
+      const totalCount = instruments.reduce((acc, i) => acc + i.count, 0);
+      return { provider, totalCount, instruments };
+    });
+  }, [filteredSatellite]);
+
+  const isInstrumentAllowed = useCallback(
+    (provider: GridProvider, instrumentRaw: string | null | undefined): boolean => {
+      const list = instrumentsByProvider?.[provider];
+      if (list == null) return true; // null/undefined = all allowed
+      if (list.length === 0) return false; // explicit empty = block everything
+      return list.includes(normalizeInstrument(instrumentRaw));
+    },
+    [instrumentsByProvider],
+  );
+
+  const gridPoints = useMemo<EmissionPoint[]>(() => {
+    const pts: EmissionPoint[] = [];
+    if (providerSet.size === 0) return pts;
+
+    for (const s of filteredSatellite) {
+      const prov = (s.provider ?? 'carbon_mapper') as GridProvider;
+      if (!providerSet.has(prov)) continue;
+      if (!isInstrumentAllowed(prov, s.instrument)) continue;
+      pts.push({
+        longitude: s.longitude ?? s.lon,
+        latitude: s.latitude ?? s.lat,
+        emissionRate: s.emissionRate ?? s.emission_rate ?? 0,
+        provider: prov,
+        sourceId: s.id,
+      });
+    }
+
+    // Include ground facilities only when all satellite providers are visible
+    // (matches "All sources" semantics from the previous dropdown).
+    if (allProvidersSelected) {
+      for (const f of filteredFacilities) {
+        const measurements: any[] = groundDataMapRef.current.get(f.id) ?? [];
+        const maxReading = measurements.reduce((mx: number, gd: any) => Math.max(mx, gd.methaneReading ?? 0), 0);
+        if (!Number.isFinite(f.latitude) || !Number.isFinite(f.longitude)) continue;
+        pts.push({
+          longitude: f.longitude,
+          latitude: f.latitude,
+          emissionRate: maxReading,
+          provider: 'ground',
+          sourceId: f.id,
+        });
+      }
+    }
+
+    return pts;
+    // groundDataVersion captures ground data updates (mutating ref)
+  }, [filteredSatellite, filteredFacilities, providerSet, allProvidersSelected, isInstrumentAllowed, groundDataVersion]);
+
+  /**
+   * Compact "Carbon Mapper · EMIT 14 · IMEO · EnMAP 12 · S-2 5 · GHGSat 3 · TROPOMI 8"
+   * Lists every selected provider and every selected instrument under it.
+   * No truncation — the user explicitly asked to see all sources from the API.
+   */
+  const instrumentBreakdown = useMemo(() => {
+    const parts: string[] = [];
+    for (const summary of providerSourceSummaries) {
+      if (!providerSet.has(summary.provider)) continue;
+      const allowed = summary.instruments.filter((i) => isInstrumentAllowed(summary.provider, i.instrument));
+      if (allowed.length === 0) continue;
+      const items = allowed.map((i) => `${i.shortLabel} ${i.count}`).join(' · ');
+      parts.push(items);
+    }
+    return parts.length > 0 ? parts.join('  ·  ') : undefined;
+  }, [providerSourceSummaries, providerSet, isInstrumentAllowed]);
+
+  const gridGeoJSON = useMemo(() => {
+    const cellDeg = cellDegForZoom(mapZoom);
+    return buildEmissionGrid(gridPoints, {
+      cellDeg,
+      statistic: gridControls.statistic,
+      alertThresholdKgHr: gridControls.showAlerts ? gridControls.alertThresholdKgHr : Infinity,
+    });
+  }, [gridPoints, mapZoom, gridControls.statistic, gridControls.showAlerts, gridControls.alertThresholdKgHr]);
+
+  // Keep a ref to the latest grid so rebuildAllLayers (after a style swap) can restore it.
+  useEffect(() => {
+    gridGeoJSONRef.current = gridGeoJSON;
+  }, [gridGeoJSON]);
+
+  // Mount/update/remove the grid in Mapbox
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+
+    if (!mapLayers.emissionGrid) {
+      removeEmissionGridLayer(m);
+      return;
+    }
+
+    const beforeId = m.getLayer(SAT_LAYER_GLOW) ? SAT_LAYER_GLOW : undefined;
+    addEmissionGridLayer(m, gridGeoJSON as any, { darkMode, beforeLayerId: beforeId });
+    updateEmissionGridLayer(m, gridGeoJSON as any);
+  }, [mapLoaded, mapLayers.emissionGrid, gridGeoJSON, darkMode]);
+
+  // Theme-react when dark mode changes
+  useEffect(() => {
+    const m = map.current;
+    if (m && mapLoaded) setEmissionGridTheme(m, darkMode);
+  }, [darkMode, mapLoaded]);
+
+  // Click on a grid cell → zoom in to drill-in
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !mapLoaded) return;
+
+    const handler = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+      const f = e.features?.[0];
+      if (!f) return;
+      const props = f.properties as Record<string, any> | null;
+      if (!props) return;
+      const west = Number(props.west), east = Number(props.east), south = Number(props.south), north = Number(props.north);
+      if ([west, east, south, north].some((v) => !Number.isFinite(v))) return;
+      m.fitBounds([[west, south], [east, north]], { padding: 80, duration: 500, maxZoom: 11.5 });
+    };
+
+    const cursorEnter = () => { m.getCanvas().style.cursor = 'pointer'; };
+    const cursorLeave = () => { m.getCanvas().style.cursor = ''; };
+
+    m.on('click', EMISSION_GRID_FILL, handler);
+    m.on('mouseenter', EMISSION_GRID_FILL, cursorEnter);
+    m.on('mouseleave', EMISSION_GRID_FILL, cursorLeave);
+    return () => {
+      m.off('click', EMISSION_GRID_FILL, handler);
+      m.off('mouseenter', EMISSION_GRID_FILL, cursorEnter);
+      m.off('mouseleave', EMISSION_GRID_FILL, cursorLeave);
+    };
+  }, [mapLoaded]);
 
   // Oil Blocks layer (real boundary data from GeoJSON)
   useEffect(() => {
@@ -1046,13 +1300,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     });
 
     // Scatter haze: large soft cloud visible at low zoom, clusters tight
-    const plumeColorExpr: mapboxgl.Expression = [
-      'interpolate', ['linear'], ['get', 'rate'],
-      0, '#fbbf24',
-      50, '#f97316',
-      200, '#ef4444',
-      500, '#dc2626',
-    ];
+    // Plume scatter dots inherit their parent source's color so each plume halo
+    // visually belongs to the satellite that detected it.
+    const plumeColorExpr: mapboxgl.Expression = ['get', 'feed_color'];
 
     m.addLayer({
       id: SCATTER_HAZE, type: 'circle', source: SCATTER_SOURCE,
@@ -1088,16 +1338,24 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       },
     });
 
-    const emissionColorExpr: mapboxgl.Expression = [
+    // Per-source fill color: provider canonical for CM/TROPOMI, instrument-hashed
+    // palette for IMEO. The value is precomputed by `feedColor()` and embedded as
+    // `feed_color` on each GeoJSON feature so the legend, the chart, and the map
+    // markers all stay in sync.
+    const sourceColorExpr: mapboxgl.Expression = ['get', 'feed_color'];
+
+    // Glow halo intensity now encodes emission rate (so we keep that signal visible
+    // alongside the source-colored fill).
+    const emissionGlowOpacityExpr: mapboxgl.Expression = [
       'interpolate', ['linear'], ['get', 'emission_rate'],
-      0, '#fbbf24',
-      50, '#f97316',
-      200, '#ef4444',
-      500, '#dc2626',
-      1000, '#991b1b',
+      0,    0.05,
+      50,   0.15,
+      200,  0.25,
+      500,  0.35,
+      1000, 0.45,
     ];
 
-    // Main source glow: ambient halo — zoom responsive
+    // Main source glow: ambient halo — sized by plume_count, lit by emission_rate
     m.addLayer({
       id: SAT_LAYER_GLOW, type: 'circle', source: SAT_SOURCE_ID,
       paint: {
@@ -1107,13 +1365,13 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           9, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 14, 1, 20, 5, 34, 10, 44, 20, 58],
           12, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 18, 1, 26, 5, 44, 10, 57, 20, 75],
         ],
-        'circle-color': emissionColorExpr,
-        'circle-opacity': ['interpolate', ['linear'], ['get', 'plume_count'], 0, 0.06, 1, 0.1, 3, 0.15, 10, 0.22, 20, 0.3],
+        'circle-color': sourceColorExpr,
+        'circle-opacity': emissionGlowOpacityExpr,
         'circle-blur': 1,
       },
     });
 
-    // Main source dot — zoom responsive, color-coded by emission rate
+    // Main source dot — fill = source color, stroke = white (or near-white in dark mode)
     m.addLayer({
       id: SAT_LAYER_POINT, type: 'circle', source: SAT_SOURCE_ID,
       paint: {
@@ -1123,9 +1381,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           9, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 6, 1, 8, 5, 13, 10, 16, 20, 20],
           12, ['interpolate', ['exponential', 1.5], ['get', 'plume_count'], 0, 8, 1, 10, 5, 17, 10, 21, 20, 26],
         ],
-        'circle-color': emissionColorExpr,
+        'circle-color': sourceColorExpr,
         'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 7, 1.5, 12, 2],
         'circle-stroke-color': '#ffffff',
+        'circle-stroke-opacity': 0.9,
       },
     });
 
@@ -1284,8 +1543,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const props = e.features[0].properties!;
       const coords = (e.features[0].geometry as GeoJSON.Point).coordinates;
       const sourceName = props.source_name ?? '';
+      const prov = (props.provider as string) ?? 'carbon_mapper';
       setSelectedFacility({
-        id: sourceName, name: sourceName,
+        id: (props.feature_id as string) || sourceName,
+        name: sourceName,
         latitude: coords[1], longitude: coords[0],
         sector: props.sector ?? 'Unknown', region: null,
         isSatellite: true, emissionRate: props.emission_rate ?? 0,
@@ -1293,6 +1554,8 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         plumeCount: props.plume_count ?? 0, persistence: props.persistence ?? 0,
         instrument: props.instrument ?? '', firstDetected: props.first_detected ?? '',
         lastDetected: props.last_detected ?? '',
+        satelliteProvider: prov,
+        plumeImageUrl: (props.plume_image_url as string) || undefined,
       });
       setActivePlumeSource(sourceName);
       setIsExpanded(false);
@@ -1419,7 +1682,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">Satellite Data Unavailable</p>
               <p className={`text-xs mt-1 ${darkMode ? 'text-red-400/70' : 'text-red-600/70'}`}>
-                The satellite data source (CarbonMapper) is not available at the moment. Facility data is still displayed. Please try refreshing later.
+                Satellite data (Carbon Mapper, IMEO, TROPOMI) is not available at the moment. Facility data is still displayed. Please try refreshing later.
               </p>
             </div>
             <button onClick={() => setSatelliteError(null)} className="flex-shrink-0 p-1 rounded-lg hover:bg-white/10 transition-colors">
@@ -1464,10 +1727,34 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       <MapZoomControls onZoomIn={() => map.current?.zoomIn()} onZoomOut={() => map.current?.zoomOut()} />
       <EmissionSummaryCard darkMode={darkMode} totalSources={totalSources} totalPlumes={totalPlumes} facilityCount={filteredFacilities.length} satelliteCount={filteredSatellite.length} />
 
-      {/* Layer toggle button */}
-      <div className="absolute top-20 md:top-28 right-3 md:right-6 z-40">
+      {/* Top-right control stack: Layers + Grid Legend toggles */}
+      <div className="absolute top-20 md:top-28 right-3 md:right-6 z-40 flex flex-col gap-2.5">
+        <button
+          onClick={() => setShowGridLegend(v => !v)}
+          aria-label="Toggle methane grid legend"
+          aria-pressed={showGridLegend}
+          title="Methane grid legend"
+          className={`relative w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${
+            showGridLegend && mapLayers.emissionGrid
+              ? 'bg-teal-600 text-white'
+              : darkMode
+                ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]'
+                : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'
+          }`}
+        >
+          <Info size={22} />
+          {!mapLayers.emissionGrid && (
+            <span
+              aria-hidden
+              className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2"
+              style={{ backgroundColor: '#94a3b8', borderColor: darkMode ? '#0b0e14' : '#003d33' }}
+            />
+          )}
+        </button>
         <button
           onClick={() => setShowLayerPanel(v => !v)}
+          aria-label="Toggle layer panel"
+          title="Layers"
           className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showLayerPanel ? 'bg-teal-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}
         >
           <Layers size={22} />
@@ -1491,6 +1778,40 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         visible={showLayerPanel}
         onClose={() => setShowLayerPanel(false)}
       />
+
+      <EmissionGridLegend
+        darkMode={darkMode}
+        visible={showGridLegend}
+        state={{
+          enabled: mapLayers.emissionGrid,
+          providers: gridControls.providers ?? [],
+          instrumentsByProvider: instrumentsByProvider,
+          statistic: gridControls.statistic,
+          showAlerts: gridControls.showAlerts,
+        }}
+        onChange={(s) => {
+          if (s.enabled !== mapLayers.emissionGrid) toggleMapLayer('emissionGrid');
+          setGridControls({
+            providers: s.providers,
+            instrumentsByProvider: s.instrumentsByProvider,
+            statistic: s.statistic,
+            showAlerts: s.showAlerts,
+          });
+        }}
+        providerSources={providerSourceSummaries}
+        currentlyShowing={mapLayers.emissionGrid ? {
+          source: providerSummary(gridControls.providers),
+          statistic:
+            gridControls.statistic === 'max' ? 'Maximum reading' :
+            gridControls.statistic === 'sum' ? 'Total emissions' :
+            'Average reading',
+          timeLabel: 'Last 7 days',
+          instrumentBreakdown: instrumentBreakdown,
+        } : undefined}
+        onClose={() => setShowGridLegend(false)}
+      />
+
+      <SourceLegendHint darkMode={darkMode} providerSources={providerSourceSummaries} />
 
       {showAlerts && (
         <AlertsPanel

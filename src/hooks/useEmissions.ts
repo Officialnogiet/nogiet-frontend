@@ -70,6 +70,18 @@ export function useSatelliteSources(filters: EmissionFiltersInput) {
       const cacheKey = `sat-${JSON.stringify(parsed)}`;
       try {
         const res = await emissionsApi.getSatelliteSources(parsed);
+        if (import.meta.env.DEV && res.data?.features?.length) {
+          const counts: Record<string, number> = {};
+          for (const f of res.data.features) {
+            counts[f.provider] = (counts[f.provider] ?? 0) + 1;
+          }
+          console.log("[Satellite API] backend providers:", res.data.providers);
+          console.log("[Satellite API] features by provider:", counts);
+          for (const p of new Set(res.data.features.map((f) => f.provider))) {
+            const sample = res.data.features.find((f) => f.provider === p);
+            if (sample) console.log(`[Satellite API] normalized sample (${p}):`, sample);
+          }
+        }
         if (res.data) {
           cacheEmissions(cacheKey, res.data).catch(() => {});
         }

@@ -9,6 +9,8 @@ export interface FacilityData {
   sector: string;
   region?: string | null;
   isSatellite?: boolean;
+  /** When `isSatellite`, which upstream feed normalized this point (`carbon_mapper` | `imeo` | `tropomi`). */
+  satelliteProvider?: string;
   emissionRate?: number;
   emissionUncertainty?: number;
   plumeCount?: number;
@@ -16,6 +18,8 @@ export interface FacilityData {
   instrument?: string;
   firstDetected?: string;
   lastDetected?: string;
+  /** IMEO plume image URL when provider is `imeo`. */
+  plumeImageUrl?: string;
 }
 
 interface FacilityPopupProps {
@@ -35,7 +39,19 @@ const FacilityPopup: React.FC<FacilityPopupProps> = ({ darkMode, facility, onExp
 
     <div className="flex items-center gap-2 mt-2">
       {facility.isSatellite ? (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400">Satellite Source</span>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+          facility.satelliteProvider === 'imeo'
+            ? 'bg-cyan-500/15 text-cyan-400'
+            : facility.satelliteProvider === 'tropomi'
+              ? 'bg-violet-500/15 text-violet-300'
+              : 'bg-orange-500/15 text-orange-400'
+        }`}>
+          {facility.satelliteProvider === 'imeo'
+            ? 'IMEO (UNEP)'
+            : facility.satelliteProvider === 'tropomi'
+              ? 'TROPOMI'
+              : 'Carbon Mapper'}
+        </span>
       ) : (
         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/15 text-teal-400">Facility</span>
       )}

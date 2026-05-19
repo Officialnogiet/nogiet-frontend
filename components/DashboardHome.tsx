@@ -3,6 +3,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,17 +13,16 @@ import {
   Bell,
   Building2,
   Flame,
-  Loader2,
   Satellite,
   Map,
-  Hexagon,
   ArrowRight,
   FileText,
   AlertTriangle,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { useDashboardSummary } from "../src/hooks/useEmissions";
+import { useDashboardSummary, useSatelliteSources } from "../src/hooks/useEmissions";
+import { useSatelliteStore } from "../src/stores/satellite.store";
 import { useSettingsStore } from "../src/stores/settings.store";
 import { useDashboardStore } from "../src/stores/dashboard.store";
 import {
@@ -31,16 +31,24 @@ import {
   getUnitLabel,
 } from "../src/utils/unit-conversion";
 import Preloader from "./Preloader";
+import { feedColor } from "./methane-trends/feeds";
+import type { ProviderId } from "./methane-trends/types";
 
-const TREND_FALLBACK = [
-  { day: "Mon", valueKgHr: 0 },
-  { day: "Tue", valueKgHr: 0 },
-  { day: "Wed", valueKgHr: 0 },
-  { day: "Thu", valueKgHr: 0 },
-  { day: "Fri", valueKgHr: 0 },
-  { day: "Sat", valueKgHr: 0 },
-  { day: "Sun", valueKgHr: 0 },
-];
+/** Trend chart shows the last 7 calendar days, one bucket per UTC date. */
+const TREND_DAYS = 7;
+const PROVIDER_KEYS: ProviderId[] = ["carbon_mapper", "imeo", "tropomi"];
+const PROVIDER_LABELS: Record<ProviderId, string> = {
+  carbon_mapper: "Carbon Mapper",
+  imeo: "IMEO (UNEP)",
+  tropomi: "TROPOMI",
+};
+// Reuse the same hue palette as the Methane Trends screen so the dashboard
+// agrees with what the user sees when they drill in.
+const PROVIDER_COLORS: Record<ProviderId, string> = {
+  carbon_mapper: feedColor("carbon_mapper", "carbon_mapper"),
+  imeo: feedColor("imeo", "imeo"),
+  tropomi: feedColor("tropomi", "tropomi"),
+};
 
 interface DashboardHomeProps {
   darkMode: boolean;
@@ -70,6 +78,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
   const emissionUnit = useSettingsStore((s) => s.emissionUnit);
   const setActiveView = useDashboardStore((s) => s.setActiveView);
 
+  // Trigger a satellite fetch if the user landed on the dashboard before visiting the map.
+  // React Query dedupes the request with LiveMap's existing call.
+  useSatelliteSources({ gasType: "CH4", page: 1, limit: 100, bbox: "3,4,15,14" });
+  const satelliteSources = useSatelliteStore((s) => s.sources);
+
   const topFiveAlerts = useMemo(() => {
     const list = data?.recentAlerts ?? [];
     return [...list]
@@ -80,20 +93,81 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
       .slice(0, 5);
   }, [data?.recentAlerts]);
 
-  const hasLiveTrend = (data?.dailyTrend ?? []).length > 0;
-
-  const trendData = useMemo(() => {
-    if (hasLiveTrend) {
-      return (data!.dailyTrend as { day: string; totalRate: number }[]).map((d) => ({
-        day: d.day,
-        value: convertEmission(d.totalRate, emissionUnit),
-      }));
+  /**
+   * 7-day per-source trend.
+   *
+   * The previous version aggregated rows from the `alerts` table into a single line —
+   * which hides which feed (Carbon Mapper / IMEO / TROPOMI) actually drove emissions.
+   * This now derives the trend directly from the live satellite sources so each
+   * provider gets its own series on the chart.
+   */
+  const last7Days = useMemo(() => {
+    const days: { day: string; iso: string }[] = [];
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    for (let i = TREND_DAYS - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - i);
+      days.push({
+        day: d.toLocaleDateString("en-US", { weekday: "short" }),
+        iso: d.toISOString().slice(0, 10),
+      });
     }
-    return TREND_FALLBACK.map((d) => ({
-      day: d.day,
-      value: convertEmission(d.valueKgHr, emissionUnit),
-    }));
-  }, [emissionUnit, hasLiveTrend, data?.dailyTrend]);
+    return days;
+  }, []);
+
+  const sevenDaysAgoMs = useMemo(() => {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() - (TREND_DAYS - 1));
+    return d.getTime();
+  }, []);
+
+  /** Per-provider × per-day total emission rate (kg/hr) over the last 7 days. */
+  const totalsByProviderDay = useMemo(() => {
+    const totals: Record<ProviderId, Record<string, number>> = {
+      carbon_mapper: {},
+      imeo: {},
+      tropomi: {},
+    };
+    for (const s of satelliteSources) {
+      const provider = (s.provider as ProviderId) ?? "carbon_mapper";
+      if (!totals[provider]) continue;
+      const dateStr = s.lastDetected || s.firstDetected;
+      if (!dateStr) continue;
+      const t = new Date(dateStr).getTime();
+      if (!Number.isFinite(t) || t < sevenDaysAgoMs) continue;
+      const iso = new Date(t).toISOString().slice(0, 10);
+      const rate = Number(s.emissionRate ?? 0);
+      if (!Number.isFinite(rate) || rate <= 0) continue;
+      totals[provider][iso] = (totals[provider][iso] ?? 0) + rate;
+    }
+    return totals;
+  }, [satelliteSources, sevenDaysAgoMs]);
+
+  /** Provider series that actually had observations in the last 7 days. */
+  const activeProviders = useMemo(() => {
+    return PROVIDER_KEYS.filter((p) =>
+      Object.values(totalsByProviderDay[p]).some((v) => v > 0),
+    );
+  }, [totalsByProviderDay]);
+
+  const hasSatelliteTrend = activeProviders.length > 0;
+
+  /**
+   * Recharts row shape: `{ day, carbon_mapper, imeo, tropomi }`. Missing values
+   * are coerced to `0` so the stacked area chart doesn't break on gaps.
+   */
+  const trendData = useMemo(() => {
+    return last7Days.map(({ day, iso }) => {
+      const row: Record<string, number | string> = { day };
+      for (const p of PROVIDER_KEYS) {
+        const raw = totalsByProviderDay[p][iso] ?? 0;
+        row[p] = convertEmission(raw, emissionUnit);
+      }
+      return row;
+    });
+  }, [last7Days, totalsByProviderDay, emissionUnit]);
 
   const cardBase = dm
     ? "rounded-xl border border-[#1e2430] bg-[#1a1f2b] text-white shadow-lg shadow-black/20"
@@ -214,24 +288,38 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
       </div>
 
       <div className={cardBase}>
-        <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
-          <h2 className={`text-lg font-semibold ${sectionTitle}`}>
-            Emission trend (7 days)
-          </h2>
-          <p className={`mt-1 text-sm ${muted}`}>
-            {hasLiveTrend
-              ? `Alert emission rates aggregated daily (${getUnitLabel(emissionUnit)})`
-              : `No alert data yet — chart will populate as emissions are detected (${getUnitLabel(emissionUnit)})`}
-          </p>
+        <div className={`border-b px-5 py-4 flex items-start justify-between gap-4 ${cardSectionBorder}`}>
+          <div>
+            <h2 className={`text-lg font-semibold ${sectionTitle}`}>
+              Emission trend (7 days)
+            </h2>
+            <p className={`mt-1 text-sm ${muted}`}>
+              {hasSatelliteTrend
+                ? `Daily total emission rate by data source (${getUnitLabel(emissionUnit)})`
+                : `No satellite data in the last 7 days yet — chart populates as Carbon Mapper, IMEO and TROPOMI feeds load (${getUnitLabel(emissionUnit)})`}
+            </p>
+          </div>
+          {hasSatelliteTrend && (
+            <ul className="hidden md:flex items-center gap-3 flex-shrink-0">
+              {activeProviders.map((p) => (
+                <li key={p} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: dm ? '#cbd5e1' : '#475569' }}>
+                  <span aria-hidden className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PROVIDER_COLORS[p] }} />
+                  {PROVIDER_LABELS[p]}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className={`h-72 p-4 ${innerMutedBg}`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trendData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="dashAreaFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={chartStroke} stopOpacity={0.4} />
-                  <stop offset="100%" stopColor={chartStroke} stopOpacity={0} />
-                </linearGradient>
+                {PROVIDER_KEYS.map((p) => (
+                  <linearGradient key={p} id={`dashAreaFill-${p}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PROVIDER_COLORS[p]} stopOpacity={0.45} />
+                    <stop offset="100%" stopColor={PROVIDER_COLORS[p]} stopOpacity={0} />
+                  </linearGradient>
+                ))}
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis
@@ -252,17 +340,41 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
                   borderRadius: "0.5rem",
                   color: dm ? "#fff" : "#111827",
                 }}
+                formatter={(value: number, name: string) => {
+                  const provider = name as ProviderId;
+                  return [
+                    `${formatEmission(Number(value), emissionUnit)} ${getUnitLabel(emissionUnit)}`,
+                    PROVIDER_LABELS[provider] ?? name,
+                  ];
+                }}
               />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={chartStroke}
-                strokeWidth={2}
-                fill="url(#dashAreaFill)"
-              />
+              <Legend content={() => null} />
+              {PROVIDER_KEYS.map((p) => (
+                <Area
+                  key={p}
+                  type="monotone"
+                  dataKey={p}
+                  name={p}
+                  stackId="providers"
+                  stroke={PROVIDER_COLORS[p]}
+                  strokeWidth={2}
+                  fill={`url(#dashAreaFill-${p})`}
+                  isAnimationActive={false}
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        {hasSatelliteTrend && (
+          <ul className="md:hidden flex flex-wrap items-center gap-3 px-5 py-3 border-t" style={{ borderColor: dm ? '#1e2430' : '#e5e7eb' }}>
+            {activeProviders.map((p) => (
+              <li key={p} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: dm ? '#cbd5e1' : '#475569' }}>
+                <span aria-hidden className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PROVIDER_COLORS[p] }} />
+                {PROVIDER_LABELS[p]}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

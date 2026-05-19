@@ -19,10 +19,21 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
     tips: [
       'Click any orange dot to view satellite source details (emission rate, plume count, instrument).',
       'Click green facility markers to see ground-truth measurement history.',
-      'Use the search bar to find specific facilities or sources by name.',
+      'The square emissions grid colors each cell by methane intensity — click any cell to drill in.',
+      'Use the source/statistic dropdowns in the legend to switch between IMEO, Carbon Mapper, or "All".',
+      'Cells with thicker dark borders indicate alerts that exceed the configured threshold.',
       'Open Filters to narrow by state, LGA, oil block, operator, emission range, or satellite provider.',
-      'Use the Layers button (top-right) to toggle state boundaries, oil blocks, pipelines, and more.',
-      'Pan the map and click "Load this area" to fetch satellite data for a new region.',
+    ],
+  },
+  METHANE_TRENDS: {
+    title: 'Methane Trends',
+    description: 'Long-term per-source comparison of Carbon Mapper, IMEO and TROPOMI feeds, plus a year-by-year statistics table.',
+    tips: [
+      'Long-term Trends plots monthly mean kg/hr per provider with a 12-month rolling average.',
+      'Toggle a provider in the legend to mute/show its line. Use the date pickers to zoom the time window.',
+      'Annual Statistics shows yearly averages and year-over-year % change per Nigerian state.',
+      'Click "Details" on any state row to drill into that state\'s trend chart.',
+      'Use Download CSV to export the annual table for further analysis.',
     ],
   },
   DATA_COMPARISON: {

@@ -57,12 +57,21 @@ const FacilityDetailModal: React.FC<FacilityDetailModalProps> = ({
   </div>
 );
 
+function satelliteSourceLabel(facility: FacilityData): string {
+  if (!facility.isSatellite) return 'NOGIET Ground';
+  switch (facility.satelliteProvider) {
+    case 'imeo': return 'UNEP IMEO (Eye on Methane)';
+    case 'tropomi': return 'Sentinel-5P TROPOMI';
+    default: return 'Carbon Mapper Satellite';
+  }
+}
+
 const MetadataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }> = ({ darkMode, facility }) => {
   const rows = [
     { label: 'Sector', value: facility.sector },
     { label: 'Region', value: facility.region ?? 'N/A' },
     { label: 'Gas Type', value: 'CH\u2084' },
-    { label: 'Data Source', value: facility.isSatellite ? 'CarbonMapper Satellite' : 'NOGIET Ground' },
+    { label: 'Data Source', value: satelliteSourceLabel(facility) },
     { label: 'Coordinates', value: `${facility.latitude.toFixed(4)}, ${facility.longitude.toFixed(4)}` },
   ];
 
@@ -83,7 +92,13 @@ const MetadataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }> = (
         ))}
       </div>
       <div className={`pt-6 mt-auto border-t text-xs italic ${darkMode ? 'border-gray-800 text-gray-600' : 'border-gray-200 text-gray-500'}`}>
-        {facility.isSatellite ? 'Data from CarbonMapper satellite observations' : 'Data from NOGIET database'}
+        {facility.isSatellite
+          ? (facility.satelliteProvider === 'imeo'
+            ? 'Data from UNEP IMEO / Eye on Methane'
+            : facility.satelliteProvider === 'tropomi'
+              ? 'Data from Sentinel-5P TROPOMI'
+              : 'Data from CarbonMapper satellite observations')
+          : 'Data from NOGIET database'}
       </div>
     </div>
   );
@@ -119,8 +134,27 @@ const SatelliteDataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }
           </div>
         ))}
       </div>
+      {facility.satelliteProvider === 'imeo' && facility.plumeImageUrl && (
+        <div className="mt-6">
+          <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            IMEO plume image
+          </p>
+          <a href={facility.plumeImageUrl} target="_blank" rel="noopener noreferrer" className="block">
+            <img
+              src={facility.plumeImageUrl}
+              alt={`IMEO methane plume detection — ${facility.name}`}
+              loading="lazy"
+              className={`w-full max-w-md rounded-xl border ${darkMode ? 'border-[#1e2430]' : 'border-gray-200'}`}
+            />
+          </a>
+        </div>
+      )}
       <p className={`mt-6 text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-        Source data provided by CarbonMapper.org satellite emissions monitoring platform.
+        {facility.satelliteProvider === 'imeo'
+          ? 'Source data provided by UNEP International Methane Emissions Observatory (IMEO).'
+          : facility.satelliteProvider === 'tropomi'
+            ? 'Source data from Copernicus Sentinel-5P TROPOMI CH\u2084 products.'
+            : 'Source data provided by CarbonMapper.org satellite emissions monitoring platform.'}
       </p>
     </div>
   );

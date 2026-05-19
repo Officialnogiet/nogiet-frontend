@@ -7,6 +7,7 @@ import { useAuthStore } from '../src/stores/auth.store';
 import Sidebar from '../components/Sidebar';
 import MobileBottomNav from '../components/MobileBottomNav';
 import LiveMap from '../components/LiveMap';
+import MethaneTrends from '../components/MethaneTrends';
 import DataComparison from '../components/DataComparison';
 import DataTabs from '../components/DataTabs';
 import ManageData from '../components/ManageData';
@@ -54,6 +55,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       case 'LIVE_MAP':
         content = <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} filters={mapFilters} />;
         label = 'Live Map';
+        break;
+      case 'METHANE_TRENDS':
+        content = <MethaneTrends darkMode={darkMode} />;
+        label = 'Methane Trends';
         break;
       case 'DATA_COMPARISON':
         content = <DataComparison darkMode={darkMode} />;

@@ -48,6 +48,7 @@ const NAV_ITEMS: { id: DashboardView; label: string; icon: (active: boolean) => 
 ];
 
 const MORE_ITEMS: { id: DashboardView; label: string }[] = [
+  { id: 'METHANE_TRENDS', label: 'Methane Trends' },
   { id: 'MANAGE_DATA', label: 'Manage Data' },
   { id: 'DATA_COMPARISON', label: 'Data Comparison' },
   { id: 'FIELD_DATA', label: 'Field Data' },

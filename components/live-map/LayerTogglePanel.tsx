@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Map, Grid3x3, Hexagon, Activity, Thermometer } from 'lucide-react';
+import { Layers, Map, Grid3x3, Hexagon, Activity, Thermometer, Square, X } from 'lucide-react';
 import { type MapLayerState } from '../../src/stores/dashboard.store';
 
 export type { MapLayerState };
@@ -13,6 +13,7 @@ interface LayerTogglePanelProps {
 }
 
 const LAYER_ITEMS: { key: keyof MapLayerState; label: string; icon: React.ReactNode; color: string }[] = [
+  { key: 'emissionGrid', label: 'Emissions Grid', icon: <Square size={16} />, color: '#d97a4d' },
   { key: 'states', label: 'State Boundaries', icon: <Map size={16} />, color: '#10b981' },
   { key: 'lgas', label: 'LGA Boundaries', icon: <Grid3x3 size={16} />, color: '#a78bfa' },
   { key: 'oilBlocks', label: 'Oil Blocks', icon: <Hexagon size={16} />, color: '#0ea5e9' },
@@ -30,13 +31,15 @@ const LayerTogglePanel: React.FC<LayerTogglePanelProps> = ({ darkMode, layers, o
   const subText = darkMode ? 'text-gray-400' : 'text-gray-500';
 
   return (
-    <div className={`absolute top-32 md:top-44 right-2 md:right-4 z-30 ${bg} backdrop-blur-sm rounded-xl border ${border} shadow-xl p-3 md:p-4 w-48 md:w-56`}>
+    <div className={`absolute top-32 md:top-44 right-16 md:right-20 z-30 ${bg} backdrop-blur-sm rounded-xl border ${border} shadow-xl p-3 md:p-4 w-48 md:w-56`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Layers size={16} className="text-teal-500" />
           <span className={`text-sm font-bold ${text}`}>Layers</span>
         </div>
-        <button onClick={onClose} className={`text-xs ${subText} hover:text-teal-500`}>Close</button>
+        <button onClick={onClose} className={`text-xs ${subText} hover:text-teal-500`}>
+          <X size={14} />
+        </button>
       </div>
       <div className="space-y-1">
         {LAYER_ITEMS.map(item => (

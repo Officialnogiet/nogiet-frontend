@@ -8,6 +8,13 @@ import {
 import { useSettingsStore } from "../src/stores/settings.store";
 import type { Facility, NormalizedSource } from "../src/api/emissions.api";
 import { formatEmission, getUnitLabel, type EmissionUnit } from "../src/utils/unit-conversion";
+import { feedColor } from "./methane-trends/feeds";
+import type { ProviderId } from "./methane-trends/types";
+
+/** Color swatch reused from the live map / methane trends so providers stay visually consistent. */
+function providerSwatch(provider: string, instrument: string): string {
+  return feedColor(provider as ProviderId, instrument);
+}
 
 type SortDir = "asc" | "desc";
 
@@ -254,7 +261,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
     const q = searchRates.trim().toLowerCase();
     let rows = features.filter((f: NormalizedSource) => {
       if (!q) return true;
-      const blob = [f.name, f.provider, f.emissionRate, f.gas, f.persistence, f.plumeCount]
+      const blob = [f.name, f.provider, f.instrument, f.emissionRate, f.gas, f.sector, f.persistence, f.plumeCount]
         .map((x) => String(x ?? ""))
         .join(" ")
         .toLowerCase();
@@ -265,6 +272,8 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
     const getters: Record<string, (r: NormalizedSource) => string | number> = {
       name: (r) => r.name,
       provider: (r) => providerLabel(r.provider),
+      instrument: (r) => r.instrument ?? "",
+      sector: (r) => r.sector ?? "",
       rate: (r) => r.emissionRate,
       gas: (r) => r.gas,
       persistence: (r) => r.persistence,
@@ -382,10 +391,16 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   }, [filteredByInstrument, rateStr, emissionUnit]);
 
   const exportRates = useCallback(() => {
-    const headers = ["Source Name", "Provider", "Rate", "Gas", "Persistence", "Plume Count"];
+    const headers = ["Source Name", "Provider", "Instrument", "Sector", "Rate", "Gas", "Persistence", "Plume Count"];
     const rows = filteredSortedRates.map((f) => [
-      f.name, providerLabel(f.provider), rateStr(f.emissionRate, emissionUnit),
-      f.gas, f.persistence, f.plumeCount,
+      f.name,
+      providerLabel(f.provider),
+      f.instrument || "—",
+      f.sector || "—",
+      rateStr(f.emissionRate, emissionUnit),
+      f.gas,
+      f.persistence,
+      f.plumeCount,
     ]);
     downloadCsv("emission-rates.csv", headers, rows);
   }, [filteredSortedRates, rateStr, emissionUnit]);
@@ -650,11 +665,13 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
               ) : filteredSortedRates.length === 0 ? (
                 <EmptyState dm={dm} text={searchRates ? "No rates match your search" : "No emission rate data available"} />
               ) : (
-                <table className="w-full min-w-[640px] text-sm">
+                <table className="w-full min-w-[820px] text-sm">
                   <thead className={thRow}>
                     <tr className={`border-b ${border}`}>
                       <SortHeader label="Source name" colKey="name" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
                       <SortHeader label="Provider" colKey="provider" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
+                      <SortHeader label="Instrument" colKey="instrument" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
+                      <SortHeader label="Sector" colKey="sector" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
                       <SortHeader label="Rate" colKey="rate" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
                       <SortHeader label="Gas" colKey="gas" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
                       <SortHeader label="Persistence" colKey="persistence" activeKey={sortRates.sortKey} dir={sortRates.sortDir} onSort={sortRates.toggle} dm={dm} />
@@ -665,7 +682,14 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                     {filteredSortedRates.map((f) => (
                       <tr key={f.id} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
                         <td className={`px-3 py-2 font-medium ${tdCls}`}>{f.name}</td>
-                        <td className={`px-3 py-2 ${tdCls}`}>{providerLabel(f.provider)}</td>
+                        <td className={`px-3 py-2 ${tdCls}`}>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span aria-hidden className="w-2 h-2 rounded-full" style={{ backgroundColor: providerSwatch(f.provider, f.instrument) }} />
+                            {providerLabel(f.provider)}
+                          </span>
+                        </td>
+                        <td className={`px-3 py-2 ${tdCls}`}>{f.instrument || <span className={dm ? "text-gray-600" : "text-gray-400"}>—</span>}</td>
+                        <td className={`px-3 py-2 ${tdCls}`}>{f.sector || <span className={dm ? "text-gray-600" : "text-gray-400"}>—</span>}</td>
                         <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(f.emissionRate, emissionUnit)}</td>
                         <td className={`px-3 py-2 ${tdCls}`}>{f.gas}</td>
                         <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{f.persistence}</td>

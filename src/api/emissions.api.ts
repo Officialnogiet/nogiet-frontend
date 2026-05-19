@@ -173,6 +173,12 @@ export const emissionsApi = {
   getSatellitePlumes: (sourceId: string) =>
     api.get<ApiResponse<any[]>>(`/satellite/plumes/${sourceId}`).then((r) => r.data),
 
+  getImeoPlumeImageUrl: (plumeId: string) =>
+    `/satellite/imeo/plume-image/${encodeURIComponent(plumeId)}`,
+
+  getImeoLastUpdate: () =>
+    api.get<ApiResponse<{ lastUpdate: string | null }>>("/satellite/imeo/last-update").then((r) => r.data),
+
   getComparisonData: (facilityId: string, startDate?: string, endDate?: string, mode?: string, maxDistance?: number) =>
     api.get<ApiResponse<any>>(`/comparison/${facilityId}`, {
       params: { startDate, endDate, mode, maxDistance },
