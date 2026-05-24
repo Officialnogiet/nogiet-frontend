@@ -15,8 +15,8 @@ export interface MapLayerState {
 export const DEFAULT_LAYERS: MapLayerState = {
   states: true,
   lgas: false,
-  oilBlocks: true,
-  pipelines: false,
+  oilBlocks: false,
+  pipelines: true,
   satelliteView: false,
   emissionHotspots: true,
   emissionGrid: true,
@@ -113,7 +113,7 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: "nogiet-dashboard",
-      version: 7,
+      version: 8,
       partialize: (state) => ({
         darkMode: state.darkMode,
         sidebarCollapsed: state.sidebarCollapsed,
@@ -184,6 +184,18 @@ export const useDashboardStore = create<DashboardState>()(
             states: persisted.mapLayers?.states ?? true,
             oilBlocks: persisted.mapLayers?.oilBlocks ?? true,
             emissionGrid: persisted.mapLayers?.emissionGrid ?? true,
+          };
+        }
+        if (version < 8) {
+          // Swap default layer visibility: oil blocks were on by default, pipelines were off.
+          // From v8 onwards pipelines are shown by default and oil blocks are off — they were
+          // visually noisy and most users only want to drill into them on demand. Override the
+          // persisted values so existing sessions adopt the new defaults on next load.
+          persisted.mapLayers = {
+            ...DEFAULT_LAYERS,
+            ...(persisted.mapLayers ?? {}),
+            oilBlocks: false,
+            pipelines: true,
           };
         }
         // Final safety: guarantee every required gridControls field exists, regardless of

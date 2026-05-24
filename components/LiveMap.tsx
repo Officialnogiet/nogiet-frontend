@@ -13,7 +13,7 @@ import FacilityPopup from './live-map/FacilityPopup';
 import FacilityDetailModal from './live-map/FacilityDetailModal';
 import MapDataLoader from './live-map/MapDataLoader';
 import LayerTogglePanel from './live-map/LayerTogglePanel';
-import { useDashboardStore, DEFAULT_LAYERS, type MapLayerState } from '../src/stores/dashboard.store';
+import { useDashboardStore, DEFAULT_LAYERS, DEFAULT_GRID_CONTROLS, type MapLayerState } from '../src/stores/dashboard.store';
 import type { FacilityData } from './live-map/FacilityPopup';
 import { DEFAULT_FILTERS, type MapFilters } from './FilterPanel';
 import { useFacilities, useAlerts, useGroundData, useSatelliteSources, useUnreadAlertCount, useMarkAllAlertsRead } from '../src/hooks/useEmissions';
@@ -427,6 +427,56 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
 
   const totalSources = filteredFacilities.length + filteredSatellite.length;
   const totalPlumes = filteredSatellite.reduce((sum: number, s: any) => sum + (s.plumeCount ?? s.plume_count ?? 0), 0);
+
+  // True when the backend returned features but our filter pipeline produced nothing.
+  // Powers both the dev-mode diagnostic log AND the on-map "filtered to nothing" banner.
+  const isFilteredToNothing = globalSatSources.length > 0 && filteredSatellite.length === 0;
+
+  // Dev-only diagnostic: log every filter input when the filter pipeline drops all
+  // sources so we can see exactly which control is responsible. Fires only on the
+  // mismatch, so it never spams the console under normal use.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (!isFilteredToNothing) return;
+    /* eslint-disable no-console */
+    console.group(
+      `%c[LiveMap] ${globalSatSources.length} sources in store, 0 after filtering`,
+      'color:#f59e0b;font-weight:bold;',
+    );
+    console.log('mapFilters.showSatellite:', mapFilters.showSatellite);
+    console.log('mapFilters.providers:', mapFilters.providers);
+    console.log('gridControls.providers (legend toggles):', gridControls.providers);
+    console.log('gridControls.instrumentsByProvider:', gridControls.instrumentsByProvider);
+    console.log('emission-rate range:', mapFilters.minEmissionRate, '–', mapFilters.maxEmissionRate);
+    console.log('plume-count range:', mapFilters.minPlumes, '–', mapFilters.maxPlumes);
+    console.log('persistence range:', mapFilters.minPersistence, '–', mapFilters.maxPersistence);
+    console.log('search query:', searchQuery || '(empty)');
+    const sample = globalSatSources[0] as any;
+    console.log('first source in store:', {
+      provider: sample.provider,
+      instrument: sample.instrument,
+      emissionRate: sample.emissionRate ?? sample.emission_rate,
+      plumeCount: sample.plumeCount ?? sample.plume_count,
+      persistence: sample.persistence,
+    });
+    console.log('Tip: click "Reset filters" on the on-map banner to clear filters and restore defaults.');
+    console.groupEnd();
+    /* eslint-enable no-console */
+  }, [
+    isFilteredToNothing,
+    globalSatSources,
+    mapFilters.showSatellite,
+    mapFilters.providers,
+    mapFilters.minEmissionRate,
+    mapFilters.maxEmissionRate,
+    mapFilters.minPlumes,
+    mapFilters.maxPlumes,
+    mapFilters.minPersistence,
+    mapFilters.maxPersistence,
+    gridControls.providers,
+    gridControls.instrumentsByProvider,
+    searchQuery,
+  ]);
 
   // Fetch ground data for all facilities to build ground scatter
   useEffect(() => {
@@ -1719,6 +1769,41 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
             <button onClick={() => setSatelliteError(null)} className="flex-shrink-0 p-1 rounded-lg hover:bg-white/10 transition-colors">
               <X size={16} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* "Filtered to nothing" banner — backend returned data but our filter pipeline
+          (legend toggles, sliders, search) dropped everything. Distinct from the
+          error banner because the cause is local UI state, not the backend. */}
+      {isFilteredToNothing && !satelliteError && mapLoaded && (
+        <div className={`absolute top-24 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[90%] animate-in fade-in slide-in-from-top-2 duration-300`}>
+          <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-md ${darkMode ? 'bg-[#1a1f14]/95 border-amber-500/30 text-amber-200' : 'bg-amber-50/95 border-amber-200 text-amber-800'}`}>
+            <Satellite className="flex-shrink-0 mt-0.5 text-amber-500" size={20} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">
+                {globalSatSources.length} source{globalSatSources.length === 1 ? '' : 's'} loaded — filters are hiding them all
+              </p>
+              <p className={`text-xs mt-1 ${darkMode ? 'text-amber-200/70' : 'text-amber-700/80'}`}>
+                The backend returned data, but the current filter selection (legend providers / instruments, or filter panel sliders) excludes every source. Reset the legend or open Filters to widen the selection.
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setGridControls(DEFAULT_GRID_CONTROLS)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${darkMode ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-100' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                >
+                  Reset legend
+                </button>
+                {onOpenFilters && (
+                  <button
+                    onClick={onOpenFilters}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${darkMode ? 'bg-white/10 hover:bg-white/20 text-amber-100' : 'bg-white hover:bg-gray-50 text-amber-800 border border-amber-200'}`}
+                  >
+                    Open Filters
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

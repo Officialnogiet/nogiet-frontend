@@ -161,7 +161,18 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
 
   const emissionUnit = useSettingsStore((s) => s.emissionUnit);
 
-  const satelliteFilters = { gasType: "CH4" as const, page: 1, limit: 100 };
+  // The "all" / "instruments" / "rates" tabs only display Nigerian sources, so
+  // we send the Nigeria bbox up-front. Without it the aggregator returns every
+  // cached source globally (Carbon Mapper has ~thousands), bloating the payload
+  // and dragging first-paint by seconds. The bbox is the same one used by
+  // LiveMap so React Query happily de-dupes the request when both screens
+  // mount in the same session.
+  const satelliteFilters = {
+    gasType: "CH4" as const,
+    page: 1,
+    limit: 100,
+    bbox: "3,4,15,14",
+  };
   const { data: satelliteRes, isLoading: loadingSat, isError: errSat } = useSatelliteSources(satelliteFilters);
   const { data: facilities = [], isLoading: loadingFac, isError: errFac } = useFacilities();
   const { data: aggregations, isLoading: loadingAgg, isError: errAgg } = useEmissionAggregations();
