@@ -54,7 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         label = 'Dashboard';
         break;
       case 'LIVE_MAP':
-        content = <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} filters={mapFilters} />;
+        content = <LiveMap onOpenFilters={() => setFilterOpen(true)} darkMode={darkMode} onNavigateAlerts={() => setActiveView('ALERTS')} onNavigateMethaneTrends={() => setActiveView('METHANE_TRENDS')} filters={mapFilters} />;
         label = 'Live Map';
         break;
       case 'METHANE_TRENDS':
@@ -106,8 +106,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   };
 
   return (
+    // Breakpoint policy: the desktop sidebar appears at `lg:` (1024px+). Below
+    // that we render the mobile bottom-nav, even on tablets / small laptops.
+    // We picked `lg` because at `md` (768px) the 256px sidebar + 320px summary
+    // card + Mapbox UI overflowed small-laptop viewports (1366×768 zoomed to
+    // 125% effective ≈ 1093×614) — the very screen the client was on.
     <div className={`flex h-screen transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'} overflow-hidden`}>
-      <div className="hidden md:flex">
+      <div className="hidden lg:flex">
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={toggleSidebar}
@@ -118,14 +123,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           onToggleDarkMode={toggleDarkMode}
         />
       </div>
-      <main className="flex-1 relative overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom)] md:pb-0">
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeView !== 'LIVE_MAP' ? 'pb-16 md:pb-0' : ''}`}>
+      <main className="flex-1 relative overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom)] lg:pb-0">
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeView !== 'LIVE_MAP' ? 'pb-16 lg:pb-0' : ''}`}>
           {renderContent()}
         </div>
         {isFilterOpen && <FilterPanel onClose={() => setFilterOpen(false)} darkMode={darkMode} filters={mapFilters} onApply={setMapFilters} />}
         <ScreenGuide darkMode={darkMode} screenKey={activeView} />
       </main>
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <MobileBottomNav
           activeView={activeView}
           onViewChange={setActiveView}

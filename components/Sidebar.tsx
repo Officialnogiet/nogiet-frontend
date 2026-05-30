@@ -88,9 +88,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   const labelColor = darkMode ? 'text-gray-500' : 'text-gray-400';
 
   return (
-    <aside className={`${bgColor} ${borderColor} border-r flex flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
-      {/* Brand Section */}
-      <div className="p-6 flex items-center justify-between">
+    // h-full pins the sidebar to the parent flex row's height (Dashboard wraps
+    // it in `flex h-screen`), so the middle scrollable region always knows
+    // what "full height" means. Without this, on small/zoomed viewports the
+    // aside would expand to fit its intrinsic content height and the footer
+    // (user pill + Logout) would slide off-screen with no scroll mechanism.
+    <aside className={`${bgColor} ${borderColor} border-r h-full flex flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
+      {/* Brand Section — flex-shrink-0 prevents the brand from collapsing
+          when the middle nav is taller than available space. */}
+      <div className="p-6 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-8 h-8 text-[#009688] flex-shrink-0">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -106,7 +112,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      <div className="mt-4 px-4 flex-1 space-y-8">
+      {/* Middle nav — `min-h-0` lets this flex child shrink below its content
+          size so `overflow-y-auto` can actually scroll. On a ~600px-tall
+          viewport (small laptop at 125% scaling) the menu + system sections
+          exceed the available space; without scroll, the user pill and Logout
+          button get pushed off-screen and become unreachable. */}
+      <div className="mt-4 px-4 flex-1 min-h-0 overflow-y-auto space-y-8 sidebar-scroll">
         {/* Menu Section */}
         <div>
           {!collapsed && <p className={`text-[10px] font-bold ${labelColor} uppercase tracking-widest px-2 mb-3`}>Menu</p>}
@@ -201,7 +212,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <div className={`p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-50'} space-y-4`}>
+      {/* Footer — flex-shrink-0 so the user pill + Logout always stay visible
+          even when the middle nav scrolls. */}
+      <div className={`p-4 border-t flex-shrink-0 ${darkMode ? 'border-gray-800' : 'border-gray-50'} space-y-4`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
           <div className="w-10 h-10 rounded-full bg-[#009688] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
             {(user?.fullName ?? 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}

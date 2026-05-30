@@ -28,7 +28,15 @@ import {
   addOilBlocksLayer, removeOilBlocksLayer,
   uninstallBoundaryHover,
   setBoundaryTheme,
+  installOilBlockClick,
+  uninstallOilBlockClick,
+  setOilBlockClickHandler,
+  preloadAdminGeoJSONs,
+  findStateAtPoint,
+  findLGAAtPoint,
+  type OilBlockClickPayload,
 } from './live-map/boundaryLayers';
+import OilBlockDetailModal, { type OilBlockData } from './live-map/OilBlockDetailModal';
 import {
   addEmissionGridLayer,
   updateEmissionGridLayer,
@@ -259,10 +267,12 @@ interface LiveMapProps {
   onOpenFilters?: () => void;
   darkMode?: boolean;
   onNavigateAlerts?: () => void;
+  /** Optional navigator to the Methane Trends screen — called from the oil-block detail modal. */
+  onNavigateMethaneTrends?: () => void;
   filters?: MapFilters;
 }
 
-const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNavigateAlerts, filters }) => {
+const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNavigateAlerts, onNavigateMethaneTrends, filters }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const facilityMarkersRef = useRef<mapboxgl.Marker[]>([]);
@@ -274,6 +284,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const [error, setError] = useState<string | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<FacilityData | null>(null);
+  // Oil-block detail modal — populated when the user clicks any oil block
+  // polygon. Contains the polygon props, geometry, derived state/LGA, and
+  // centroid; consumed by `OilBlockDetailModal` at the bottom of the render.
+  const [selectedOilBlock, setSelectedOilBlock] = useState<OilBlockData | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeBBox, setActiveBBox] = useState(NIGERIA_DEFAULT_BBOX);
   const viewportBBoxRef = useRef(NIGERIA_DEFAULT_BBOX);
@@ -297,7 +311,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const filteredSatRef = useRef<any[]>([]);
 
   const [showLayerPanel, setShowLayerPanel] = useState(false);
-  const [showGridLegend, setShowGridLegend] = useState(true);
+  // Grid legend is collapsed by default — opens via the dedicated toggle button
+  // in the top-right legend chip. Showing it on every map load was visual noise
+  // for clients on small screens where the legend covered key plumes.
+  const [showGridLegend, setShowGridLegend] = useState(false);
   const mapLayers = useDashboardStore((s) => s.mapLayers);
   const toggleMapLayer = useDashboardStore((s) => s.toggleMapLayer);
   const gridControls = useDashboardStore((s) => s.gridControls);
@@ -343,6 +360,29 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       mergeSources(raw.features, activeBBox);
     }
   }, [satelliteData, activeBBox, mergeSources]);
+
+  // Bridge the vanilla Mapbox oil-block click into React state. Re-registers
+  // on every render so the closure captures the latest setSelectedOilBlock
+  // reference (cheap — single function assignment).
+  useEffect(() => {
+    setOilBlockClickHandler((payload: OilBlockClickPayload) => {
+      // Compute a rough centroid from the polygon for both the modal display
+      // and the state/LGA point-in-polygon lookup. We fall back to the click
+      // point itself when the geometry is missing (defensive).
+      const centroid = computePolygonCentroid(payload.geometry) ?? {
+        lon: payload.lngLat.lng,
+        lat: payload.lngLat.lat,
+      };
+      setSelectedOilBlock({
+        properties: payload.properties,
+        geometry: payload.geometry,
+        state: findStateAtPoint(centroid.lon, centroid.lat),
+        lga: findLGAAtPoint(centroid.lon, centroid.lat),
+        centroid,
+      });
+    });
+    return () => setOilBlockClickHandler(null);
+  }, []);
 
   // Force refetch satellite data when filters change via Done button
   useEffect(() => {
@@ -803,6 +843,15 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         if (layers.states) addStatesLayer(m, undefined, isDark);
         if (layers.lgas) addLGAsLayer(m, undefined, isDark);
         if (layers.pipelines) addPipelinesLayer(m, undefined, isDark);
+
+        // Wire the oil-block click → detail modal. The handler stays installed
+        // for the life of the map; the React callback is swapped via the
+        // `selectedOilBlock` effect below so it always has fresh closures.
+        installOilBlockClick(m);
+        // Pre-warm the states + LGAs GeoJSONs so the modal can show "State /
+        // LGA" even when those layers are turned off in the toggle panel.
+        // Fire-and-forget: load errors are swallowed by the helper.
+        preloadAdminGeoJSONs().catch(() => { /* non-fatal */ });
       });
 
       m.on('error', (e) => {
@@ -829,6 +878,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     return () => {
       if (breatheAnimRef.current) { cancelAnimationFrame(breatheAnimRef.current); breatheAnimRef.current = null; }
       uninstallBoundaryHover();
+      // Reset module-level "installed on which map" flag so the NEXT mount of
+      // LiveMap (e.g. after a round-trip to Methane Trends) re-binds the click
+      // listener on the new map instance instead of silently no-op'ing.
+      uninstallOilBlockClick();
       map.current?.remove(); map.current = null;
     };
   }, []);
@@ -1737,19 +1790,27 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       )}
 
       {isRefreshing && mapLoaded && (
-        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-md ${darkMode ? 'bg-[#12161f]/95 text-teal-400 border border-[#1e2430]' : 'bg-white/95 text-teal-700 border border-gray-200'}`}>
+        // Mobile: floats at the TOP-CENTER so it doesn't collide with the
+        // EmissionSummaryCard (bottom-left) or the zoom controls (bottom-right).
+        // Desktop (lg:): drops back to the original bottom-center spot.
+        <div className={`absolute top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-8 z-50 flex items-center gap-2.5 px-4 py-2 lg:px-5 lg:py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-md ${darkMode ? 'bg-[#12161f]/95 text-teal-400 border border-[#1e2430]' : 'bg-white/95 text-teal-700 border border-gray-200'}`}>
           <div className="w-3.5 h-3.5 rounded-full border-2 border-transparent border-t-current animate-spin" />
           Fetching satellite data{globalSatSources.length > 0 ? ` (${globalSatSources.length} sources cached)` : ''}...
         </div>
       )}
 
       {regionChanged && !isRefreshing && mapLoaded && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
+        // Mobile-first repositioning: "Load this area" lives at the TOP-CENTER
+        // on small viewports so it never overlaps the bottom-left summary card
+        // or the bottom-right zoom controls (all three used to fight for the
+        // same `bottom-24` band). Desktop keeps the original bottom-center spot.
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-8 z-50">
           <button
             onClick={handleRefreshRegion}
-            className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-sm font-extrabold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 ${darkMode ? 'bg-[#009688] text-white hover:bg-[#00796b]' : 'bg-[#009688] text-white hover:bg-[#00796b]'}`}
+            className={`flex items-center gap-2 lg:gap-2.5 px-4 py-2.5 lg:px-6 lg:py-3 rounded-2xl text-xs lg:text-sm font-extrabold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 ${darkMode ? 'bg-[#009688] text-white hover:bg-[#00796b]' : 'bg-[#009688] text-white hover:bg-[#00796b]'}`}
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} className="lg:hidden" />
+            <RefreshCw size={16} className="hidden lg:block" />
             Load this area
           </button>
         </div>
@@ -1952,8 +2013,57 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           onShareReport={handleShareReport} onExportCSV={handleExportCSV}
         />
       )}
+
+      {selectedOilBlock && (
+        <OilBlockDetailModal
+          darkMode={darkMode}
+          block={selectedOilBlock}
+          satelliteSources={filteredSatellite as any}
+          facilities={filteredFacilities as any}
+          onClose={() => setSelectedOilBlock(null)}
+          onOpenMethaneTrends={(ctx) => {
+            // Hand off the block name + state so the Methane Trends screen
+            // can pre-scope its filter + heading to "this specific block".
+            useDashboardStore.getState().setTrendsScope({
+              kind: 'oilBlock',
+              name: ctx.blockName,
+              state: ctx.state,
+            });
+            setSelectedOilBlock(null);
+            onNavigateMethaneTrends?.();
+          }}
+          onFlyTo={(lng, lat) => {
+            map.current?.flyTo({ center: [lng, lat], zoom: Math.max(8, map.current.getZoom()), duration: 800 });
+            setSelectedOilBlock(null);
+          }}
+        />
+      )}
     </div>
   );
 };
+
+/**
+ * Cheap polygon centroid — averages all outer-ring vertices. Good enough for
+ * "where on the map should we anchor the modal-derived state/LGA lookup"; we
+ * deliberately don't pull in turf for this since the few-hundred-vertex max
+ * makes a hand-rolled average more than fast enough.
+ */
+function computePolygonCentroid(geometry: GeoJSON.Geometry | null): { lon: number; lat: number } | null {
+  if (!geometry) return null;
+  const rings: number[][][] = [];
+  if (geometry.type === 'Polygon') rings.push(geometry.coordinates[0] ?? []);
+  else if (geometry.type === 'MultiPolygon') {
+    for (const poly of geometry.coordinates) rings.push(poly?.[0] ?? []);
+  } else return null;
+  let lon = 0, lat = 0, n = 0;
+  for (const ring of rings) {
+    for (const pt of ring) {
+      if (Array.isArray(pt) && pt.length >= 2) {
+        lon += pt[0]; lat += pt[1]; n += 1;
+      }
+    }
+  }
+  return n > 0 ? { lon: lon / n, lat: lat / n } : null;
+}
 
 export default LiveMap;

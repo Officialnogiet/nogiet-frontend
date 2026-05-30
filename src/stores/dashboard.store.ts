@@ -15,7 +15,7 @@ export interface MapLayerState {
 export const DEFAULT_LAYERS: MapLayerState = {
   states: true,
   lgas: false,
-  oilBlocks: false,
+  oilBlocks: true,
   pipelines: true,
   satelliteView: false,
   emissionHotspots: true,
@@ -52,6 +52,22 @@ export const DEFAULT_GRID_CONTROLS: GridControlsState = {
   alertThresholdKgHr: 200,
 };
 
+/**
+ * Cross-screen drill-in context passed when the user clicks "View Methane Trends"
+ * from somewhere else in the app (e.g. the Live Map oil-block detail modal).
+ * MethaneTrends reads this on mount and pre-filters its observations + heading
+ * to the requested scope, then clears it so a subsequent direct visit doesn't
+ * inherit stale state.
+ */
+export interface TrendsScope {
+  /** Filter kind drives which observations are kept (Nigeria-wide, by state, or by oil-block name). */
+  kind: 'nigeria' | 'state' | 'oilBlock';
+  /** Display + filter value. e.g. "Rivers" for state, "OML 60" for oilBlock. */
+  name: string;
+  /** Optional state context for an oil-block scope — surfaces in the heading. */
+  state?: string | null;
+}
+
 interface DashboardState {
   activeView: DashboardView;
   setActiveView: (view: DashboardView) => void;
@@ -71,6 +87,8 @@ interface DashboardState {
   toggleMapLayer: (layer: keyof MapLayerState) => void;
   gridControls: GridControlsState;
   setGridControls: (s: Partial<GridControlsState>) => void;
+  trendsScope: TrendsScope | null;
+  setTrendsScope: (scope: TrendsScope | null) => void;
 }
 
 export const useDashboardStore = create<DashboardState>()(
@@ -93,6 +111,11 @@ export const useDashboardStore = create<DashboardState>()(
       mapLayers: DEFAULT_LAYERS,
       toggleMapLayer: (layer: keyof MapLayerState) =>
         set((s) => ({ mapLayers: { ...s.mapLayers, [layer]: !s.mapLayers[layer] } })),
+      // Drill-in context populated by the Live Map's oil-block / state click;
+      // consumed (and immediately cleared) by MethaneTrends on mount. Not
+      // persisted — a fresh browser tab should never inherit a stale scope.
+      trendsScope: null,
+      setTrendsScope: (scope: TrendsScope | null) => set({ trendsScope: scope }),
       gridControls: DEFAULT_GRID_CONTROLS,
       setGridControls: (next: Partial<GridControlsState>) =>
         set((s) => {
@@ -113,7 +136,7 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: "nogiet-dashboard",
-      version: 8,
+      version: 9,
       partialize: (state) => ({
         darkMode: state.darkMode,
         sidebarCollapsed: state.sidebarCollapsed,
@@ -196,6 +219,18 @@ export const useDashboardStore = create<DashboardState>()(
             ...(persisted.mapLayers ?? {}),
             oilBlocks: false,
             pipelines: true,
+          };
+        }
+        if (version < 9) {
+          // v9 reverses the v8 oil-block default: blocks are now the primary
+          // drill-in surface (click → detail modal with plumes, facilities,
+          // state, LGA), so they must be visible from the start. Override
+          // the persisted value so existing sessions pick up the new behaviour
+          // without the user having to toggle the layers panel.
+          persisted.mapLayers = {
+            ...DEFAULT_LAYERS,
+            ...(persisted.mapLayers ?? {}),
+            oilBlocks: true,
           };
         }
         // Final safety: guarantee every required gridControls field exists, regardless of

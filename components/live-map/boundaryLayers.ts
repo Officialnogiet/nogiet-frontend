@@ -297,6 +297,169 @@ export function uninstallBoundaryHover() {
   boundaryHandlerInstalled = false;
 }
 
+// --- Oil-block click → detail modal ---
+// A separate click handler (in addition to the hover/touch popup above) that
+// fires only when the user clicks an oil-block fill. The React layer registers
+// a callback via `setOilBlockClickHandler` and renders a rich detail modal
+// (block info + plumes + facilities + state + LGA + Methane Trends drill-in).
+
+export interface OilBlockClickPayload {
+  properties: Record<string, any>;
+  /** Click coordinates on the map (use for zooming or "back to point" links). */
+  lngLat: { lng: number; lat: number };
+  /** Polygon geometry — lets the React side compute bbox / "inside this block" queries. */
+  geometry: GeoJSON.Geometry | null;
+}
+
+let oilBlockClickHandler: ((payload: OilBlockClickPayload) => void) | null = null;
+// We track WHICH map instance has the click listener bound. The previous
+// implementation tracked install state with a boolean which never reset on
+// LiveMap unmount → the next mount got a fresh map with no listener, so
+// clicking blocks did nothing after navigating away and coming back. Storing
+// the map reference makes "is this map already wired?" a real identity check.
+let oilBlockClickInstalledOn: mapboxgl.Map | null = null;
+
+export function setOilBlockClickHandler(fn: ((payload: OilBlockClickPayload) => void) | null) {
+  oilBlockClickHandler = fn;
+}
+
+export function installOilBlockClick(m: mapboxgl.Map) {
+  // Already wired to THIS map instance — skip. Different map (or first install
+  // after a remount) — fall through and bind.
+  if (oilBlockClickInstalledOn === m) return;
+  oilBlockClickInstalledOn = m;
+  m.on('click', OIL_BLOCKS_FILL, (e: mapboxgl.MapLayerMouseEvent) => {
+    const feature = e.features?.[0];
+    if (!feature || !oilBlockClickHandler) return;
+    // Dismiss any open hover popup so the modal isn't competing for attention.
+    boundaryPopup?.remove();
+    oilBlockClickHandler({
+      properties: feature.properties ?? {},
+      lngLat: { lng: e.lngLat.lng, lat: e.lngLat.lat },
+      geometry: (feature.geometry as GeoJSON.Geometry) ?? null,
+    });
+  });
+  m.on('mouseenter', OIL_BLOCKS_FILL, () => { m.getCanvas().style.cursor = 'pointer'; });
+  m.on('mouseleave', OIL_BLOCKS_FILL, () => { m.getCanvas().style.cursor = ''; });
+}
+
+/**
+ * Call this from the React cleanup when the map is destroyed (LiveMap
+ * unmount). Without it the next mount sees the stale install flag and never
+ * rebinds the click listener — the symptom being: oil-block modal opens on
+ * the very first visit but stops responding after the user navigates away
+ * (e.g. to Methane Trends) and comes back.
+ */
+export function uninstallOilBlockClick() {
+  oilBlockClickInstalledOn = null;
+}
+
+// --- Point-in-polygon helpers (state, LGA, oil-block lookup by lat/lon) ---
+// Used by the oil-block detail modal to look up "which state/LGA contains
+// this block centroid" without a network round-trip. The same `statesGeoJSON`,
+// `lgasGeoJSON`, and `oilBlocksGeoJSON` loaded by the layer renderers are
+// reused here — no extra fetch, no extra dependency on turf.
+
+function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
+  // Ray-casting algorithm. Returns true when `(lon, lat)` lies inside the
+  // outer ring of a simple polygon. Holes are intentionally ignored — for
+  // our use cases (Nigerian state / LGA / oil-block polygons) the rare
+  // hole-in-polygon case isn't worth the complexity.
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersect = ((yi > lat) !== (yj > lat))
+      && (lon < ((xj - xi) * (lat - yi)) / (yj - yi || Number.EPSILON) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function pointInGeometry(lon: number, lat: number, geometry: any): boolean {
+  if (!geometry) return false;
+  if (geometry.type === 'Polygon') {
+    const outer = geometry.coordinates?.[0];
+    return Array.isArray(outer) && pointInRing(lon, lat, outer);
+  }
+  if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates ?? []) {
+      const outer = polygon?.[0];
+      if (Array.isArray(outer) && pointInRing(lon, lat, outer)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Finds the first state polygon whose interior contains `(lon, lat)`.
+ * Returns the state name (`shapeName`) or `null` when nothing matches or
+ * the states GeoJSON hasn't been loaded yet (layer toggle was never on).
+ */
+export function findStateAtPoint(lon: number, lat: number): string | null {
+  const fc = statesGeoJSON as { features?: any[] } | null;
+  if (!fc?.features) return null;
+  for (const f of fc.features) {
+    if (pointInGeometry(lon, lat, f.geometry)) {
+      return typeof f.properties?.shapeName === 'string' ? f.properties.shapeName : null;
+    }
+  }
+  return null;
+}
+
+/** Same as `findStateAtPoint` but against the LGA layer. */
+export function findLGAAtPoint(lon: number, lat: number): string | null {
+  const fc = lgasGeoJSON as { features?: any[] } | null;
+  if (!fc?.features) return null;
+  for (const f of fc.features) {
+    if (pointInGeometry(lon, lat, f.geometry)) {
+      return typeof f.properties?.shapeName === 'string' ? f.properties.shapeName : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Finds the oil-block polygon containing `(lon, lat)` and returns its full
+ * properties object — useful for "which block is this satellite plume in"
+ * lookups, where the caller already has lat/lon and wants the block name.
+ */
+export function findOilBlockAtPoint(lon: number, lat: number): Record<string, any> | null {
+  const fc = oilBlocksGeoJSON as { features?: any[] } | null;
+  if (!fc?.features) return null;
+  for (const f of fc.features) {
+    if (pointInGeometry(lon, lat, f.geometry)) {
+      return (f.properties ?? {}) as Record<string, any>;
+    }
+  }
+  return null;
+}
+
+/**
+ * Returns true when ANY vertex of `geometry` falls inside the supplied
+ * polygon. A cheap approximation of polygon-intersection that's good enough
+ * for "which facilities/plumes lie inside this oil block" lookups when the
+ * caller already has the block geometry. Reuses `pointInGeometry` so it
+ * supports both Polygon and MultiPolygon block geometries.
+ */
+export function isPointInsidePolygon(lon: number, lat: number, blockGeometry: GeoJSON.Geometry | null | undefined): boolean {
+  return pointInGeometry(lon, lat, blockGeometry);
+}
+
+/**
+ * Async helper that pre-loads the states + LGAs GeoJSONs so the lookup
+ * functions above work even when the user hasn't toggled the layers on.
+ * The oil-block GeoJSON is loaded automatically by the layer renderer
+ * (it's on by default in v9+), so it's not included here.
+ */
+export async function preloadAdminGeoJSONs(): Promise<void> {
+  await Promise.all([
+    statesGeoJSON ? Promise.resolve() : loadStatesGeoJSON(),
+    lgasGeoJSON ? Promise.resolve() : loadLGAsGeoJSON(),
+    oilBlocksGeoJSON ? Promise.resolve() : loadOilBlocksGeoJSON(),
+  ]);
+}
+
 
 // --- States Layer ---
 

@@ -150,7 +150,12 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
   return (
     <>
       <aside
-        className={`absolute top-12 md:top-28 right-16 md:right-20 z-30 ${bg} backdrop-blur-md rounded-2xl border ${border} shadow-2xl p-5 w-72 md:w-80 max-h-[80vh] overflow-y-auto`}
+        // Mobile: top-28 leaves room for the top-center "Load this area" pill
+        // and the search bar; right-4 tucks the panel close to the edge so its
+        // ~288px width doesn't push past the left side of the viewport.
+        // Desktop (lg:): restores the original top-28 / right-20 spot beside
+        // the legend toggle chip.
+        className={`absolute top-28 right-4 lg:top-28 lg:right-20 z-30 ${bg} backdrop-blur-md rounded-2xl border ${border} shadow-2xl p-5 w-72 md:w-80 max-h-[70vh] lg:max-h-[80vh] overflow-y-auto`}
         aria-label="Emission grid legend"
       >
         <div className="flex items-start justify-between gap-2 mb-4">

@@ -1,12 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { LineChart as LineChartIcon, Table as TableIcon, MapPin, Loader2, Satellite } from 'lucide-react';
+import { LineChart as LineChartIcon, Table as TableIcon, MapPin, Loader2, Satellite, X } from 'lucide-react';
 import { useFacilities, useSatelliteSources } from '../src/hooks/useEmissions';
 import { useSatelliteStore } from '../src/stores/satellite.store';
+import { useDashboardStore } from '../src/stores/dashboard.store';
+import { findOilBlockAtPoint, preloadAdminGeoJSONs } from './live-map/boundaryLayers';
 import TrendsChart from './methane-trends/TrendsChart';
 import AnnualStatisticsTable from './methane-trends/AnnualStatisticsTable';
 import { buildAnnualTable, buildFeedSeries, isoMonth, type AnnualObservation } from './methane-trends/aggregations';
 import { attachStateNames } from './methane-trends/stateLookup';
 import type { GroupByMode, ProviderId } from './methane-trends/types';
+
+/** Filter kinds Methane Trends supports. Mirrors `TrendsScope` from the store. */
+type ScopeKind = 'nigeria' | 'state' | 'oilBlock';
+interface Scope { kind: ScopeKind; name: string; state?: string | null; }
+const NIGERIA_SCOPE: Scope = { kind: 'nigeria', name: 'Nigeria' };
 
 interface MethaneTrendsProps {
   darkMode?: boolean;
@@ -29,9 +36,22 @@ function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number): num
 const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
   const dm = !!darkMode;
   const [tab, setTab] = useState<Tab>('TRENDS');
-  const [scope, setScope] = useState<string>('Nigeria');
+  const [scope, setScope] = useState<Scope>(NIGERIA_SCOPE);
   const [providerFilter, setProviderFilter] = useState<'all' | ProviderId>('all');
   const [groupBy, setGroupBy] = useState<GroupByMode>('state');
+
+  // Drill-in handoff from Live Map (oil-block modal "View Methane Trends").
+  // Read once, apply, then clear so a later direct visit doesn't reinherit.
+  const pendingScope = useDashboardStore((s) => s.trendsScope);
+  const clearPendingScope = useDashboardStore((s) => s.setTrendsScope);
+  useEffect(() => {
+    if (!pendingScope) return;
+    setScope({ kind: pendingScope.kind, name: pendingScope.name, state: pendingScope.state ?? null });
+    // For oil-block scope the source-list filter needs the oil-block GeoJSON
+    // loaded (live map may not have been visited yet this session).
+    if (pendingScope.kind === 'oilBlock') preloadAdminGeoJSONs().catch(() => { /* non-fatal */ });
+    clearPendingScope(null);
+  }, [pendingScope, clearPendingScope]);
 
   // Pull a wide satellite query so we have enough history to build a trend
   const { isFetching } = useSatelliteSources({
@@ -143,25 +163,53 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
     return () => { cancelled = true; };
   }, [baseObservations, facilities]);
 
+  // Scope filter — narrows the dataset before chart + table aggregation. For
+  // 'nigeria' we pass through; for 'state' we match the resolved state name;
+  // for 'oilBlock' we look up each observation's containing oil block via the
+  // shared point-in-polygon helper (same one the live map uses, so the trends
+  // screen agrees with what the user clicked).
+  const scopedEnriched = useMemo<AnnualObservation[]>(() => {
+    if (scope.kind === 'nigeria') return enriched;
+    if (scope.kind === 'state') {
+      const target = scope.name.toLowerCase();
+      return enriched.filter((o) => (o.state ?? '').toLowerCase() === target);
+    }
+    // oilBlock: per-observation lookup. Memoising per (lat, lon) is overkill
+    // for ~hundreds of points and 300 polygons.
+    return enriched.filter((o) => {
+      const block = findOilBlockAtPoint(o.longitude, o.latitude);
+      return block?.name === scope.name;
+    });
+  }, [enriched, scope]);
+
   const series = useMemo(
-    () => buildFeedSeries(enriched, activeRange.start, activeRange.end, 12),
-    [enriched, activeRange.start, activeRange.end],
+    () => buildFeedSeries(scopedEnriched, activeRange.start, activeRange.end, 12),
+    [scopedEnriched, activeRange.start, activeRange.end],
   );
 
   const years = useMemo(() => {
     const yrs = new Set<number>();
-    for (const o of enriched) {
+    for (const o of scopedEnriched) {
       const d = new Date(o.date);
       if (Number.isFinite(d.getTime())) yrs.add(d.getUTCFullYear());
     }
     return [...yrs].sort();
-  }, [enriched]);
+  }, [scopedEnriched]);
 
   const annualRows = useMemo(() => {
     if (years.length === 0) return [];
-    const globalLabel = groupBy === 'facility' ? 'All facilities' : 'Nigeria';
-    return buildAnnualTable(enriched, years, groupBy, globalLabel);
-  }, [enriched, years, groupBy]);
+    const globalLabel = groupBy === 'facility' ? 'All facilities' : scope.name;
+    return buildAnnualTable(scopedEnriched, years, groupBy, globalLabel);
+  }, [scopedEnriched, years, groupBy, scope.name]);
+
+  // Distinct Nigerian states extracted from the enriched data — used to
+  // populate the scope dropdown so the user can switch between Nigeria-wide
+  // and any state they have observations for.
+  const availableStates = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of enriched) if (o.state) set.add(o.state);
+    return [...set].sort();
+  }, [enriched]);
 
   const handleDownloadCsv = () => {
     if (annualRows.length === 0 || years.length === 0) return;
@@ -221,22 +269,69 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
   const hasData = enriched.length > 0;
   const fetchingText = isFetching ? 'Fetching satellite data…' : 'Computing aggregations…';
 
+  // Scope dropdown serializes to "kind:name" so we can round-trip the union
+  // type through a plain <select>. Oil-block scope only ever arrives via
+  // drill-in from the live map — not selectable in the dropdown — so we add
+  // a one-off option for it when active so the dropdown reflects current state.
+  const scopeValue = `${scope.kind}:${scope.name}`;
+  const scopeHeading = scope.kind === 'oilBlock'
+    ? `Oil Block ${scope.name}${scope.state ? ` · ${scope.state}` : ''}`
+    : scope.name;
+
   return (
     <div className={`flex-1 overflow-y-auto ${surface}`}>
       <header className="px-6 md:px-8 pt-12 pb-4 mx-auto">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className={`text-2xl md:text-3xl font-bold ${headingColor}`}>Methane Trends — {scope}</h1>
-            <p className={`text-sm mt-1 ${subColor}`}>Long-term satellite observations comparing Carbon Mapper, IMEO and TROPOMI feeds.</p>
+          <div className="min-w-0">
+            <h1 className={`text-2xl md:text-3xl font-bold ${headingColor} truncate`}>
+              Methane Trends — {scopeHeading}
+            </h1>
+            <p className={`text-sm mt-1 ${subColor}`}>
+              {scope.kind === 'oilBlock'
+                ? `Filtered to satellite observations whose centroid lies inside the ${scope.name} polygon.`
+                : scope.kind === 'state'
+                  ? `Filtered to observations within ${scope.name} state.`
+                  : 'Long-term satellite observations comparing Carbon Mapper, IMEO and TROPOMI feeds.'}
+            </p>
+            {scope.kind === 'oilBlock' && (
+              // Inline "clear filter" pill so the user can return to Nigeria-
+              // wide view without hunting through the dropdown.
+              <button
+                onClick={() => setScope(NIGERIA_SCOPE)}
+                className={`mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition ${dm ? 'border-teal-500/30 bg-teal-500/10 text-teal-300 hover:bg-teal-500/15' : 'border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100'}`}
+              >
+                Showing block context · <X size={10} /> clear
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <select
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
+              value={scopeValue}
+              onChange={(e) => {
+                const [kind, ...rest] = e.target.value.split(':');
+                const name = rest.join(':');
+                if (kind === 'nigeria') setScope(NIGERIA_SCOPE);
+                else if (kind === 'state') setScope({ kind: 'state', name });
+                else if (kind === 'oilBlock') setScope({ kind: 'oilBlock', name });
+              }}
               className={`text-xs px-3 py-2 rounded-xl border outline-none ${chip}`}
               aria-label="Scope"
             >
-              <option value="Nigeria">Nigeria (all states)</option>
+              <option value="nigeria:Nigeria">Nigeria (all states)</option>
+              {availableStates.length > 0 && (
+                <optgroup label="By state">
+                  {availableStates.map((s) => (
+                    <option key={s} value={`state:${s}`}>{s}</option>
+                  ))}
+                </optgroup>
+              )}
+              {scope.kind === 'oilBlock' && (
+                // Drill-in scope; surface it as a current selection so the user
+                // can see what's active and switch back.
+                <optgroup label="Drill-in">
+                  <option value={`oilBlock:${scope.name}`}>Oil Block {scope.name}</option>
+                </optgroup>
+              )}
             </select>
             <select
               value={providerFilter}
@@ -290,7 +385,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
             series={series}
             range={activeRange}
             onRangeChange={setActiveRange}
-            title={`Long-term trends for ${scope}`}
+            title={`Long-term trends for ${scopeHeading}`}
             description={[
               'This view shows monthly methane emission rates across all matching sources, with a 12-month rolling average to smooth seasonal noise.',
               'The lower chart shows the proportion of months containing observations. Coverage may dip during heavy cloud cover or instrument maintenance.',
@@ -315,7 +410,9 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
               groupBy={groupBy}
               onDownloadCsv={handleDownloadCsv}
               onOpenDetails={(rowKey) => {
-                setScope(rowKey);
+                // Only state-grouped rows map cleanly to the scope filter.
+                // Region (geopolitical zone) and facility rows just switch tabs.
+                if (groupBy === 'state') setScope({ kind: 'state', name: rowKey });
                 setTab('TRENDS');
               }}
             />
