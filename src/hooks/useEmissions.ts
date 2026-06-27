@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { emissionsApi } from "../api/emissions.api";
 import type { EmissionFilters } from "../api/emissions.api";
+import type { AnalyticsReportFilters } from "../api/emissions.api";
 import { submitGroundDataSchema, emissionFiltersSchema } from "../validations/emission.schema";
 import type { SubmitGroundDataInput, EmissionFiltersInput } from "../validations/emission.schema";
 import {
@@ -9,6 +10,8 @@ import {
   cacheEmissions, getCachedEmissions,
   queuePendingSubmission, isOffline,
 } from "../utils/offline-storage";
+
+const SATELLITE_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
 export function useFacilities(filters?: Partial<EmissionFilters>) {
   return useQuery({
@@ -96,7 +99,8 @@ export function useSatelliteSources(filters: EmissionFiltersInput) {
     },
     select: (res) => res.data,
     enabled: !!filters,
-    staleTime: 2 * 60_000,
+    staleTime: SATELLITE_REFRESH_INTERVAL_MS,
+    refetchInterval: SATELLITE_REFRESH_INTERVAL_MS,
     refetchOnWindowFocus: false,
   });
 }
@@ -160,7 +164,24 @@ export function useSubmitGroundData() {
 export function useCreateFacility() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; latitude: number; longitude: number; sector?: string; region?: string; state?: string; lga?: string; oilBlock?: string; operator?: string; facilityType?: string }) =>
+    mutationFn: (data: {
+      name: string;
+      latitude: number;
+      longitude: number;
+      sector?: string;
+      region?: string;
+      state?: string;
+      lga?: string;
+      subSector: "Upstream" | "Midstream" | "Downstream";
+      oilBlock?: string;
+      oilfield?: string;
+      operator?: string;
+      facilityType?: string;
+      geographicLocation?: "Onshore" | "Offshore";
+      customField1?: string;
+      customField2?: string;
+      customField3?: string;
+    }) =>
       emissionsApi.createFacility(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["facilities"] });
@@ -341,7 +362,8 @@ export function useDashboardSummary() {
       }
     },
     select: (res) => res.data,
-    staleTime: 60_000,
+    staleTime: SATELLITE_REFRESH_INTERVAL_MS,
+    refetchInterval: SATELLITE_REFRESH_INTERVAL_MS,
   });
 }
 
@@ -359,6 +381,16 @@ export function useEmissionAggregations() {
     queryKey: ["emission-aggregations"],
     queryFn: () => emissionsApi.getEmissionAggregations(),
     select: (res) => res.data,
-    staleTime: 2 * 60_000,
+    staleTime: SATELLITE_REFRESH_INTERVAL_MS,
+    refetchInterval: SATELLITE_REFRESH_INTERVAL_MS,
+  });
+}
+
+export function useAnalyticsReport(filters: AnalyticsReportFilters) {
+  return useQuery({
+    queryKey: ["analytics-report", filters],
+    queryFn: () => emissionsApi.getAnalyticsReport(filters),
+    select: (res) => res.data,
+    staleTime: SATELLITE_REFRESH_INTERVAL_MS,
   });
 }

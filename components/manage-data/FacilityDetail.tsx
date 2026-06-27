@@ -70,6 +70,7 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
           <h3 className={`font-extrabold text-lg truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{facility.name}</h3>
           <div className="flex items-center gap-2 mt-0.5">
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${darkMode ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-700'}`}>{facility.sector}</span>
+            {facility.subSector && <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${darkMode ? 'bg-sky-500/10 text-sky-400' : 'bg-sky-50 text-sky-700'}`}>{facility.subSector}</span>}
             {facility.region && <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{facility.region}</span>}
             <span className={`text-[11px] font-mono ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</span>
           </div>
@@ -91,6 +92,23 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
           </div>
         </div>
       )}
+
+      <div className={`mb-6 rounded-2xl border p-5 ${darkMode ? 'bg-[#0b0e14]/60 border-[#1e2430]' : 'bg-gray-50 border-gray-100'}`}>
+        <h4 className={`mb-3 text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Facility metadata</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <InfoRow label="Sub-sector" value={facility.subSector} darkMode={darkMode} />
+          <InfoRow label="Facility Type" value={facility.facilityType} darkMode={darkMode} />
+          <InfoRow label="Operator" value={facility.operator} darkMode={darkMode} />
+          <InfoRow label="Oil Block" value={facility.oilBlock} darkMode={darkMode} />
+          <InfoRow label="Oilfield" value={facility.oilfield} darkMode={darkMode} />
+          <InfoRow label="State" value={facility.state} darkMode={darkMode} />
+          <InfoRow label="LGA" value={facility.lga} darkMode={darkMode} />
+          <InfoRow label="Location" value={facility.geographicLocation} darkMode={darkMode} />
+          <InfoRow label="Custom Field 1" value={facility.customField1} darkMode={darkMode} />
+          <InfoRow label="Custom Field 2" value={facility.customField2} darkMode={darkMode} />
+          <InfoRow label="Custom Field 3" value={facility.customField3} darkMode={darkMode} />
+        </div>
+      </div>
 
       <div className="flex items-center justify-between mb-4">
         <h4 className={`font-bold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -201,3 +219,10 @@ function renderSlider(label: string, value: number, setValue: (v: number) => voi
 }
 
 export default FacilityDetail;
+
+const InfoRow: React.FC<{ label: string; value?: string | null; darkMode: boolean }> = ({ label, value, darkMode }) => (
+  <div>
+    <p className={`text-[10px] font-bold uppercase tracking-wide ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>{label}</p>
+    <p className={`mt-0.5 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>{value || '—'}</p>
+  </div>
+);

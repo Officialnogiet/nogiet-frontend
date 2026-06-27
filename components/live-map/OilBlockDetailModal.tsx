@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   X,
   MapPin,
@@ -11,10 +11,15 @@ import {
   Layers,
   CalendarClock,
   Factory,
+  Pencil,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import type { NormalizedSource } from '../../src/api/emissions.api';
+import { emissionsApi } from '../../src/api/emissions.api';
+import { useAuthStore } from '../../src/stores/auth.store';
 import { feedColor } from '../methane-trends/feeds';
-import { isPointInsidePolygon } from './boundaryLayers';
+import { applyOilBlockOverrideToCache, isPointInsidePolygon } from './boundaryLayers';
 
 export interface OilBlockData {
   properties: Record<string, any>;
@@ -50,6 +55,7 @@ interface OilBlockDetailModalProps {
   onOpenMethaneTrends: (context: { blockName: string; state: string | null; lga: string | null }) => void;
   /** Optional callback for "fly to block centroid" action. */
   onFlyTo?: (lng: number, lat: number) => void;
+  onBlockUpdated?: (properties: Record<string, any>) => void;
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -66,8 +72,11 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
   onClose,
   onOpenMethaneTrends,
   onFlyTo,
+  onBlockUpdated,
 }) => {
+  const user = useAuthStore((s) => s.user);
   const props = block.properties ?? {};
+  const blockId = String(props.block_id ?? props.id ?? props.name ?? '');
   const blockName: string = props.name ?? 'Unknown block';
   const blockType: string = props.type ?? '';
   const operator: string = props.operator ?? '';
@@ -80,6 +89,42 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
   const areaKm2: string = props.area_sqkm
     ? `${Number(props.area_sqkm).toLocaleString()} km²`
     : '';
+  const canEdit = ['super_admin', 'admin', 'regulator'].includes(user?.role ?? '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: String(blockName ?? ''),
+    type: String(blockType ?? ''),
+    status: String(status ?? ''),
+    operator: String(operator ?? ''),
+    terrain: String(terrain ?? ''),
+    basin: String(basin ?? ''),
+    areaSqkm: String(props.area_sqkm ?? ''),
+    awardDate: String(awardDate ?? ''),
+    contract: String(contract ?? ''),
+    rights: String(rights ?? ''),
+  });
+
+  const updateEditField = (key: keyof typeof editForm, value: string) => {
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const saveOilBlock = async () => {
+    if (!blockId) return;
+    setIsSaving(true);
+    setEditError(null);
+    try {
+      const res = await emissionsApi.updateOilBlockOverride(blockId, editForm);
+      const updated = applyOilBlockOverrideToCache(res.data) ?? { ...props, ...res.data.properties };
+      onBlockUpdated?.(updated);
+      setIsEditing(false);
+    } catch (err: any) {
+      setEditError(err?.message ?? 'Failed to update oil block metadata');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Plumes whose centroid lies inside the clicked block polygon.
   // We use the loaded block geometry (no extra network call) and the in-memory
@@ -168,13 +213,25 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
               {operator ? <> · <Building2 size={12} className="inline" /> {operator}</> : null}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className={`flex-shrink-0 p-2.5 rounded-full transition-colors ${dm ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-500'}`}
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {canEdit && (
+              <button
+                onClick={() => setIsEditing((v) => !v)}
+                className={`p-2.5 rounded-full transition-colors ${isEditing ? 'bg-teal-600 text-white' : dm ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-500'}`}
+                aria-label={isEditing ? 'Cancel oil block edit' : 'Edit oil block metadata'}
+                title={isEditing ? 'Cancel edit' : 'Edit oil block'}
+              >
+                {isEditing ? <X size={18} /> : <Pencil size={18} />}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className={`p-2.5 rounded-full transition-colors ${dm ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-500'}`}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Body: left sidebar (block metadata) + right content (plumes + facilities) */}
@@ -182,13 +239,39 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
           {/* Sidebar — block metadata */}
           <div className={`w-full md:w-80 md:border-r border-b md:border-b-0 ${sidebar} overflow-y-auto p-6 md:p-8 space-y-5 flex-shrink-0`}>
             <SectionTitle dm={dm}>Block info</SectionTitle>
-            <MetaRow dm={dm} label="Operator" value={operator || '—'} />
-            <MetaRow dm={dm} label="Terrain" value={terrain || '—'} />
-            <MetaRow dm={dm} label="Basin" value={basin || '—'} />
-            <MetaRow dm={dm} label="Area" value={areaKm2 || '—'} />
-            <MetaRow dm={dm} label="Contract" value={contract || '—'} />
-            <MetaRow dm={dm} label="Rights" value={rights || '—'} />
-            <MetaRow dm={dm} label="Awarded" value={awardDate || '—'} />
+            {isEditing ? (
+              <div className="space-y-3">
+                <EditInput dm={dm} label="Name" value={editForm.name} onChange={(v) => updateEditField('name', v)} />
+                <EditInput dm={dm} label="Type" value={editForm.type} onChange={(v) => updateEditField('type', v)} />
+                <EditInput dm={dm} label="Status" value={editForm.status} onChange={(v) => updateEditField('status', v)} />
+                <EditInput dm={dm} label="Operator" value={editForm.operator} onChange={(v) => updateEditField('operator', v)} />
+                <EditInput dm={dm} label="Terrain" value={editForm.terrain} onChange={(v) => updateEditField('terrain', v)} />
+                <EditInput dm={dm} label="Basin" value={editForm.basin} onChange={(v) => updateEditField('basin', v)} />
+                <EditInput dm={dm} label="Area" value={editForm.areaSqkm} onChange={(v) => updateEditField('areaSqkm', v)} />
+                <EditInput dm={dm} label="Contract" value={editForm.contract} onChange={(v) => updateEditField('contract', v)} />
+                <EditInput dm={dm} label="Rights" value={editForm.rights} onChange={(v) => updateEditField('rights', v)} />
+                <EditInput dm={dm} label="Awarded" value={editForm.awardDate} onChange={(v) => updateEditField('awardDate', v)} />
+                {editError && <p className="text-xs font-semibold text-red-400">{editError}</p>}
+                <button
+                  onClick={saveOilBlock}
+                  disabled={isSaving}
+                  className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 transition-colors"
+                >
+                  {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  Save changes
+                </button>
+              </div>
+            ) : (
+              <>
+                <MetaRow dm={dm} label="Operator" value={operator || '—'} />
+                <MetaRow dm={dm} label="Terrain" value={terrain || '—'} />
+                <MetaRow dm={dm} label="Basin" value={basin || '—'} />
+                <MetaRow dm={dm} label="Area" value={areaKm2 || '—'} />
+                <MetaRow dm={dm} label="Contract" value={contract || '—'} />
+                <MetaRow dm={dm} label="Rights" value={rights || '—'} />
+                <MetaRow dm={dm} label="Awarded" value={awardDate || '—'} />
+              </>
+            )}
 
             <hr className={`${divider}`} />
 
@@ -368,6 +451,19 @@ const MetaRow: React.FC<{ dm: boolean; label: string; value: string }> = ({ dm, 
       {value}
     </span>
   </div>
+);
+
+const EditInput: React.FC<{ dm: boolean; label: string; value: string; onChange: (value: string) => void }> = ({ dm, label, value, onChange }) => (
+  <label className="block">
+    <span className={`block text-[10px] font-bold uppercase tracking-wide mb-1 ${dm ? 'text-gray-500' : 'text-gray-400'}`}>
+      {label}
+    </span>
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`w-full px-3 py-2 rounded-lg border text-xs outline-none transition-colors ${dm ? 'bg-[#12161f] border-[#1e2430] text-gray-100 focus:border-teal-500' : 'bg-white border-gray-200 text-gray-900 focus:border-teal-500'}`}
+    />
+  </label>
 );
 
 const StatCard: React.FC<{

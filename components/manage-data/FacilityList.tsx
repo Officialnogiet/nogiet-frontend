@@ -42,6 +42,7 @@ const FacilityList: React.FC<FacilityListProps> = ({ darkMode, facilities, isLoa
                 <p className={`font-bold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{f.name}</p>
                 <div className="flex items-center gap-3 mt-1.5">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${darkMode ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-700'}`}>{f.sector}</span>
+                  {f.subSector && <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${darkMode ? 'bg-sky-500/10 text-sky-400' : 'bg-sky-50 text-sky-700'}`}>{f.subSector}</span>}
                   {f.region && <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{f.region}</span>}
                 </div>
               </div>

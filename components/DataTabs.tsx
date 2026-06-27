@@ -1,6 +1,9 @@
 import React, { useMemo, useState, useCallback } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Loader2, Search } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
+  useAnalyticsReport,
   useEmissionAggregations,
   useFacilities,
   useSatelliteSources,
@@ -24,6 +27,7 @@ const TABS = [
   { id: "rates", label: "Emission Rates" },
   { id: "cumulative", label: "Cumulative" },
   { id: "averages", label: "Averages" },
+  { id: "reporting", label: "Reporting" },
 ] as const;
 
 const SATELLITE_INSTRUMENTS: Record<string, string> = {
@@ -158,6 +162,12 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   const [searchRates, setSearchRates] = useState("");
   const [searchCum, setSearchCum] = useState("");
   const [searchAvg, setSearchAvg] = useState("");
+  const [reportStart, setReportStart] = useState(() => `${new Date().getFullYear()}-01-01`);
+  const [reportEnd, setReportEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly">("monthly");
+  const [reportSource, setReportSource] = useState<"combined" | "satellite" | "ground">("combined");
+  const [reportSubSector, setReportSubSector] = useState<"" | "Upstream" | "Midstream" | "Downstream">("");
+  const [reportProvider, setReportProvider] = useState<"" | "carbon_mapper" | "imeo" | "tropomi">("");
 
   const emissionUnit = useSettingsStore((s) => s.emissionUnit);
 
@@ -176,6 +186,15 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   const { data: satelliteRes, isLoading: loadingSat, isError: errSat } = useSatelliteSources(satelliteFilters);
   const { data: facilities = [], isLoading: loadingFac, isError: errFac } = useFacilities();
   const { data: aggregations, isLoading: loadingAgg, isError: errAgg } = useEmissionAggregations();
+  const reportFilters = useMemo(() => ({
+    startDate: reportStart ? new Date(`${reportStart}T00:00:00.000Z`).toISOString() : undefined,
+    endDate: reportEnd ? new Date(`${reportEnd}T23:59:59.999Z`).toISOString() : undefined,
+    period: reportPeriod,
+    source: reportSource,
+    subSector: reportSubSector || undefined,
+    provider: reportProvider || undefined,
+  }), [reportStart, reportEnd, reportPeriod, reportSource, reportSubSector, reportProvider]);
+  const { data: analyticsReport, isLoading: loadingReport, isError: errReport } = useAnalyticsReport(reportFilters);
 
   const features: NormalizedSource[] = satelliteRes?.features ?? [];
 
@@ -372,8 +391,9 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
       rates: filteredSortedRates.length,
       cumulative: filteredSortedCumulative.length,
       averages: filteredRegions.length + filteredOperators.length,
+      reporting: analyticsReport?.rows.length ?? 0,
     }),
-    [filteredAllSources, filteredByInstrument, filteredSortedRates, filteredSortedCumulative, filteredRegions, filteredOperators],
+    [filteredAllSources, filteredByInstrument, filteredSortedRates, filteredSortedCumulative, filteredRegions, filteredOperators, analyticsReport],
   );
 
   const exportAllSources = useCallback(() => {
@@ -433,6 +453,47 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
     downloadCsv("averages.csv", headers, rows);
   }, [filteredRegions, filteredOperators, rateStr, emissionUnit]);
 
+  const exportReportCsv = useCallback(() => {
+    const headers = ["Period", "Sub-sector", "Satellite Emission", "Ground Emission", "Combined Emission", "Satellite Count", "Ground Count"];
+    const rows = (analyticsReport?.rows ?? []).map((r) => [
+      r.period,
+      r.subSector,
+      rateStr(r.satelliteEmission, emissionUnit),
+      rateStr(r.groundEmission, emissionUnit),
+      rateStr(r.combinedEmission, emissionUnit),
+      r.satelliteCount,
+      r.groundCount,
+    ]);
+    downloadCsv("nogiet-analytics-report.csv", headers, rows);
+  }, [analyticsReport, rateStr, emissionUnit]);
+
+  const exportReportPdf = useCallback(() => {
+    if (!analyticsReport) return;
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(16);
+    doc.text("NOGIET Analytics Report", 14, 16);
+    doc.setFontSize(9);
+    doc.text(`Period: ${analyticsReport.filters.startDate.slice(0, 10)} to ${analyticsReport.filters.endDate.slice(0, 10)}`, 14, 24);
+    doc.text(`Source: ${analyticsReport.filters.source} · Sub-sector: ${analyticsReport.filters.subSector} · Provider: ${analyticsReport.filters.provider}`, 14, 30);
+    doc.text(`Combined: ${rateStr(analyticsReport.totals.combinedEmission, emissionUnit)} · Satellite: ${rateStr(analyticsReport.totals.satelliteEmission, emissionUnit)} · Ground: ${rateStr(analyticsReport.totals.groundEmission, emissionUnit)}`, 14, 36);
+    autoTable(doc, {
+      startY: 44,
+      head: [["Period", "Sub-sector", "Satellite", "Ground", "Combined", "Sat Count", "Ground Count"]],
+      body: analyticsReport.rows.map((r) => [
+        r.period,
+        r.subSector,
+        rateStr(r.satelliteEmission, emissionUnit),
+        rateStr(r.groundEmission, emissionUnit),
+        rateStr(r.combinedEmission, emissionUnit),
+        r.satelliteCount,
+        r.groundCount,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [0, 150, 136] },
+    });
+    doc.save(`nogiet-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }, [analyticsReport, rateStr, emissionUnit]);
+
   const shell = dm ? "bg-[#12161f] text-white" : "bg-white text-gray-900";
   const panel = dm ? "bg-[#1a1f2b] border-[#1e2430]" : "bg-gray-50 border-gray-200";
   const border = dm ? "border-[#1e2430]" : "border-gray-200";
@@ -450,6 +511,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
       ? "border-[#1e2430] text-gray-400 hover:text-white hover:bg-white/5"
       : "border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
   }`;
+  const reportMax = Math.max(...(analyticsReport?.rows ?? []).map((r) => r.combinedEmission), 1);
 
   return (
     <div className={`flex flex-col h-full min-h-0 rounded-xl border overflow-hidden ${shell} ${border}`}>
@@ -853,9 +915,136 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
             </div>
           </>
         )}
+
+        {activeTab === "reporting" && (
+          <>
+            <div className={`mb-3 grid grid-cols-1 md:grid-cols-6 gap-2 rounded-lg border p-3 ${border} ${dm ? "bg-[#12161f]" : "bg-white"}`}>
+              <ReportField label="Start" dm={dm}>
+                <input type="date" value={reportStart} onChange={(e) => setReportStart(e.target.value)} className={inputCls.replace("pl-9", "pl-3")} />
+              </ReportField>
+              <ReportField label="End" dm={dm}>
+                <input type="date" value={reportEnd} onChange={(e) => setReportEnd(e.target.value)} className={inputCls.replace("pl-9", "pl-3")} />
+              </ReportField>
+              <ReportField label="Period" dm={dm}>
+                <select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value as "monthly" | "yearly")} className={inputCls.replace("pl-9", "pl-3")}>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </ReportField>
+              <ReportField label="Source" dm={dm}>
+                <select value={reportSource} onChange={(e) => setReportSource(e.target.value as "combined" | "satellite" | "ground")} className={inputCls.replace("pl-9", "pl-3")}>
+                  <option value="combined">Combined</option>
+                  <option value="satellite">Satellite</option>
+                  <option value="ground">Ground-truthed</option>
+                </select>
+              </ReportField>
+              <ReportField label="Sub-sector" dm={dm}>
+                <select value={reportSubSector} onChange={(e) => setReportSubSector(e.target.value as any)} className={inputCls.replace("pl-9", "pl-3")}>
+                  <option value="">All</option>
+                  <option value="Upstream">Upstream</option>
+                  <option value="Midstream">Midstream</option>
+                  <option value="Downstream">Downstream</option>
+                </select>
+              </ReportField>
+              <ReportField label="Provider" dm={dm}>
+                <select value={reportProvider} onChange={(e) => setReportProvider(e.target.value as any)} className={inputCls.replace("pl-9", "pl-3")} disabled={reportSource === "ground"}>
+                  <option value="">All</option>
+                  <option value="carbon_mapper">Carbon Mapper</option>
+                  <option value="imeo">IMEO</option>
+                  <option value="tropomi">TROPOMI</option>
+                </select>
+              </ReportField>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mb-3">
+              <button type="button" onClick={exportReportCsv} title="Export CSV" className={dlBtnCls}>
+                <Download className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={exportReportPdf}
+                className={`px-3 py-2 rounded-lg border text-xs font-bold transition-colors ${dm ? "border-[#1e2430] text-gray-300 hover:bg-white/5" : "border-gray-200 text-gray-700 hover:bg-gray-100"}`}
+              >
+                PDF Report
+              </button>
+            </div>
+
+            {loadingReport ? (
+              <LoadingState dm={dm} />
+            ) : errReport ? (
+              <p className={`py-16 text-center text-sm ${dm ? "text-red-400" : "text-red-600"}`}>Failed to load analytics report.</p>
+            ) : !analyticsReport || analyticsReport.rows.length === 0 ? (
+              <EmptyState dm={dm} text="No analytics rows match the selected filters" />
+            ) : (
+              <div className="flex-1 min-h-0 overflow-auto space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <ReportStat dm={dm} label="Satellite" value={rateStr(analyticsReport.totals.satelliteEmission, emissionUnit)} sub={`${analyticsReport.totals.satelliteCount} detections`} />
+                  <ReportStat dm={dm} label="Ground-truthed" value={rateStr(analyticsReport.totals.groundEmission, emissionUnit)} sub={`${analyticsReport.totals.groundCount} measurements`} />
+                  <ReportStat dm={dm} label="Combined" value={rateStr(analyticsReport.totals.combinedEmission, emissionUnit)} sub="sector-wide total" />
+                </div>
+
+                <div className={`rounded-lg border ${border} ${dm ? "bg-[#12161f]" : "bg-white"} p-4 space-y-3`}>
+                  {analyticsReport.rows.slice(0, 12).map((r) => (
+                    <div key={`${r.period}-${r.subSector}`} className="grid grid-cols-[120px_1fr_120px] items-center gap-3 text-xs">
+                      <span className={tdCls}>{r.period} · {r.subSector}</span>
+                      <div className={`h-2 rounded-full overflow-hidden ${dm ? "bg-[#1e2430]" : "bg-gray-100"}`}>
+                        <div className="h-full bg-teal-500" style={{ width: `${Math.max(2, (r.combinedEmission / reportMax) * 100)}%` }} />
+                      </div>
+                      <span className={`text-right tabular-nums ${tdCls}`}>{rateStr(r.combinedEmission, emissionUnit)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`rounded-lg border overflow-auto ${border} ${dm ? "bg-[#12161f]" : "bg-white"}`}>
+                  <table className="w-full min-w-[820px] text-sm">
+                    <thead className={thRow}>
+                      <tr className={`border-b ${border}`}>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Period</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Sub-sector</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Satellite</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Ground</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Combined</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Satellite Count</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Ground Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsReport.rows.map((r) => (
+                        <tr key={`${r.period}-${r.subSector}`} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
+                          <td className={`px-3 py-2 ${tdCls}`}>{r.period}</td>
+                          <td className={`px-3 py-2 ${tdCls}`}>{r.subSector}</td>
+                          <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(r.satelliteEmission, emissionUnit)}</td>
+                          <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(r.groundEmission, emissionUnit)}</td>
+                          <td className={`px-3 py-2 tabular-nums font-bold ${tdCls}`}>{rateStr(r.combinedEmission, emissionUnit)}</td>
+                          <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{r.satelliteCount}</td>
+                          <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{r.groundCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
 };
 
 export default DataTabs;
+
+const ReportField: React.FC<{ label: string; dm: boolean; children: React.ReactNode }> = ({ label, dm, children }) => (
+  <label className="block">
+    <span className={`block text-[10px] font-bold uppercase tracking-wide mb-1 ${dm ? "text-gray-500" : "text-gray-400"}`}>{label}</span>
+    {children}
+  </label>
+);
+
+const ReportStat: React.FC<{ dm: boolean; label: string; value: string; sub: string }> = ({ dm, label, value, sub }) => (
+  <div className={`rounded-lg border p-4 ${dm ? "bg-[#12161f] border-[#1e2430]" : "bg-white border-gray-200"}`}>
+    <p className={`text-[10px] font-bold uppercase tracking-wide ${dm ? "text-gray-500" : "text-gray-400"}`}>{label}</p>
+    <p className={`mt-1 text-lg font-black ${dm ? "text-white" : "text-gray-900"}`}>{value}</p>
+    <p className={`text-xs ${dm ? "text-gray-500" : "text-gray-400"}`}>{sub}</p>
+  </div>
+);

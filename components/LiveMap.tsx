@@ -34,6 +34,8 @@ import {
   preloadAdminGeoJSONs,
   findStateAtPoint,
   findLGAAtPoint,
+  findOilBlockAtPoint,
+  refreshOilBlockSource,
   type OilBlockClickPayload,
 } from './live-map/boundaryLayers';
 import OilBlockDetailModal, { type OilBlockData } from './live-map/OilBlockDetailModal';
@@ -234,6 +236,13 @@ function providerSummary(providers: string[]): string {
   if (providers.length === 0) return 'None';
   if (providers.length === ALL_GRID_PROVIDERS.length) return 'All providers';
   return providers.map((p) => PROVIDER_SHORT_LABEL[p] ?? p).join(' + ');
+}
+
+function facilitySubSectorStyle(subSector?: string | null) {
+  const value = (subSector ?? '').toLowerCase();
+  if (value === 'midstream') return { color: '#0ea5e9', label: 'M' };
+  if (value === 'downstream') return { color: '#a855f7', label: 'D' };
+  return { color: '#10b981', label: 'U' };
 }
 
 const REGION_COORDS: Record<string, { center: [number, number]; zoom: number }> = {
@@ -733,6 +742,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         body: [
           ['Source Name', selectedFacility.name],
           ['Sector', selectedFacility.sector],
+          ['Oil Block', selectedFacility.oilBlock || 'N/A'],
+          ['State', selectedFacility.state || 'N/A'],
+          ['LGA', selectedFacility.lga || 'N/A'],
           ['Emission Rate', (selectedFacility.emissionRate ?? 0) > 0 ? `${(selectedFacility.emissionRate ?? 0).toFixed(1)} kg/hr` : 'N/A'],
           ['Plume Count', String(selectedFacility.plumeCount ?? 0)],
           ['Persistence', `${((selectedFacility.persistence ?? 0) * 100).toFixed(0)}%`],
@@ -1159,18 +1171,31 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const facility: FacilityData = {
         id: f.id, name: f.name, latitude: f.latitude, longitude: f.longitude,
         sector: f.sector ?? 'Oil & Gas', region: f.region,
+        state: f.state ?? null,
+        lga: f.lga ?? null,
+        subSector: f.subSector ?? null,
+        oilBlock: f.oilBlock ?? null,
+        oilfield: f.oilfield ?? null,
+        operator: f.operator ?? null,
+        facilityType: f.facilityType ?? null,
+        geographicLocation: f.geographicLocation ?? null,
+        customField1: f.customField1 ?? null,
+        customField2: f.customField2 ?? null,
+        customField3: f.customField3 ?? null,
         plumeCount: gdCount,
       };
+      const subSectorStyle = facilitySubSectorStyle(f.subSector);
       const el = document.createElement('div');
       const iconSize = gdCount > 0 ? Math.min(32 + gdCount * 2, 48) : 32;
       el.style.cssText = 'width:56px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;';
       const countLabel = gdCount > 0
         ? `<span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;z-index:4;padding:0 3px;border:1.5px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${gdCount}</span>`
         : '';
+      const subSectorBadge = `<span style="position:absolute;bottom:-2px;left:-2px;width:17px;height:17px;background:${subSectorStyle.color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:white;z-index:5;border:1.5px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.35);">${subSectorStyle.label}</span>`;
       const iconMarkup = iconColor
-        ? `<div role="img" aria-label="Oil facility" style="width:100%;height:100%;background-color:${iconColor};-webkit-mask:url(${oilStationIcon}) center/contain no-repeat;mask:url(${oilStationIcon}) center/contain no-repeat;pointer-events:none;filter:${iconShadow};"></div>`
+        ? `<div role="img" aria-label="${f.subSector ?? 'Upstream'} oil facility" style="width:100%;height:100%;background-color:${subSectorStyle.color};-webkit-mask:url(${oilStationIcon}) center/contain no-repeat;mask:url(${oilStationIcon}) center/contain no-repeat;pointer-events:none;filter:${iconShadow};"></div>`
         : `<img src="${oilStationIcon}" alt="Oil facility" style="width:100%;height:100%;object-fit:contain;pointer-events:none;filter:${iconShadow};" draggable="false" />`;
-      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${iconSize}px;height:${iconSize}px;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${iconMarkup}${countLabel}</div><span style="position:absolute;top:100%;margin-top:4px;font-size:10px;font-weight:700;color:${labelColor};white-space:nowrap;pointer-events:none;text-shadow:${labelShadow};">${f.name}</span></div>`;
+      el.innerHTML = `<div class="fac-inner" style="position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease;"><div style="width:${iconSize}px;height:${iconSize}px;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;">${iconMarkup}${countLabel}${subSectorBadge}</div><span style="position:absolute;top:100%;margin-top:4px;font-size:10px;font-weight:700;color:${labelColor};white-space:nowrap;pointer-events:none;text-shadow:${labelShadow};">${f.name}</span></div>`;
       el.addEventListener('click', (e) => { e.stopPropagation(); handleFacilityClick(facility); });
       const marker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([f.longitude, f.latitude]).addTo(map.current!);
       facilityMarkersRef.current.push(marker);
@@ -1678,11 +1703,17 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       const coords = (e.features[0].geometry as GeoJSON.Point).coordinates;
       const sourceName = props.source_name ?? '';
       const prov = (props.provider as string) ?? 'carbon_mapper';
+      const lng = Number(coords[0]);
+      const lat = Number(coords[1]);
+      const oilBlock = findOilBlockAtPoint(lng, lat);
       setSelectedFacility({
         id: (props.feature_id as string) || sourceName,
         name: sourceName,
-        latitude: coords[1], longitude: coords[0],
+        latitude: lat, longitude: lng,
         sector: props.sector ?? 'Unknown', region: null,
+        oilBlock: oilBlock?.name ?? null,
+        state: findStateAtPoint(lng, lat),
+        lga: findLGAAtPoint(lng, lat),
         isSatellite: true, emissionRate: props.emission_rate ?? 0,
         emissionUncertainty: props.emission_uncertainty ?? 0,
         plumeCount: props.plume_count ?? 0, persistence: props.persistence ?? 0,
@@ -2021,6 +2052,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           satelliteSources={filteredSatellite as any}
           facilities={filteredFacilities as any}
           onClose={() => setSelectedOilBlock(null)}
+          onBlockUpdated={(properties) => {
+            setSelectedOilBlock((current) => current ? { ...current, properties } : current);
+            refreshOilBlockSource(map.current);
+          }}
           onOpenMethaneTrends={(ctx) => {
             // Hand off the block name + state so the Methane Trends screen
             // can pre-scope its filter + heading to "this specific block".

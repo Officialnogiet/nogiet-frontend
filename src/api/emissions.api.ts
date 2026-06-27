@@ -15,9 +15,15 @@ export interface Facility {
   region: string;
   state?: string;
   lga?: string;
+  subSector?: "Upstream" | "Midstream" | "Downstream";
   oilBlock?: string;
+  oilfield?: string;
   operator?: string;
   facilityType?: string;
+  geographicLocation?: "Onshore" | "Offshore";
+  customField1?: string;
+  customField2?: string;
+  customField3?: string;
   alertThreshold?: number | null;
 }
 
@@ -131,10 +137,72 @@ export interface FacilityFilterOptions {
   facilityTypes: string[];
 }
 
+export interface OilBlockOverride {
+  blockId: string;
+  updatedBy: string;
+  updatedAt: string;
+  properties: {
+    name?: string;
+    type?: string;
+    status?: string;
+    operator?: string;
+    terrain?: string;
+    basin?: string;
+    area_sqkm?: string;
+    award_date?: string;
+    contract?: string;
+    rights?: string;
+  };
+}
+
+export interface UpdateOilBlockOverrideInput {
+  name?: string;
+  type?: string;
+  status?: string;
+  operator?: string;
+  terrain?: string;
+  basin?: string;
+  areaSqkm?: string;
+  awardDate?: string;
+  contract?: string;
+  rights?: string;
+}
+
 export interface EmissionAggregations {
   byRegion: { region: string; count: number; avgReading: number }[];
   byOperator: { operator: string; count: number; avgReading: number }[];
   cumulativeByFacility: { facilityId: string; facilityName: string; totalEmission: number; count: number; latestDate: string }[];
+}
+
+export interface AnalyticsReportFilters {
+  startDate?: string;
+  endDate?: string;
+  period?: "monthly" | "yearly";
+  subSector?: "Upstream" | "Midstream" | "Downstream";
+  source?: "satellite" | "ground" | "combined";
+  provider?: "carbon_mapper" | "imeo" | "tropomi";
+}
+
+export interface AnalyticsReport {
+  filters: Record<string, string>;
+  totals: {
+    satelliteEmission: number;
+    groundEmission: number;
+    combinedEmission: number;
+    satelliteCount: number;
+    groundCount: number;
+  };
+  rows: {
+    period: string;
+    subSector: string;
+    satelliteEmission: number;
+    groundEmission: number;
+    combinedEmission: number;
+    satelliteCount: number;
+    groundCount: number;
+  }[];
+  satelliteRows: any[];
+  groundRows: any[];
 }
 
 export const emissionsApi = {
@@ -192,9 +260,15 @@ export const emissionsApi = {
     region?: string;
     state?: string;
     lga?: string;
+    subSector: "Upstream" | "Midstream" | "Downstream";
     oilBlock?: string;
+    oilfield?: string;
     operator?: string;
     facilityType?: string;
+    geographicLocation?: "Onshore" | "Offshore";
+    customField1?: string;
+    customField2?: string;
+    customField3?: string;
   }) => api.post<ApiResponse<Facility>>("/facilities", data).then((r) => r.data),
 
   deleteFacility: (id: string) =>
@@ -261,6 +335,15 @@ export const emissionsApi = {
   getFacilityFilterOptions: () =>
     api.get<ApiResponse<FacilityFilterOptions>>("/facilities/filter-options").then((r) => r.data),
 
+  getOilBlockOverrides: () =>
+    api.get<ApiResponse<OilBlockOverride[]>>("/oil-block-overrides").then((r) => r.data),
+
+  updateOilBlockOverride: (blockId: string, data: UpdateOilBlockOverrideInput) =>
+    api.put<ApiResponse<OilBlockOverride>>(`/oil-block-overrides/${encodeURIComponent(blockId)}`, data).then((r) => r.data),
+
   getEmissionAggregations: () =>
     api.get<ApiResponse<EmissionAggregations>>("/emissions/aggregations").then((r) => r.data),
+
+  getAnalyticsReport: (filters: AnalyticsReportFilters) =>
+    api.get<ApiResponse<AnalyticsReport>>("/analytics/report", { params: filters }).then((r) => r.data),
 };

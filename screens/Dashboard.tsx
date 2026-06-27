@@ -58,7 +58,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         label = 'Live Map';
         break;
       case 'METHANE_TRENDS':
-        content = <MethaneTrends darkMode={darkMode} />;
+        content = <MethaneTrends darkMode={darkMode} onClose={() => setActiveView('LIVE_MAP')} />;
         label = 'Methane Trends';
         break;
       case 'DATA_COMPARISON':

@@ -17,6 +17,7 @@ const NIGERIA_SCOPE: Scope = { kind: 'nigeria', name: 'Nigeria' };
 
 interface MethaneTrendsProps {
   darkMode?: boolean;
+  onClose?: () => void;
 }
 
 type Tab = 'TRENDS' | 'ANNUAL';
@@ -33,7 +34,7 @@ function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number): num
   return Math.sqrt(x * x + dLat * dLat) * R;
 }
 
-const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
+const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose }) => {
   const dm = !!darkMode;
   const [tab, setTab] = useState<Tab>('TRENDS');
   const [scope, setScope] = useState<Scope>(NIGERIA_SCOPE);
@@ -305,6 +306,17 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true }) => {
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {scope.kind === 'oilBlock' && onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Return to live map"
+                title="Return to live map"
+                className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${dm ? 'border-[#1e2430] bg-[#12161f] text-gray-300 hover:bg-white/10 hover:text-white' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+              >
+                <X size={16} />
+              </button>
+            )}
             <select
               value={scopeValue}
               onChange={(e) => {

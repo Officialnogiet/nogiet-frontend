@@ -1,4 +1,5 @@
 import mapboxgl from 'mapbox-gl';
+import { emissionsApi, type OilBlockOverride } from '../../src/api/emissions.api';
 
 function isMapAlive(m: mapboxgl.Map): boolean {
   try { m.getStyle(); return true; } catch { return false; }
@@ -75,7 +76,52 @@ async function loadOilBlocksGeoJSON() {
   const res = await fetch('/geojson/oil-blocks.geojson');
   if (!res.ok) return null;
   oilBlocksGeoJSON = await res.json();
+  normalizeOilBlockIds(oilBlocksGeoJSON);
+  await applyOilBlockOverridesFromApi();
   return oilBlocksGeoJSON;
+}
+
+function oilBlockIdForFeature(feature: any): string {
+  return String(feature?.properties?.block_id ?? feature?.id ?? feature?.properties?.name ?? '');
+}
+
+function normalizeOilBlockIds(fc: any) {
+  for (const feature of fc?.features ?? []) {
+    const blockId = oilBlockIdForFeature(feature);
+    feature.properties = {
+      ...(feature.properties ?? {}),
+      block_id: blockId,
+    };
+  }
+}
+
+async function applyOilBlockOverridesFromApi() {
+  try {
+    const res = await emissionsApi.getOilBlockOverrides();
+    for (const override of res.data ?? []) {
+      applyOilBlockOverrideToCache(override);
+    }
+  } catch {
+    // Non-fatal: static oil-block GeoJSON remains usable when the API is unavailable.
+  }
+}
+
+export function applyOilBlockOverrideToCache(override: OilBlockOverride): Record<string, any> | null {
+  if (!oilBlocksGeoJSON?.features) return null;
+  const feature = oilBlocksGeoJSON.features.find((f: any) => oilBlockIdForFeature(f) === override.blockId);
+  if (!feature) return null;
+  feature.properties = {
+    ...(feature.properties ?? {}),
+    block_id: override.blockId,
+    ...override.properties,
+  };
+  return feature.properties;
+}
+
+export function refreshOilBlockSource(m: mapboxgl.Map | null | undefined) {
+  if (!m || !oilBlocksGeoJSON || !isMapAlive(m)) return;
+  const source = m.getSource(OIL_BLOCKS_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+  source?.setData(oilBlocksGeoJSON);
 }
 
 // --- Theme tracking for popup colors ---

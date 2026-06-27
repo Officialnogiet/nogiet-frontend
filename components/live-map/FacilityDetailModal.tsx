@@ -69,7 +69,25 @@ function satelliteSourceLabel(facility: FacilityData): string {
 const MetadataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }> = ({ darkMode, facility }) => {
   const rows = [
     { label: 'Sector', value: facility.sector },
+    ...(facility.isSatellite ? [] : [
+      { label: 'Sub-sector', value: facility.subSector ?? 'N/A' },
+      { label: 'Facility Type', value: facility.facilityType ?? 'N/A' },
+      { label: 'Operator', value: facility.operator ?? 'N/A' },
+      { label: 'Oil Block', value: facility.oilBlock ?? 'N/A' },
+      { label: 'Oilfield', value: facility.oilfield ?? 'N/A' },
+      { label: 'State', value: facility.state ?? 'N/A' },
+      { label: 'LGA', value: facility.lga ?? 'N/A' },
+      { label: 'Location', value: facility.geographicLocation ?? 'N/A' },
+      { label: 'Custom Field 1', value: facility.customField1 ?? 'N/A' },
+      { label: 'Custom Field 2', value: facility.customField2 ?? 'N/A' },
+      { label: 'Custom Field 3', value: facility.customField3 ?? 'N/A' },
+    ]),
     { label: 'Region', value: facility.region ?? 'N/A' },
+    ...(facility.isSatellite ? [
+      { label: 'Oil Block', value: facility.oilBlock ?? 'N/A' },
+      { label: 'State', value: facility.state ?? 'N/A' },
+      { label: 'LGA', value: facility.lga ?? 'N/A' },
+    ] : []),
     { label: 'Gas Type', value: 'CH\u2084' },
     { label: 'Data Source', value: satelliteSourceLabel(facility) },
     { label: 'Coordinates', value: `${facility.latitude.toFixed(4)}, ${facility.longitude.toFixed(4)}` },

@@ -8,6 +8,17 @@ export interface FacilityData {
   longitude: number;
   sector: string;
   region?: string | null;
+  state?: string | null;
+  lga?: string | null;
+  subSector?: string | null;
+  oilBlock?: string | null;
+  oilfield?: string | null;
+  operator?: string | null;
+  facilityType?: string | null;
+  geographicLocation?: string | null;
+  customField1?: string | null;
+  customField2?: string | null;
+  customField3?: string | null;
   isSatellite?: boolean;
   /** When `isSatellite`, which upstream feed normalized this point (`carbon_mapper` | `imeo` | `tropomi`). */
   satelliteProvider?: string;
@@ -73,7 +84,18 @@ const FacilityPopup: React.FC<FacilityPopupProps> = ({ darkMode, facility, onExp
 
     <div className="mt-4 space-y-2.5 text-sm">
       <PopupRow darkMode={darkMode} label="Sector" value={facility.sector} />
+      {!facility.isSatellite && facility.subSector && <PopupRow darkMode={darkMode} label="Sub-sector" value={facility.subSector} />}
       {facility.region && <PopupRow darkMode={darkMode} label="Region" value={facility.region} />}
+      {!facility.isSatellite && facility.facilityType && <PopupRow darkMode={darkMode} label="Facility Type" value={facility.facilityType} />}
+      {!facility.isSatellite && facility.operator && <PopupRow darkMode={darkMode} label="Operator" value={facility.operator} />}
+      {facility.oilBlock && <PopupRow darkMode={darkMode} label="Oil Block" value={facility.oilBlock} />}
+      {facility.oilfield && <PopupRow darkMode={darkMode} label="Oilfield" value={facility.oilfield} />}
+      {facility.state && <PopupRow darkMode={darkMode} label="State" value={facility.state} />}
+      {facility.lga && <PopupRow darkMode={darkMode} label="LGA" value={facility.lga} />}
+      {!facility.isSatellite && facility.geographicLocation && <PopupRow darkMode={darkMode} label="Location" value={facility.geographicLocation} />}
+      {!facility.isSatellite && facility.customField1 && <PopupRow darkMode={darkMode} label="Custom Field 1" value={facility.customField1} />}
+      {!facility.isSatellite && facility.customField2 && <PopupRow darkMode={darkMode} label="Custom Field 2" value={facility.customField2} />}
+      {!facility.isSatellite && facility.customField3 && <PopupRow darkMode={darkMode} label="Custom Field 3" value={facility.customField3} />}
       <PopupRow darkMode={darkMode} label="Gas Type" value="CH₄" />
       {facility.isSatellite && (
         <PopupRow
