@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { emissionsApi } from "../api/emissions.api";
-import type { EmissionFilters } from "../api/emissions.api";
+import type { EmissionFilters, FacilityInput } from "../api/emissions.api";
 import type { AnalyticsReportFilters } from "../api/emissions.api";
 import { submitGroundDataSchema, emissionFiltersSchema } from "../validations/emission.schema";
 import type { SubmitGroundDataInput, EmissionFiltersInput } from "../validations/emission.schema";
@@ -164,28 +164,26 @@ export function useSubmitGroundData() {
 export function useCreateFacility() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
-      name: string;
-      latitude: number;
-      longitude: number;
-      sector?: string;
-      region?: string;
-      state?: string;
-      lga?: string;
-      subSector: "Upstream" | "Midstream" | "Downstream";
-      oilBlock?: string;
-      oilfield?: string;
-      operator?: string;
-      facilityType?: string;
-      geographicLocation?: "Onshore" | "Offshore";
-      customField1?: string;
-      customField2?: string;
-      customField3?: string;
-    }) =>
+    mutationFn: (data: FacilityInput & { name: string; latitude: number; longitude: number; subSector: "Upstream" | "Midstream" | "Downstream" }) =>
       emissionsApi.createFacility(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["facilities"] });
       qc.invalidateQueries({ queryKey: ["emission-stats"] });
+    },
+  });
+}
+
+export function useUpdateFacility() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FacilityInput }) =>
+      emissionsApi.updateFacility(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["facilities"] });
+      qc.invalidateQueries({ queryKey: ["facility-filter-options"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      qc.invalidateQueries({ queryKey: ["emission-aggregations"] });
+      qc.invalidateQueries({ queryKey: ["analytics-report"] });
     },
   });
 }
@@ -392,5 +390,16 @@ export function useAnalyticsReport(filters: AnalyticsReportFilters) {
     queryFn: () => emissionsApi.getAnalyticsReport(filters),
     select: (res) => res.data,
     staleTime: SATELLITE_REFRESH_INTERVAL_MS,
+  });
+}
+
+export function useDataCompletenessAudit() {
+  return useQuery({
+    queryKey: ["data-completeness-audit"],
+    queryFn: () => emissionsApi.getDataCompletenessAudit(),
+    select: (res) => res.data,
+    staleTime: SATELLITE_REFRESH_INTERVAL_MS,
+    refetchInterval: SATELLITE_REFRESH_INTERVAL_MS,
+    refetchOnWindowFocus: false,
   });
 }

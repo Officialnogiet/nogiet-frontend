@@ -23,6 +23,7 @@ export interface MapFilters {
   oilBlock: string;
   operator: string;
   facilityType: string;
+  subSector: string;
 }
 
 export const DEFAULT_FILTERS: MapFilters = {
@@ -43,6 +44,7 @@ export const DEFAULT_FILTERS: MapFilters = {
   oilBlock: '',
   operator: '',
   facilityType: '',
+  subSector: '',
 };
 
 interface FilterPanelProps {
@@ -203,6 +205,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, fil
                     {filterOptions.facilityTypes.map((t: string) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 )}
+                <select value={local.subSector} onChange={e => setLocal(p => ({ ...p, subSector: e.target.value }))}
+                  className={`w-full border rounded-xl px-4 py-3 text-sm ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                  <option value="">All Sub-sectors</option>
+                  {(filterOptions.subSectors?.length ? filterOptions.subSectors : ['Upstream', 'Midstream', 'Downstream']).map((s: string) => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
             </section>
           )}

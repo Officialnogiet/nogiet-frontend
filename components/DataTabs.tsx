@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
   useAnalyticsReport,
+  useDataCompletenessAudit,
   useEmissionAggregations,
   useFacilities,
   useSatelliteSources,
@@ -27,6 +28,7 @@ const TABS = [
   { id: "rates", label: "Emission Rates" },
   { id: "cumulative", label: "Cumulative" },
   { id: "averages", label: "Averages" },
+  { id: "completeness", label: "Completeness" },
   { id: "reporting", label: "Reporting" },
 ] as const;
 
@@ -186,6 +188,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   const { data: satelliteRes, isLoading: loadingSat, isError: errSat } = useSatelliteSources(satelliteFilters);
   const { data: facilities = [], isLoading: loadingFac, isError: errFac } = useFacilities();
   const { data: aggregations, isLoading: loadingAgg, isError: errAgg } = useEmissionAggregations();
+  const { data: completenessAudit, isLoading: loadingCompleteness, isError: errCompleteness } = useDataCompletenessAudit();
   const reportFilters = useMemo(() => ({
     startDate: reportStart ? new Date(`${reportStart}T00:00:00.000Z`).toISOString() : undefined,
     endDate: reportEnd ? new Date(`${reportEnd}T23:59:59.999Z`).toISOString() : undefined,
@@ -391,9 +394,10 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
       rates: filteredSortedRates.length,
       cumulative: filteredSortedCumulative.length,
       averages: filteredRegions.length + filteredOperators.length,
+      completeness: completenessAudit?.gaps.length ?? 0,
       reporting: analyticsReport?.rows.length ?? 0,
     }),
-    [filteredAllSources, filteredByInstrument, filteredSortedRates, filteredSortedCumulative, filteredRegions, filteredOperators, analyticsReport],
+    [filteredAllSources, filteredByInstrument, filteredSortedRates, filteredSortedCumulative, filteredRegions, filteredOperators, completenessAudit, analyticsReport],
   );
 
   const exportAllSources = useCallback(() => {
@@ -466,6 +470,39 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
     ]);
     downloadCsv("nogiet-analytics-report.csv", headers, rows);
   }, [analyticsReport, rateStr, emissionUnit]);
+
+  const exportCompletenessCsv = useCallback(() => {
+    if (!completenessAudit) return;
+    const providerRows = completenessAudit.providers.map((p) => [
+      "Provider",
+      providerLabel(p.provider),
+      p.status.replace(/_/g, " "),
+      p.sourceCount,
+      rateStr(p.totalEmissionRate, emissionUnit),
+      p.latestDetection ? formatDate(p.latestDetection) : "—",
+    ]);
+    const metadataRows = completenessAudit.facilityMetadata.map((m) => [
+      "Facility metadata",
+      m.label,
+      `${m.coveragePercent}% covered`,
+      m.count,
+      `${m.missing} missing`,
+      "",
+    ]);
+    const gapRows = completenessAudit.gaps.map((g) => [
+      "Gap",
+      g.item,
+      g.severity,
+      "",
+      "",
+      g.recommendation,
+    ]);
+    downloadCsv(
+      "nogiet-data-completeness-audit.csv",
+      ["Category", "Item", "Status", "Count", "Value", "Recommendation / Latest"],
+      [...providerRows, ...metadataRows, ...gapRows],
+    );
+  }, [completenessAudit, rateStr, emissionUnit]);
 
   const exportReportPdf = useCallback(() => {
     if (!analyticsReport) return;
@@ -913,6 +950,142 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                 </>
               )}
             </div>
+          </>
+        )}
+
+        {activeTab === "completeness" && (
+          <>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p className={`text-sm font-bold ${dm ? "text-white" : "text-gray-900"}`}>Emissions Data Completeness Audit</p>
+                <p className={`text-xs ${dm ? "text-gray-500" : "text-gray-400"}`}>
+                  Live coverage check for satellite feeds, ground measurements, facility metadata, and integration gaps.
+                </p>
+              </div>
+              <button type="button" onClick={exportCompletenessCsv} title="Export audit CSV" className={dlBtnCls}>
+                <Download className="h-4 w-4" />
+              </button>
+            </div>
+
+            {loadingCompleteness ? (
+              <LoadingState dm={dm} />
+            ) : errCompleteness ? (
+              <p className={`py-16 text-center text-sm ${dm ? "text-red-400" : "text-red-600"}`}>Failed to load completeness audit.</p>
+            ) : !completenessAudit ? (
+              <EmptyState dm={dm} text="No completeness audit available" />
+            ) : (
+              <div className="flex-1 min-h-0 overflow-auto space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <ReportStat dm={dm} label="Satellite feeds" value={`${completenessAudit.summary.activeSatelliteProviders}/${completenessAudit.summary.configuredSatelliteProviders}`} sub="active configured providers" />
+                  <ReportStat dm={dm} label="Detections" value={`${completenessAudit.summary.satelliteDetections}`} sub={rateStr(completenessAudit.summary.satelliteEmissionRate, emissionUnit)} />
+                  <ReportStat dm={dm} label="Facilities" value={`${completenessAudit.summary.facilities}`} sub="registered assets" />
+                  <ReportStat dm={dm} label="Ground data" value={`${completenessAudit.summary.groundMeasurements}`} sub={`${completenessAudit.summary.facilitiesWithGroundData} facilities covered`} />
+                </div>
+
+                <div className={`rounded-lg border overflow-auto ${border} ${dm ? "bg-[#12161f]" : "bg-white"}`}>
+                  <table className="w-full min-w-[720px] text-sm">
+                    <thead className={thRow}>
+                      <tr className={`border-b ${border}`}>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Source</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Status</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Detections</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Emission rate</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Latest</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completenessAudit.providers.map((p) => (
+                        <tr key={p.provider} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
+                          <td className={`px-3 py-2 font-medium ${tdCls}`}>{providerLabel(p.provider)}</td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-bold capitalize ${
+                              p.status === "active"
+                                ? dm ? "bg-emerald-500/15 text-emerald-300" : "bg-emerald-50 text-emerald-700"
+                                : p.status === "configured_no_data"
+                                  ? dm ? "bg-amber-500/15 text-amber-300" : "bg-amber-50 text-amber-700"
+                                  : dm ? "bg-red-500/15 text-red-300" : "bg-red-50 text-red-700"
+                            }`}>
+                              {p.status.replace(/_/g, " ")}
+                            </span>
+                          </td>
+                          <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{p.sourceCount}</td>
+                          <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(p.totalEmissionRate, emissionUnit)}</td>
+                          <td className={`px-3 py-2 ${tdCls}`}>{p.latestDetection ? formatDate(p.latestDetection) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className={`rounded-lg border ${border} ${dm ? "bg-[#12161f]" : "bg-white"} p-4`}>
+                    <p className={`text-xs font-bold uppercase mb-3 ${dm ? "text-gray-400" : "text-gray-500"}`}>Facility metadata coverage</p>
+                    <div className="space-y-3">
+                      {completenessAudit.facilityMetadata.map((m) => (
+                        <div key={m.key} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className={tdCls}>{m.label}</span>
+                            <span className={`tabular-nums ${tdCls}`}>{m.coveragePercent}%</span>
+                          </div>
+                          <div className={`h-2 rounded-full overflow-hidden ${dm ? "bg-[#1e2430]" : "bg-gray-100"}`}>
+                            <div className="h-full bg-teal-500" style={{ width: `${m.coveragePercent}%` }} />
+                          </div>
+                          <p className={`text-[11px] ${dm ? "text-gray-500" : "text-gray-400"}`}>{m.count} complete · {m.missing} missing</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`rounded-lg border ${border} ${dm ? "bg-[#12161f]" : "bg-white"} p-4`}>
+                    <p className={`text-xs font-bold uppercase mb-3 ${dm ? "text-gray-400" : "text-gray-500"}`}>Gaps and next actions</p>
+                    {completenessAudit.gaps.length === 0 ? (
+                      <p className={`text-sm ${dm ? "text-gray-400" : "text-gray-600"}`}>No current completeness gaps detected.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {completenessAudit.gaps.map((g, i) => (
+                          <div key={`${g.item}-${i}`} className={`rounded-lg border p-3 ${border} ${dm ? "bg-[#1a1f2b]" : "bg-gray-50"}`}>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-sm font-semibold ${tdCls}`}>{g.item}</p>
+                              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase ${
+                                g.severity === "high"
+                                  ? dm ? "bg-red-500/15 text-red-300" : "bg-red-50 text-red-700"
+                                  : g.severity === "medium"
+                                    ? dm ? "bg-amber-500/15 text-amber-300" : "bg-amber-50 text-amber-700"
+                                    : dm ? "bg-sky-500/15 text-sky-300" : "bg-sky-50 text-sky-700"
+                              }`}>{g.severity}</span>
+                            </div>
+                            <p className={`mt-1 text-xs ${dm ? "text-gray-500" : "text-gray-500"}`}>{g.recommendation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className={`rounded-lg border overflow-auto ${border} ${dm ? "bg-[#12161f]" : "bg-white"}`}>
+                  <table className="w-full min-w-[760px] text-sm">
+                    <thead className={thRow}>
+                      <tr className={`border-b ${border}`}>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Candidate</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Category</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Status</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completenessAudit.integrationCandidates.map((c) => (
+                        <tr key={c.name} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
+                          <td className={`px-3 py-2 font-medium ${tdCls}`}>{c.name}</td>
+                          <td className={`px-3 py-2 ${tdCls}`}>{c.category}</td>
+                          <td className={`px-3 py-2 capitalize ${tdCls}`}>{c.status.replace(/_/g, " ")}</td>
+                          <td className={`px-3 py-2 ${tdCls}`}>{c.action}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
 

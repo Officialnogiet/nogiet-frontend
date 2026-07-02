@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Trash2, Plus, MapPin, Calendar, FlaskConical } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, Trash2, Plus, MapPin, Calendar, FlaskConical, Pencil, Save, X } from 'lucide-react';
 import type { Facility } from '../../src/api/emissions.api';
-import { useGroundData, useDeleteFacility, useSubmitGroundData } from '../../src/hooks/useEmissions';
+import { useGroundData, useDeleteFacility, useSubmitGroundData, useUpdateFacility } from '../../src/hooks/useEmissions';
 
 interface Props {
   darkMode: boolean;
@@ -12,11 +12,14 @@ interface Props {
 const RANGE_KM = 2;
 const KM_TO_DEG_LAT = 1 / 111.32;
 const kmToLonDeg = (lat: number) => 1 / (111.32 * Math.cos((lat * Math.PI) / 180));
+const SUB_SECTORS = ['Upstream', 'Midstream', 'Downstream'] as const;
+const GEO_LOCATIONS = ['Onshore', 'Offshore'] as const;
 
 const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
   const { data: groundData = [], isLoading } = useGroundData(facility.id);
   const deleteMutation = useDeleteFacility();
   const submitMutation = useSubmitGroundData();
+  const updateMutation = useUpdateFacility();
 
   const [showAdd, setShowAdd] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -24,6 +27,15 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
   const [reading, setReading] = useState('');
   const [methodology, setMethodology] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState(() => facilityToForm(facility));
+
+  useEffect(() => {
+    setEditForm(facilityToForm(facility));
+    setIsEditing(false);
+    setEditError(null);
+  }, [facility.id]);
 
   const latOffset = RANGE_KM * KM_TO_DEG_LAT;
   const lonOffset = RANGE_KM * kmToLonDeg(facility.latitude);
@@ -47,6 +59,57 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
     submitMutation.mutate(
       { facilityId: facility.id, measurementDate: new Date(date).toISOString(), methaneReading: Number(reading), methodology, latitude: +lat.toFixed(6), longitude: +lon.toFixed(6) },
       { onSuccess: () => { setShowAdd(false); setDate(''); setReading(''); setMethodology(''); setLat(facility.latitude); setLon(facility.longitude); } },
+    );
+  };
+
+  const updateEditField = (key: keyof FacilityFormState, value: string) => {
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleFacilityUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError(null);
+
+    const latValue = Number(editForm.latitude);
+    const lonValue = Number(editForm.longitude);
+    const thresholdValue = editForm.alertThreshold.trim() ? Number(editForm.alertThreshold) : null;
+
+    if (!editForm.name.trim()) { setEditError('Name is required'); return; }
+    if (!Number.isFinite(latValue) || latValue < -90 || latValue > 90) { setEditError('Latitude must be between -90 and 90'); return; }
+    if (!Number.isFinite(lonValue) || lonValue < -180 || lonValue > 180) { setEditError('Longitude must be between -180 and 180'); return; }
+    if (!editForm.subSector) { setEditError('Facilities Classification or Sub-Sector is required'); return; }
+    if (thresholdValue != null && (!Number.isFinite(thresholdValue) || thresholdValue <= 0)) {
+      setEditError('Alert threshold must be a positive number');
+      return;
+    }
+
+    updateMutation.mutate(
+      {
+        id: facility.id,
+        data: {
+          name: editForm.name.trim(),
+          latitude: latValue,
+          longitude: lonValue,
+          sector: editForm.sector.trim() || undefined,
+          region: editForm.region.trim() || undefined,
+          state: editForm.state.trim() || undefined,
+          lga: editForm.lga.trim() || undefined,
+          subSector: editForm.subSector as typeof SUB_SECTORS[number],
+          oilBlock: editForm.oilBlock.trim() || undefined,
+          oilfield: editForm.oilfield.trim() || undefined,
+          operator: editForm.operator.trim() || undefined,
+          facilityType: editForm.facilityType.trim() || undefined,
+          geographicLocation: editForm.geographicLocation ? editForm.geographicLocation as typeof GEO_LOCATIONS[number] : undefined,
+          customField1: editForm.customField1.trim() || undefined,
+          customField2: editForm.customField2.trim() || undefined,
+          customField3: editForm.customField3.trim() || undefined,
+          alertThreshold: thresholdValue,
+        },
+      },
+      {
+        onSuccess: () => setIsEditing(false),
+        onError: (err: any) => setEditError(err.message ?? 'Failed to update facility'),
+      },
     );
   };
 
@@ -75,9 +138,18 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
             <span className={`text-[11px] font-mono ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</span>
           </div>
         </div>
-        <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors" title="Delete facility">
-          <Trash2 size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setIsEditing((v) => !v); setEditError(null); setEditForm(facilityToForm(facility)); }}
+            className={`p-2 rounded-xl transition-colors ${isEditing ? 'bg-teal-600 text-white' : darkMode ? 'text-gray-400 hover:bg-[#1e2430]' : 'text-gray-500 hover:bg-gray-100'}`}
+            title={isEditing ? 'Cancel editing' : 'Edit facility metadata'}
+          >
+            {isEditing ? <X size={18} /> : <Pencil size={18} />}
+          </button>
+          <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors" title="Delete facility">
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
 
       {confirmDelete && (
@@ -94,20 +166,67 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
       )}
 
       <div className={`mb-6 rounded-2xl border p-5 ${darkMode ? 'bg-[#0b0e14]/60 border-[#1e2430]' : 'bg-gray-50 border-gray-100'}`}>
-        <h4 className={`mb-3 text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Facility metadata</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <InfoRow label="Sub-sector" value={facility.subSector} darkMode={darkMode} />
-          <InfoRow label="Facility Type" value={facility.facilityType} darkMode={darkMode} />
-          <InfoRow label="Operator" value={facility.operator} darkMode={darkMode} />
-          <InfoRow label="Oil Block" value={facility.oilBlock} darkMode={darkMode} />
-          <InfoRow label="Oilfield" value={facility.oilfield} darkMode={darkMode} />
-          <InfoRow label="State" value={facility.state} darkMode={darkMode} />
-          <InfoRow label="LGA" value={facility.lga} darkMode={darkMode} />
-          <InfoRow label="Location" value={facility.geographicLocation} darkMode={darkMode} />
-          <InfoRow label="Custom Field 1" value={facility.customField1} darkMode={darkMode} />
-          <InfoRow label="Custom Field 2" value={facility.customField2} darkMode={darkMode} />
-          <InfoRow label="Custom Field 3" value={facility.customField3} darkMode={darkMode} />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h4 className={`text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Facility metadata</h4>
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${darkMode ? 'bg-[#1e2430] text-gray-300 hover:bg-[#263042]' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
+            >
+              <Pencil size={13} /> Edit
+            </button>
+          )}
         </div>
+
+        {isEditing ? (
+          <form onSubmit={handleFacilityUpdate} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <EditField label="Name" value={editForm.name} onChange={(v) => updateEditField('name', v)} inputCls={inputCls} />
+              <EditField label="Sector" value={editForm.sector} onChange={(v) => updateEditField('sector', v)} inputCls={inputCls} />
+              <EditField label="Latitude" value={editForm.latitude} onChange={(v) => updateEditField('latitude', v)} inputCls={inputCls} type="number" />
+              <EditField label="Longitude" value={editForm.longitude} onChange={(v) => updateEditField('longitude', v)} inputCls={inputCls} type="number" />
+              <EditSelect label="Sub-sector" value={editForm.subSector} onChange={(v) => updateEditField('subSector', v)} selectCls={selectCls} options={SUB_SECTORS} required />
+              <EditField label="Facility Type" value={editForm.facilityType} onChange={(v) => updateEditField('facilityType', v)} inputCls={inputCls} />
+              <EditField label="Operator" value={editForm.operator} onChange={(v) => updateEditField('operator', v)} inputCls={inputCls} />
+              <EditField label="Oil Block" value={editForm.oilBlock} onChange={(v) => updateEditField('oilBlock', v)} inputCls={inputCls} />
+              <EditField label="Oilfield" value={editForm.oilfield} onChange={(v) => updateEditField('oilfield', v)} inputCls={inputCls} />
+              <EditField label="Region" value={editForm.region} onChange={(v) => updateEditField('region', v)} inputCls={inputCls} />
+              <EditField label="State" value={editForm.state} onChange={(v) => updateEditField('state', v)} inputCls={inputCls} />
+              <EditField label="LGA" value={editForm.lga} onChange={(v) => updateEditField('lga', v)} inputCls={inputCls} />
+              <EditSelect label="Location" value={editForm.geographicLocation} onChange={(v) => updateEditField('geographicLocation', v)} selectCls={selectCls} options={GEO_LOCATIONS} />
+              <EditField label="Alert Threshold" value={editForm.alertThreshold} onChange={(v) => updateEditField('alertThreshold', v)} inputCls={inputCls} type="number" />
+              <EditField label="Custom Field 1" value={editForm.customField1} onChange={(v) => updateEditField('customField1', v)} inputCls={inputCls} />
+              <EditField label="Custom Field 2" value={editForm.customField2} onChange={(v) => updateEditField('customField2', v)} inputCls={inputCls} />
+              <EditField label="Custom Field 3" value={editForm.customField3} onChange={(v) => updateEditField('customField3', v)} inputCls={inputCls} />
+            </div>
+            {editError && <p className="text-red-500 text-xs font-bold">{editError}</p>}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button type="submit" disabled={updateMutation.isPending}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-50">
+                <Save size={15} /> {updateMutation.isPending ? 'Saving...' : 'Save Facility'}
+              </button>
+              <button type="button" onClick={() => { setIsEditing(false); setEditError(null); setEditForm(facilityToForm(facility)); }}
+                className={`px-5 py-3 rounded-2xl text-sm font-bold ${darkMode ? 'bg-[#1e2430] text-gray-300' : 'bg-white border border-gray-200 text-gray-600'}`}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <InfoRow label="Sub-sector" value={facility.subSector} darkMode={darkMode} />
+            <InfoRow label="Facility Type" value={facility.facilityType} darkMode={darkMode} />
+            <InfoRow label="Operator" value={facility.operator} darkMode={darkMode} />
+            <InfoRow label="Oil Block" value={facility.oilBlock} darkMode={darkMode} />
+            <InfoRow label="Oilfield" value={facility.oilfield} darkMode={darkMode} />
+            <InfoRow label="State" value={facility.state} darkMode={darkMode} />
+            <InfoRow label="LGA" value={facility.lga} darkMode={darkMode} />
+            <InfoRow label="Location" value={facility.geographicLocation} darkMode={darkMode} />
+            <InfoRow label="Alert Threshold" value={facility.alertThreshold != null ? `${facility.alertThreshold} kg/hr` : undefined} darkMode={darkMode} />
+            <InfoRow label="Custom Field 1" value={facility.customField1} darkMode={darkMode} />
+            <InfoRow label="Custom Field 2" value={facility.customField2} darkMode={darkMode} />
+            <InfoRow label="Custom Field 3" value={facility.customField3} darkMode={darkMode} />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between mb-4">
@@ -224,5 +343,81 @@ const InfoRow: React.FC<{ label: string; value?: string | null; darkMode: boolea
   <div>
     <p className={`text-[10px] font-bold uppercase tracking-wide ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>{label}</p>
     <p className={`mt-0.5 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>{value || '—'}</p>
+  </div>
+);
+
+type FacilityFormState = {
+  name: string;
+  latitude: string;
+  longitude: string;
+  sector: string;
+  region: string;
+  state: string;
+  lga: string;
+  subSector: string;
+  oilBlock: string;
+  oilfield: string;
+  operator: string;
+  facilityType: string;
+  geographicLocation: string;
+  customField1: string;
+  customField2: string;
+  customField3: string;
+  alertThreshold: string;
+};
+
+const facilityToForm = (facility: Facility): FacilityFormState => ({
+  name: facility.name ?? '',
+  latitude: String(facility.latitude ?? ''),
+  longitude: String(facility.longitude ?? ''),
+  sector: facility.sector ?? '',
+  region: facility.region ?? '',
+  state: facility.state ?? '',
+  lga: facility.lga ?? '',
+  subSector: facility.subSector ?? '',
+  oilBlock: facility.oilBlock ?? '',
+  oilfield: facility.oilfield ?? '',
+  operator: facility.operator ?? '',
+  facilityType: facility.facilityType ?? '',
+  geographicLocation: facility.geographicLocation ?? '',
+  customField1: facility.customField1 ?? '',
+  customField2: facility.customField2 ?? '',
+  customField3: facility.customField3 ?? '',
+  alertThreshold: facility.alertThreshold != null ? String(facility.alertThreshold) : '',
+});
+
+const EditField: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  inputCls: string;
+  type?: 'text' | 'number';
+}> = ({ label, value, onChange, inputCls, type = 'text' }) => (
+  <div className="space-y-1.5">
+    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+    <input
+      type={type}
+      step={type === 'number' ? 'any' : undefined}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={inputCls}
+    />
+  </div>
+);
+
+const EditSelect: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  selectCls: string;
+  options: readonly string[];
+  required?: boolean;
+}> = ({ label, value, onChange, selectCls, options, required }) => (
+  <div className="space-y-1.5">
+    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={selectCls} required={required}>
+      <option value="">Select {label.toLowerCase()}</option>
+      {options.map((option) => <option key={option} value={option}>{option}</option>)}
+    </select>
   </div>
 );

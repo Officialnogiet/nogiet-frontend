@@ -31,5 +31,6 @@ export const emissionFiltersSchema = z.object({
   oilBlock: z.string().optional(),
   operator: z.string().optional(),
   facilityType: z.string().optional(),
+  subSector: z.enum(["Upstream", "Midstream", "Downstream"]).optional(),
 });
 export type EmissionFiltersInput = z.infer<typeof emissionFiltersSchema>;

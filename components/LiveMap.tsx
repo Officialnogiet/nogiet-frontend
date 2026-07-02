@@ -340,8 +340,9 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     if (mapFilters.oilBlock) f.oilBlock = mapFilters.oilBlock;
     if (mapFilters.operator) f.operator = mapFilters.operator;
     if (mapFilters.facilityType) f.facilityType = mapFilters.facilityType;
+    if (mapFilters.subSector) f.subSector = mapFilters.subSector;
     return Object.keys(f).length > 0 ? f : undefined;
-  }, [mapFilters.state, mapFilters.lga, mapFilters.oilBlock, mapFilters.operator, mapFilters.facilityType]);
+  }, [mapFilters.state, mapFilters.lga, mapFilters.oilBlock, mapFilters.operator, mapFilters.facilityType, mapFilters.subSector]);
 
   const { data: facilities = [], isLoading: isLoadingFacilities } = useFacilities(facilityApiFilters);
   const { data: alerts = [], isLoading: isLoadingAlerts } = useAlerts();

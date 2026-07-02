@@ -65,6 +65,7 @@ export interface EmissionFilters {
   oilBlock?: string;
   operator?: string;
   facilityType?: string;
+  subSector?: "Upstream" | "Midstream" | "Downstream";
 }
 
 export interface NormalizedSource {
@@ -135,6 +136,27 @@ export interface FacilityFilterOptions {
   oilBlocks: string[];
   operators: string[];
   facilityTypes: string[];
+  subSectors: string[];
+}
+
+export interface FacilityInput {
+  name?: string;
+  latitude?: number;
+  longitude?: number;
+  sector?: string;
+  region?: string;
+  state?: string;
+  lga?: string;
+  subSector?: "Upstream" | "Midstream" | "Downstream";
+  oilBlock?: string;
+  oilfield?: string;
+  operator?: string;
+  facilityType?: string;
+  geographicLocation?: "Onshore" | "Offshore";
+  customField1?: string;
+  customField2?: string;
+  customField3?: string;
+  alertThreshold?: number | null;
 }
 
 export interface OilBlockOverride {
@@ -205,6 +227,54 @@ export interface AnalyticsReport {
   groundRows: any[];
 }
 
+export interface DataCompletenessAudit {
+  generatedAt: string;
+  summary: {
+    configuredSatelliteProviders: number;
+    activeSatelliteProviders: number;
+    satelliteDetections: number;
+    satelliteEmissionRate: number;
+    facilities: number;
+    groundMeasurements: number;
+    facilitiesWithGroundData: number;
+  };
+  providers: {
+    provider: "carbon_mapper" | "imeo" | "tropomi";
+    configured: boolean;
+    sourceCount: number;
+    totalEmissionRate: number;
+    latestDetection: string | null;
+    status: "active" | "configured_no_data" | "not_configured";
+  }[];
+  facilityMetadata: {
+    key: string;
+    label: string;
+    count: number;
+    missing: number;
+    coveragePercent: number;
+  }[];
+  groundMeasurements: {
+    total: number;
+    facilitiesWithGroundData: number;
+    bySubSector: {
+      subSector: string;
+      measurementCount: number;
+      facilityCount: number;
+    }[];
+  };
+  integrationCandidates: {
+    name: string;
+    category: string;
+    status: "active" | "configured_no_data" | "not_configured";
+    action: string;
+  }[];
+  gaps: {
+    severity: "low" | "medium" | "high";
+    item: string;
+    recommendation: string;
+  }[];
+}
+
 export const emissionsApi = {
   getFacilities: (filters?: Partial<EmissionFilters>) =>
     api.get<ApiResponse<Facility[]>>("/facilities", { params: filters }).then((r) => r.data),
@@ -252,24 +322,11 @@ export const emissionsApi = {
       params: { startDate, endDate, mode, maxDistance },
     }).then((r) => r.data),
 
-  createFacility: (data: {
-    name: string;
-    latitude: number;
-    longitude: number;
-    sector?: string;
-    region?: string;
-    state?: string;
-    lga?: string;
-    subSector: "Upstream" | "Midstream" | "Downstream";
-    oilBlock?: string;
-    oilfield?: string;
-    operator?: string;
-    facilityType?: string;
-    geographicLocation?: "Onshore" | "Offshore";
-    customField1?: string;
-    customField2?: string;
-    customField3?: string;
-  }) => api.post<ApiResponse<Facility>>("/facilities", data).then((r) => r.data),
+  createFacility: (data: FacilityInput & { name: string; latitude: number; longitude: number; subSector: "Upstream" | "Midstream" | "Downstream" }) =>
+    api.post<ApiResponse<Facility>>("/facilities", data).then((r) => r.data),
+
+  updateFacility: (id: string, data: FacilityInput) =>
+    api.put<ApiResponse<Facility>>(`/facilities/${id}`, data).then((r) => r.data),
 
   deleteFacility: (id: string) =>
     api.delete<ApiResponse<Facility>>(`/facilities/${id}`).then((r) => r.data),
@@ -346,4 +403,7 @@ export const emissionsApi = {
 
   getAnalyticsReport: (filters: AnalyticsReportFilters) =>
     api.get<ApiResponse<AnalyticsReport>>("/analytics/report", { params: filters }).then((r) => r.data),
+
+  getDataCompletenessAudit: () =>
+    api.get<ApiResponse<DataCompletenessAudit>>("/emissions/completeness").then((r) => r.data),
 };
