@@ -431,10 +431,6 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
             />
           </>
         )}
-
-        {!isLoading && (
-          <MethaneConverter darkMode={dm} embedded />
-        )}
       </main>
     </div>
   );

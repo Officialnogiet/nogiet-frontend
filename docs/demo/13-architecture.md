@@ -56,7 +56,7 @@ file path below is verified against the running code.
         ┌────────────────────┐             ┌──────────────────┐
         │ Postgres (Aiven)   │             │ Redis            │
         │ - users            │             │ - aggregator     │
-        │ - facilities       │             │   cache (24h)    │
+        │ - facilities       │             │   cache (30 min) │
         │ - ground_data      │             │ - stale fallback │
         │ - alerts           │             │   (7 days)       │
         │ - geofences        │             └──────────────────┘

@@ -200,7 +200,7 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
 
   return (
     <section className={`${embedded ? '' : `flex-1 overflow-y-auto ${surface}`} ${text}`}>
-      <div className={`${embedded ? '' : 'px-6 md:px-10 py-10'} mx-auto w-full max-w-[1500px]`}>
+      <div className={`${embedded ? '' : 'px-6 md:px-10 py-10'} mx-auto w-full max-w-[2000px]`}>
         <header className={`${embedded ? 'mb-4' : 'mb-6'} flex flex-wrap items-start justify-between gap-4`}>
           <div className="min-w-0">
             <div className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${dm ? 'text-teal-300' : 'text-teal-700'}`}>

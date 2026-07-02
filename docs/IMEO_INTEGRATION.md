@@ -89,7 +89,7 @@ flowchart LR
 |---|---|---|
 | Cache key helper | `bboxCacheKey(gasType)` | `imeoCacheKey(gasType)` |
 | Stale fallback key | — (token cache only) | `imeoStaleKey(gasType)` (7-day) |
-| Service-level cache | via `EmissionService.getAllSourcesCached` (24h) | `ImeoService.fetchAllSourcesCached` (24h) |
+| Service-level cache | via `EmissionService.getAllSourcesCached` (30 minutes) | `ImeoService.fetchAllSourcesCached` (30 minutes) |
 | In-flight dedupe | `EmissionService.fetchPromise` | `ImeoService.fetchPromise` |
 | BBox filter helper | `getSourcesInBBox(all, bbox)` | `getSourcesInBBox(all, bbox)` |
 | Per-source detail | `getSourceDetail(name)` | `getSourceDetail(idSource)` |
@@ -111,7 +111,7 @@ Practical effect: once IMEO has been fetched **once successfully**, subsequent C
 
    The service follows `next` / `next_page_url` / `links.next` pagination if present and accepts arrays, `results`/`data`/`items`/`records`/`plumes`, or GeoJSON envelopes. **It does not** send `bbox` or `country` to IMEO (those are not documented for `/plumes_w_wo_sources`); geographic filtering is applied by the aggregator after normalization.
 
-2. **`SatelliteAggregatorService`** merges IMEO with Carbon Mapper and TROPOMI into **`NormalizedSource`** rows and caches in Redis (24h).
+2. **`SatelliteAggregatorService`** merges IMEO with Carbon Mapper and TROPOMI into **`NormalizedSource`** rows and caches in Redis (30 minutes).
 3. **`EmissionService.getSatelliteSources`** serves aggregated features on `GET /api/v1/emissions/satellite/sources`, filtered by viewport `bbox` when provided. **`getSatellitePlumes(sourceId)`** routes IMEO ids (`imeo-…`) to `/api/v2/plumes/{id_source}` and other ids to Carbon Mapper. New backend routes:
    - `GET /api/v1/emissions/satellite/imeo/plume-image/:plumeId` (proxies image bytes)
    - `GET /api/v1/emissions/satellite/imeo/last-update`

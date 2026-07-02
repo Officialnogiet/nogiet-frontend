@@ -11,7 +11,7 @@ import {
   queuePendingSubmission, isOffline,
 } from "../utils/offline-storage";
 
-const SATELLITE_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
+const SATELLITE_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 export function useFacilities(filters?: Partial<EmissionFilters>) {
   return useQuery({

@@ -116,7 +116,7 @@ SatelliteAggregator.fetchAllSources()
                   Normalized to NormalizedSource[]
                             │
                             ▼
-                  Redis cache (24h, plus 7-day stale fallback)
+                  Redis cache (30 minutes, plus 7-day stale fallback)
                             │
                             ▼
                   Frontend useSatelliteStore (Zustand) populated

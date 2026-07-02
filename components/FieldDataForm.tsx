@@ -67,6 +67,7 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
     data: facilities = [],
     isLoading: facilitiesLoading,
     isError: facilitiesError,
+    error: facilitiesLoadError,
   } = useFacilities();
   const { data: submissions = [], isLoading: submissionsLoading } =
     useFieldSubmissions(facilityId || undefined);
@@ -82,6 +83,10 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
     () => facilities.find((f) => f.id === facilityId),
     [facilities, facilityId],
   );
+
+  const facilityErrorMessage = facilitiesLoadError instanceof Error
+    ? facilitiesLoadError.message
+    : "Could not load facilities.";
 
   const shell = darkMode
     ? "bg-[#12161f] border-[#1e2430] text-white"
@@ -272,7 +277,12 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
                     {facilitiesLoading ? (
                       <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
                     ) : facilitiesError ? (
-                      <p className="text-sm text-red-500">Could not load facilities.</p>
+                      <div className={`rounded-xl border px-3 py-2 text-sm ${
+                        darkMode ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-red-200 bg-red-50 text-red-700"
+                      }`}>
+                        <p className="font-semibold">Could not load facilities.</p>
+                        <p className="mt-1 text-xs opacity-90">{facilityErrorMessage}</p>
+                      </div>
                     ) : (
                       <select value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className={`${inputBase} cursor-pointer appearance-none`}>
                         <option value="">Select a facility</option>
