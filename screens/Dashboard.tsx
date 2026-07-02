@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar';
 import MobileBottomNav from '../components/MobileBottomNav';
 import LiveMap from '../components/LiveMap';
 import MethaneTrends from '../components/MethaneTrends';
+import MethaneConverter from '../components/MethaneConverter';
 import DataComparison from '../components/DataComparison';
 import DataTabs from '../components/DataTabs';
 import ManageData from '../components/ManageData';
@@ -33,7 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const isFacilityOwner = user?.role === 'facility_owner';
 
   useEffect(() => {
-    if (isFacilityOwner && activeView !== 'FIELD_DATA') {
+    if (isFacilityOwner && activeView !== 'FIELD_DATA' && activeView !== 'METHANE_CONVERTER' && activeView !== 'DOCS') {
       setActiveView('FIELD_DATA');
     }
   }, [isFacilityOwner, activeView, setActiveView]);
@@ -60,6 +61,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       case 'METHANE_TRENDS':
         content = <MethaneTrends darkMode={darkMode} onClose={() => setActiveView('LIVE_MAP')} />;
         label = 'Methane Trends';
+        break;
+      case 'METHANE_CONVERTER':
+        content = <MethaneConverter darkMode={darkMode} />;
+        label = 'Methane Converter';
         break;
       case 'DATA_COMPARISON':
         content = <DataComparison darkMode={darkMode} />;

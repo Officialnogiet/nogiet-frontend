@@ -12,6 +12,7 @@ export type DashboardView =
   | 'DASHBOARD_HOME'
   | 'LIVE_MAP'
   | 'METHANE_TRENDS'
+  | 'METHANE_CONVERTER'
   | 'DATA_COMPARISON'
   | 'DATA_TABS'
   | 'MANAGE_DATA'

@@ -36,6 +36,16 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
       'Use Download CSV to export the annual table for further analysis.',
     ],
   },
+  METHANE_CONVERTER: {
+    title: 'Methane Converter',
+    description: 'Convert Nigeria satellite methane readings from kg/hr into mass, CO2e, and gas-volume reporting units.',
+    tips: [
+      'Enter the satellite reading in kg/hr, then choose the reporting duration.',
+      'Switch between GWP100 and GWP20 depending on the reporting standard.',
+      'Toggle output units to keep the results focused on Nigerian facility, state, sector, or inventory reporting.',
+      'Use copy buttons to move individual results or the full conversion set into another document.',
+    ],
+  },
   DATA_COMPARISON: {
     title: 'Data Comparison',
     description: 'Compare satellite-derived emission readings with ground-truth measurements side by side.',

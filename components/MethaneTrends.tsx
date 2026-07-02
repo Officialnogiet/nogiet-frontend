@@ -6,6 +6,7 @@ import { useDashboardStore } from '../src/stores/dashboard.store';
 import { findOilBlockAtPoint, preloadAdminGeoJSONs } from './live-map/boundaryLayers';
 import TrendsChart from './methane-trends/TrendsChart';
 import AnnualStatisticsTable from './methane-trends/AnnualStatisticsTable';
+import MethaneConverter from './MethaneConverter';
 import { buildAnnualTable, buildFeedSeries, isoMonth, type AnnualObservation } from './methane-trends/aggregations';
 import { attachStateNames } from './methane-trends/stateLookup';
 import type { GroupByMode, ProviderId } from './methane-trends/types';
@@ -429,6 +430,10 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
               }}
             />
           </>
+        )}
+
+        {!isLoading && (
+          <MethaneConverter darkMode={dm} embedded />
         )}
       </main>
     </div>
