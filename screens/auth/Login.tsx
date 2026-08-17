@@ -5,6 +5,7 @@ import { loginSchema } from '../../src/validations/auth.schema';
 import logoFull from '../../assets/logo-full.png';
 import LoginHeroPanel from '../../components/auth/LoginHeroPanel';
 import LoginForm from '../../components/auth/LoginForm';
+import PartnerLogos from '../../components/auth/PartnerLogos';
 
 interface LoginProps {
   onNavigate: (screen: AuthScreen) => void;
@@ -38,12 +39,13 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       <LoginHeroPanel />
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 lg:p-20 relative bg-white">
         <div className="w-full max-w-[440px]">
-          <div className="md:hidden flex items-center justify-center mb-12">
-            <img src={logoFull} alt="NOGIET" className="h-8 w-auto" />
+          <div className="md:hidden flex items-center justify-center mb-8">
+            <div className="w-full"><img src={logoFull} alt="NOGIET" className="h-8 w-auto mx-auto" /><PartnerLogos /></div>
           </div>
           <div className="flex justify-center mb-8">
-            <div className="hidden md:flex flex-col items-center gap-3 mb-12">
+            <div className="hidden md:flex w-full flex-col items-center mb-8">
               <img src={logoFull} alt="NOGIET" className="h-10 w-auto" />
+              <PartnerLogos />
             </div>
           </div>
           <LoginForm

@@ -21,6 +21,7 @@ import FieldDataForm from '../components/FieldDataForm';
 import ScreenGuide from '../components/ScreenGuide';
 import ErrorBoundary from '../components/ErrorBoundary';
 import Docs from './docs/Docs';
+import DataFeedsPage from '../components/DataFeedsPage';
 
 interface DashboardProps {
   onNavigate: (screen: AuthScreen) => void;
@@ -93,6 +94,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       case 'SETTINGS':
         content = <SettingsPage darkMode={darkMode} onClose={() => setActiveView('DASHBOARD_HOME')} />;
         label = 'Settings';
+        break;
+      case 'DATA_FEEDS':
+        content = user?.role === 'super_admin' ? <DataFeedsPage darkMode={darkMode} onClose={() => setActiveView('DASHBOARD_HOME')} /> : <DashboardHome darkMode={darkMode} onNavigate={(v) => setActiveView(v as any)} />;
+        label = 'Data Feeds';
         break;
       case 'DOCS':
         content = <Docs darkMode={darkMode} />;

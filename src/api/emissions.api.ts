@@ -71,7 +71,7 @@ export interface EmissionFilters {
 export interface NormalizedSource {
   id: string;
   name: string;
-  provider: "carbon_mapper" | "imeo" | "tropomi";
+  provider: "carbon_mapper" | "imeo" | "tropomi" | "emit";
   latitude: number;
   longitude: number;
   emissionRate: number;
@@ -202,7 +202,7 @@ export interface AnalyticsReportFilters {
   period?: "monthly" | "yearly";
   subSector?: "Upstream" | "Midstream" | "Downstream";
   source?: "satellite" | "ground" | "combined";
-  provider?: "carbon_mapper" | "imeo" | "tropomi";
+  provider?: "carbon_mapper" | "imeo" | "tropomi" | "emit";
 }
 
 export interface AnalyticsReport {
@@ -239,12 +239,13 @@ export interface DataCompletenessAudit {
     facilitiesWithGroundData: number;
   };
   providers: {
-    provider: "carbon_mapper" | "imeo" | "tropomi";
+    provider: "carbon_mapper" | "imeo" | "tropomi" | "emit";
     configured: boolean;
     sourceCount: number;
     totalEmissionRate: number;
     latestDetection: string | null;
     status: "active" | "configured_no_data" | "not_configured";
+    blockedReason?: string | null;
   }[];
   facilityMetadata: {
     key: string;

@@ -13,7 +13,7 @@ export interface MapLayerState {
 }
 
 export const DEFAULT_LAYERS: MapLayerState = {
-  states: true,
+  states: false,
   lgas: false,
   oilBlocks: true,
   pipelines: true,
@@ -23,8 +23,8 @@ export const DEFAULT_LAYERS: MapLayerState = {
 };
 
 /** Concrete satellite providers — the legend's "all" virtual entry just selects every one. */
-export type GridProvider = 'carbon_mapper' | 'imeo' | 'tropomi';
-export const ALL_GRID_PROVIDERS: GridProvider[] = ['carbon_mapper', 'imeo', 'tropomi'];
+export type GridProvider = 'carbon_mapper' | 'imeo' | 'tropomi' | 'emit';
+export const ALL_GRID_PROVIDERS: GridProvider[] = ['carbon_mapper', 'imeo', 'tropomi', 'emit'];
 export type GridStatistic = 'max' | 'average' | 'sum';
 
 /**
@@ -46,7 +46,7 @@ export interface GridControlsState {
 
 export const DEFAULT_GRID_CONTROLS: GridControlsState = {
   providers: [...ALL_GRID_PROVIDERS],
-  instrumentsByProvider: { carbon_mapper: null, imeo: null, tropomi: null },
+  instrumentsByProvider: { carbon_mapper: null, imeo: null, tropomi: null, emit: null },
   statistic: 'max',
   showAlerts: true,
   alertThresholdKgHr: 200,
@@ -110,7 +110,21 @@ export const useDashboardStore = create<DashboardState>()(
       toggleAlerts: () => set((s) => ({ showAlerts: !s.showAlerts })),
       mapLayers: DEFAULT_LAYERS,
       toggleMapLayer: (layer: keyof MapLayerState) =>
-        set((s) => ({ mapLayers: { ...s.mapLayers, [layer]: !s.mapLayers[layer] } })),
+        set((s) => {
+          const willEnable = !s.mapLayers[layer];
+          const mapLayers = { ...s.mapLayers, [layer]: willEnable };
+
+          // Oil concessions and administrative boundaries are both dense polygon layers.
+          // Keep them mutually exclusive so their borders and labels never pile up.
+          if (willEnable && layer === 'oilBlocks') {
+            mapLayers.states = false;
+            mapLayers.lgas = false;
+          } else if (willEnable && (layer === 'states' || layer === 'lgas')) {
+            mapLayers.oilBlocks = false;
+          }
+
+          return { mapLayers };
+        }),
       // Drill-in context populated by the Live Map's oil-block / state click;
       // consumed (and immediately cleared) by MethaneTrends on mount. Not
       // persisted — a fresh browser tab should never inherit a stale scope.
@@ -136,7 +150,7 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: "nogiet-dashboard",
-      version: 9,
+      version: 10,
       partialize: (state) => ({
         darkMode: state.darkMode,
         sidebarCollapsed: state.sidebarCollapsed,
@@ -230,6 +244,17 @@ export const useDashboardStore = create<DashboardState>()(
           persisted.mapLayers = {
             ...DEFAULT_LAYERS,
             ...(persisted.mapLayers ?? {}),
+            oilBlocks: true,
+          };
+        }
+        if (version < 10) {
+          // Oil blocks are the default drill-in surface. Administrative polygon layers
+          // stay off while it is active to prevent overlapping borders and labels.
+          persisted.mapLayers = {
+            ...DEFAULT_LAYERS,
+            ...(persisted.mapLayers ?? {}),
+            states: false,
+            lgas: false,
             oilBlocks: true,
           };
         }

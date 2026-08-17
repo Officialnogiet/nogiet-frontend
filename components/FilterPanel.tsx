@@ -63,11 +63,12 @@ const SECTORS = [
 ];
 const INSTRUMENTS = ['NASA EMIT', 'EMU', 'NASA AVIRIS-NG', 'NASA AVIRIS-3', 'ASU GAO'];
 
-const PROVIDERS = ['carbon_mapper', 'imeo', 'tropomi'];
+const PROVIDERS = ['carbon_mapper', 'imeo', 'tropomi', 'emit'];
 const PROVIDER_LABELS: Record<string, string> = {
   carbon_mapper: 'Carbon Mapper',
   imeo: 'IMEO (UNEP)',
   tropomi: 'TROPOMI',
+  emit: 'NASA EMIT',
 };
 
 const UNIT_LABELS: Record<EmissionUnit, string> = {
@@ -123,16 +124,16 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, fil
 
   return (
     <div className="absolute inset-0 z-[100] flex justify-end">
-      <div className="absolute inset-0 bg-gray-900/20" onClick={onClose} />
-      <div className={`relative w-[450px] h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300 transition-colors ${darkMode ? 'bg-[#12161f]' : 'bg-white'}`}>
-        <div className={`p-8 border-b flex justify-between items-center ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'}`}>
-          <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Filter</h2>
+      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={onClose} />
+      <div className={`relative w-full sm:w-[430px] h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300 transition-colors ${darkMode ? 'bg-[#0f1520] border-l border-white/[0.07]' : 'bg-white border-l border-slate-200'}`}>
+        <div className={`p-5 sm:p-7 border-b flex justify-between items-center sticky top-0 z-10 ${darkMode ? 'bg-[#0f1520]/95 border-white/[0.07]' : 'bg-white/95 border-slate-100'} backdrop-blur-xl`}>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-500">Map controls</p><h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>Filters</h2></div>
           <button onClick={onClose} className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-8 space-y-8 flex-1">
+        <div className="p-5 sm:p-7 space-y-8 flex-1">
           {/* Data Sources */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">

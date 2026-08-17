@@ -41,7 +41,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true, onClose })
   }, []);
 
   return (
-    <div className={`flex-1 overflow-y-auto p-10 transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'}`}>
+    <div className={`flex-1 overflow-y-auto p-5 sm:p-7 lg:p-10 transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-slate-50'}`}>
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-4 mb-10">
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-[#009688]/10' : 'bg-teal-50'}`}>

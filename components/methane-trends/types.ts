@@ -1,6 +1,6 @@
 /** Domain types for the Methane Trends screens. */
 
-export type ProviderId = 'carbon_mapper' | 'imeo' | 'tropomi';
+export type ProviderId = 'carbon_mapper' | 'imeo' | 'tropomi' | 'emit';
 
 /** Group-by options for the Annual Statistics table. */
 export type GroupByMode = 'state' | 'region' | 'facility';

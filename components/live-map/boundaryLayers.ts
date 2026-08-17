@@ -146,7 +146,7 @@ function statePopupHTML(name: string, lng: number, lat: number): string {
   // Brand-aligned: state = the most important admin context, so it gets the app's teal.
   // Dark: a mid teal that reads on navy without glowing.
   // Light: a deep desaturated teal that feels sophisticated, not loud.
-  const accent = currentThemeDark ? '#5eead4' : '#115e59';
+  const accent = currentThemeDark ? '#5eead4' : '#0f766e';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
     <div style="font-weight:800;font-size:14px;color:${accent};margin-bottom:2px;">${name} State</div>
     <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Region:</span> ${zone}</div>
@@ -158,7 +158,7 @@ function lgaPopupHTML(name: string, lng: number, lat: number): string {
   const t = themeColors();
   // Tertiary admin tier — quiet slate on both themes. Always one luminance step lighter
   // than the oil-block layer so the hierarchy reads at a glance.
-  const accent = currentThemeDark ? '#94a3b8' : '#64748b';
+  const accent = currentThemeDark ? '#60a5fa' : '#2563eb';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
     <div style="font-weight:800;font-size:13px;color:${accent};margin-bottom:2px;">${name}</div>
     <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Type:</span> Local Government Area</div>
@@ -168,7 +168,7 @@ function lgaPopupHTML(name: string, lng: number, lat: number): string {
 
 function pipelinePopupHTML(name: string, lng: number, lat: number): string {
   const t = themeColors();
-  const accent = currentThemeDark ? '#f87171' : '#dc2626';
+  const accent = currentThemeDark ? '#fb7185' : '#be123c';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
     <div style="font-weight:800;font-size:13px;color:${accent};margin-bottom:2px;">${name}</div>
     <div style="color:${t.muted};"><span style="font-weight:600;color:${t.label};">Type:</span> Oil &amp; Gas Pipeline</div>
@@ -180,7 +180,7 @@ function oilBlockPopupHTML(props: Record<string, any>, _lng: number, _lat: numbe
   const name = props.name ?? 'Unknown';
   const t = themeColors();
   // Match the slate oil-block strokes — popup accent stays in the secondary tier.
-  const accent = currentThemeDark ? '#cbd5e1' : '#334155';
+  const accent = currentThemeDark ? '#e2e8f0' : '#64748b';
   const operator = props.operator || '';
   const area = props.area_sqkm ? `${Number(props.area_sqkm).toLocaleString()} km²` : '';
   const basin = props.basin || '';
@@ -526,7 +526,7 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
   //   Dark  → mid teal that reads on navy without glowing or competing with sidebar accents.
   //   Light → deep, almost-petrol teal that feels editorial, not a neon highlight.
   //   Satellite handled by either branch + strong text halo so labels survive imagery.
-  const borderColor = isDark ? '#2dd4bf' : '#115e59';
+  const borderColor = isDark ? '#2dd4bf' : '#0f766e';
   const fillColor = isDark ? '#14b8a6' : '#0d9488';
   const labelColor = isDark ? '#5eead4' : '#134e4a';
   const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)';
@@ -589,9 +589,9 @@ export async function addLGAsLayer(m: mapboxgl.Map, beforeLayer?: string, isDark
 
   // Tertiary admin tier. Quiet cool slate on both themes — by far the lightest weight
   // in the boundary hierarchy so it only appears when you zoom in, never dominates.
-  const borderColor = isDark ? '#64748b' : '#cbd5e1';
-  const fillColor = isDark ? '#64748b' : '#cbd5e1';
-  const labelColor = isDark ? '#94a3b8' : '#64748b';
+  const borderColor = isDark ? '#60a5fa' : '#2563eb';
+  const fillColor = isDark ? '#3b82f6' : '#60a5fa';
+  const labelColor = isDark ? '#93c5fd' : '#1d4ed8';
   const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)';
 
   m.addSource(LGAS_SOURCE, { type: 'geojson', data, generateId: true });
@@ -695,9 +695,9 @@ export function addPipelinesLayer(m: mapboxgl.Map, _beforeLayer?: string, isDark
   removePipelinesLayer(m);
   if (!isMapAlive(m)) return;
 
-  const lineColor = isDark ? '#ef4444' : '#dc2626';
-  const glowColor = isDark ? '#fca5a5' : '#f87171';
-  const labelColor = isDark ? '#fca5a5' : '#991b1b';
+  const lineColor = isDark ? '#fb7185' : '#be123c';
+  const glowColor = isDark ? '#fda4af' : '#e11d48';
+  const labelColor = isDark ? '#fda4af' : '#9f1239';
   const haloColor = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)';
 
   m.addSource(PIPELINES_SOURCE, { type: 'geojson', data: buildPipelineGeoJSON() });
@@ -758,61 +758,46 @@ export async function addOilBlocksLayer(m: mapboxgl.Map, beforeLayer?: string, i
   const data = await loadOilBlocksGeoJSON();
   if (!data || !isMapAlive(m)) return;
 
-  // Secondary operational tier — quiet cool slate. Sits between the brand-teal state
-  // border and the lightest-grey LGA border, so the three layers form a clear hierarchy:
-  //   State (teal, primary) > Oil Blocks (mid-slate, secondary) > LGA (light slate, tertiary).
-  const labelColor = isDark ? '#cbd5e1' : '#334155';
+  const labelColor = isDark ? '#f1f5f9' : '#475569';
   const haloColor = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)';
-
-  // Terrain variants kept but flattened to pure luminance steps — no hue change, just
-  // darker-for-deeper. Keeps the overall map calm.
-  const fillColorExpr: mapboxgl.Expression = [
-    'case',
-    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#1e293b' : '#64748b',
-    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#334155' : '#94a3b8',
-    isDark ? '#475569' : '#94a3b8',
-  ];
-  const borderColorExpr: mapboxgl.Expression = [
-    'case',
-    ['==', ['get', 'terrain'], 'Deep Water'], isDark ? '#94a3b8' : '#334155',
-    ['==', ['get', 'terrain'], 'Shelf'], isDark ? '#64748b' : '#475569',
-    isDark ? '#64748b' : '#475569',
-  ];
+  const fillColor = '#cbd5e1';
+  const borderColor = isDark ? '#e2e8f0' : '#64748b';
 
   m.addSource(OIL_BLOCKS_SOURCE, { type: 'geojson', data, generateId: true });
 
   m.addLayer({
     id: OIL_BLOCKS_FILL, type: 'fill', source: OIL_BLOCKS_SOURCE,
     paint: {
-      'fill-color': fillColorExpr,
-      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.35, 0.15],
+      'fill-color': fillColor,
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.25, isDark ? 0.08 : 0.07],
     },
   }, beforeLayer);
 
   m.addLayer({
     id: OIL_BLOCKS_BORDER, type: 'line', source: OIL_BLOCKS_SOURCE,
     paint: {
-      'line-color': borderColorExpr,
-      'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3, 1.5],
-      'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, isDark ? 0.75 : 0.85],
+      'line-color': borderColor,
+      'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 2.5, 1],
+      'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, isDark ? 0.62 : 0.7],
     },
   }, beforeLayer);
 
   m.addLayer({
     id: OIL_BLOCKS_LABEL, type: 'symbol', source: OIL_BLOCKS_SOURCE,
-    minzoom: 7,
+    minzoom: 5,
     layout: {
       'text-field': ['get', 'name'],
-      'text-size': ['interpolate', ['linear'], ['zoom'], 7, 8, 10, 11, 13, 14],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 5, 9, 8, 10, 11, 12, 13, 13],
       'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
       'text-allow-overlap': false,
+      'text-padding': 2,
       'text-max-width': 8,
     },
     paint: {
       'text-color': labelColor,
       'text-halo-color': haloColor,
-      'text-halo-width': isDark ? 1.2 : 1.8,
-      'text-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 10, 0.9],
+      'text-halo-width': isDark ? 1.5 : 2,
+      'text-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.72, 8, 0.88, 10, 1],
     },
   });
 

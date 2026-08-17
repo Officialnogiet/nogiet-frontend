@@ -42,15 +42,16 @@ const AlertsDashboard: React.FC<AlertsDashboardProps> = ({ darkMode = true }) =>
   };
 
   return (
-    <div className={`flex-1 overflow-y-auto p-10 transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'}`}>
+    <div className={`flex-1 overflow-y-auto p-5 sm:p-7 lg:p-10 transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-slate-50'}`}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 sm:mb-10">
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>
               <Bell className="text-red-500" size={28} />
             </div>
             <div>
-              <h1 className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>Alerts</h1>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500">Monitoring</p>
+              <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Alerts</h1>
               <p className={`text-sm mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                 {(alerts as any[]).length} total alerts from emission monitoring
               </p>
@@ -72,12 +73,12 @@ const AlertsDashboard: React.FC<AlertsDashboardProps> = ({ darkMode = true }) =>
         <SeverityCards darkMode={darkMode} counts={counts} />
 
         <div className={`mt-8 rounded-3xl border overflow-hidden ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-100'}`}>
-          <div className={`px-8 py-5 border-b flex items-center justify-between ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'}`}>
+          <div className={`px-4 sm:px-8 py-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'}`}>
             <div className="flex items-center gap-2">
               <Filter size={16} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
               <span className={`text-sm font-bold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Filter by severity</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto max-w-full pb-1">
               {SEVERITY_OPTIONS.map((opt) => (
                 <button
                   key={opt}
@@ -153,9 +154,9 @@ const SeverityCards: React.FC<{ darkMode: boolean; counts: Record<string, number
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {cards.map((c) => (
-        <div key={c.label} className={`rounded-2xl p-6 border transition-colors ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'} ${c.bg}`}>
+        <div key={c.label} className={`rounded-2xl p-4 sm:p-6 border transition-all hover:-translate-y-0.5 ${darkMode ? 'border-white/[0.07]' : 'border-slate-200/80'} ${c.bg}`}>
           <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{c.label}</p>
           <p className={`text-3xl font-black ${c.color}`}>{c.count}</p>
         </div>

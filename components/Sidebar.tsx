@@ -19,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const user = useAuthStore((s) => s.user);
   const isFacilityOwner = user?.role === 'facility_owner';
+  const isSuperAdmin = user?.role === 'super_admin';
   const { mapStyle, setMapStyle } = useSettingsStore();
 
   const allMenuItems = [
@@ -144,6 +145,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div>
           {!collapsed && <p className={`text-[10px] font-bold ${labelColor} uppercase tracking-widest px-2 mb-3`}>System</p>}
           <div className="space-y-1">
+            {isSuperAdmin && <button
+              onClick={() => onViewChange('DATA_FEEDS')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${activeView === 'DATA_FEEDS' ? `${activeBg} text-[#009688]` : `${textColor} hover:bg-white/5`}`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              {!collapsed && <span className="text-sm font-medium">Data Feeds</span>}
+            </button>}
             <button
               onClick={() => onViewChange('SETTINGS')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl group transition-all ${activeView === 'SETTINGS' ? `${activeBg} text-[#009688]` : `${textColor} hover:bg-white/5`}`}

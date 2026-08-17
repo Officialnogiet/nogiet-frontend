@@ -28,6 +28,11 @@ const PROVIDER_DISPLAY: Record<GridProvider, { label: string; accent: string; de
     accent: '#a78bfa',
     description: 'Sentinel-5P column data. ESA Copernicus',
   },
+  emit: {
+    label: 'NASA EMIT',
+    accent: '#f59e0b',
+    description: 'Methane plume complexes. NASA JPL',
+  },
 };
 
 const SourceLegendHint: React.FC<SourceLegendHintProps> = ({ darkMode, providerSources }) => {

@@ -49,7 +49,7 @@ export interface EmissionPoint {
   /** Methane emission rate in kg/hr — typically `emissionRate` on a normalized source. */
   emissionRate: number;
   /** Provider for tooltip / drill-in. */
-  provider?: "carbon_mapper" | "imeo" | "tropomi" | "ground";
+  provider?: "carbon_mapper" | "imeo" | "tropomi" | "emit" | "ground";
   /** Original source id (for drilling in to raw record). */
   sourceId?: string;
 }

@@ -251,6 +251,7 @@ const PROVIDER_GROUP_LABEL = {
   carbon_mapper: 'Carbon Mapper',
   imeo: 'IMEO instruments',
   tropomi: 'TROPOMI',
+  emit: 'NASA EMIT',
 } as const;
 
 const ExpandedFeedRow: React.FC<{

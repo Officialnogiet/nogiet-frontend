@@ -153,10 +153,11 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
     [activeResultDefs],
   );
 
-  const surface = dm ? 'bg-[#0b0e14]' : 'bg-gray-50';
-  const panel = dm ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-200';
-  const softPanel = dm ? 'bg-[#0b0e14] border-[#1e2430]' : 'bg-gray-50 border-gray-200';
-  const highlightPanel = dm ? 'bg-teal-500/10 border-teal-500/20' : 'bg-teal-50 border-teal-100';
+  const surface = dm ? 'bg-[#080c12]' : 'bg-[#f4f7f6]';
+  const panel = dm
+    ? 'bg-[#111720] border-white/[0.07] shadow-[0_18px_48px_rgba(0,0,0,0.22)]'
+    : 'bg-white border-slate-200/80 shadow-[0_16px_40px_rgba(15,23,42,0.06)]';
+  const softPanel = dm ? 'bg-[#0b1017] border-white/[0.07]' : 'bg-slate-50/80 border-slate-200/80';
   const heading = dm ? 'text-white' : 'text-gray-900';
   const text = dm ? 'text-gray-300' : 'text-gray-700';
   const muted = dm ? 'text-gray-500' : 'text-gray-500';
@@ -190,7 +191,7 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
 
   const copyAll = () => {
     const lines = [
-      'Nigeria Methane Converter Results',
+      'NOGIET Methane Converter Results',
       `Input: ${kghr} kg CH4/hr | Period: ${periodLabel(hours)} | CO2e basis: ${gwp}x`,
       ...activeResultDefs
         .map((def) => `${def.label}: ${formatNumber(results[def.key])} ${def.unitFn(hours)} (${def.ctx})`),
@@ -200,68 +201,84 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
 
   return (
     <section className={`${embedded ? '' : `flex-1 overflow-y-auto ${surface}`} ${text}`}>
-      <div className={`${embedded ? '' : 'px-6 md:px-10 py-10'} mx-auto w-full max-w-[2000px]`}>
-        <header className={`${embedded ? 'mb-4' : 'mb-6'} flex flex-wrap items-start justify-between gap-4`}>
-          <div className="min-w-0">
-            <div className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${dm ? 'text-teal-300' : 'text-teal-700'}`}>
-              <Calculator size={15} />
-              Unit converter
+      <div className={`${embedded ? '' : 'px-5 md:px-8 lg:px-10 py-8'} mx-auto w-full max-w-[1600px]`}>
+        <header className={`${embedded ? 'mb-4' : 'mb-5'} relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#064e47] via-[#073f3b] to-[#0b2728] px-5 py-6 text-white shadow-[0_22px_60px_rgba(4,78,71,0.2)] md:px-8 md:py-7`}>
+          <div aria-hidden className="absolute -right-20 -top-28 h-72 w-72 rounded-full border-[44px] border-white/[0.035]" />
+          <div aria-hidden className="absolute bottom-0 right-[22%] h-24 w-24 translate-y-1/2 rounded-full bg-teal-300/10 blur-2xl" />
+          <div className="relative grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-teal-200"><Calculator size={16} /></span>
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-teal-100/80">NOGIET Analytics</span>
+              </div>
+              <h1 className={`${embedded ? 'text-xl' : 'text-2xl md:text-[2rem]'} font-black tracking-[-0.025em] text-white`}>
+                Methane Emissions Converter
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-teal-50/75">
+                One methane rate, translated instantly into the units used across operations, inventories and climate reporting.
+              </p>
             </div>
-            <h1 className={`${embedded ? 'text-xl' : 'text-2xl md:text-3xl'} mt-2 font-bold ${heading}`}>
-              Nigeria Methane Emissions Converter
-            </h1>
-            <p className={`mt-1 text-sm ${muted}`}>
-              Start with a Nigeria satellite reading in kg CH4/hr, then convert it into reporting mass, gas volume, and optional CO2e climate-impact units.
-            </p>
+
+            <div className="flex items-center gap-3 md:justify-end">
+              {!embedded && (
+                <div className="hidden min-w-44 rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur sm:block">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-teal-100/60">Current period total</p>
+                  <p className="mt-1 text-xl font-black tabular-nums text-white">{formatNumber(results.tperiod)}</p>
+                  <p className="text-[10px] font-semibold text-teal-100/70">tonnes CH₄ · {periodLabel(hours)}</p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={reset}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3.5 text-xs font-bold text-white transition hover:bg-white/15"
+              >
+                <RotateCcw size={14} />
+                Reset
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={reset}
-            className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition ${panel} ${dm ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
-          >
-            <RotateCcw size={14} />
-            Reset
-          </button>
         </header>
 
-        <div className="mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className={`rounded-2xl border p-4 ${highlightPanel}`}>
+        <div className={`mb-5 grid grid-cols-1 overflow-hidden rounded-2xl border md:grid-cols-3 ${panel}`}>
+          <div className={`relative p-4 md:px-5 ${dm ? 'bg-teal-400/[0.055]' : 'bg-teal-50/60'}`}>
+            <span aria-hidden className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-teal-500" />
             <div className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${dm ? 'text-teal-300' : 'text-teal-700'}`}>
               <Gauge size={14} />
-                Nigeria satellite input
+                Observed methane rate
             </div>
             <p className={`mt-2 text-2xl font-bold ${heading}`}>{formatNumber(Number(kghr) || 0)}</p>
             <p className={`text-xs font-semibold ${dm ? 'text-teal-200' : 'text-teal-800'}`}>kg CH4/hr</p>
           </div>
-          <div className={`rounded-2xl border p-4 ${panel}`}>
+          <div className={`border-t p-4 md:border-l md:border-t-0 md:px-5 ${dm ? 'border-white/[0.07]' : 'border-slate-200/80'}`}>
             <div className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${muted}`}>
               <Flame size={14} />
-              Methane over period
+              Period total
             </div>
             <p className={`mt-2 text-2xl font-bold ${heading}`}>{formatNumber(results.tperiod)}</p>
             <p className={`text-xs font-semibold ${subtle}`}>tonnes CH4 over {periodLabel(hours)}</p>
           </div>
-          <div className={`rounded-2xl border p-4 ${panel}`}>
+          <div className={`border-t p-4 md:border-l md:border-t-0 md:px-5 ${dm ? 'border-white/[0.07]' : 'border-slate-200/80'}`}>
             <div className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${muted}`}>
               <Info size={14} />
-              CO2e basis
+              Climate factor
             </div>
             <p className={`mt-2 text-2xl font-bold ${heading}`}>{gwp}x</p>
             <p className={`text-xs font-semibold ${subtle}`}>{gwp === 29.8 ? '100-year methane climate impact' : '20-year methane climate impact'}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-5">
-          <div className={`rounded-2xl border p-5 ${panel}`}>
+        <div className="grid grid-cols-1 xl:grid-cols-[390px_minmax(0,1fr)] gap-5 items-start">
+          <div className={`rounded-3xl border p-5 md:p-6 ${panel}`}>
             <div>
-              <h2 className={`text-sm font-bold ${heading}`}>Conversion setup</h2>
+              <div className={`mb-2 inline-flex h-7 min-w-7 items-center justify-center rounded-lg px-2 text-[10px] font-black tracking-wider ${dm ? 'bg-teal-400/10 text-teal-300' : 'bg-teal-50 text-teal-700'}`}>01 · INPUT</div>
+              <h2 className={`text-lg font-bold tracking-tight ${heading}`}>Measurement setup</h2>
               <p className={`mt-1 text-xs leading-relaxed ${muted}`}>
-                Nigeria satellite methane feeds arrive as an emission rate. Choose the time window and reporting basis below.
+                Enter an observed emission rate, then choose the reporting period and climate-impact basis.
               </p>
             </div>
-            <div className="mt-4 grid gap-4">
+            <div className="mt-5 grid gap-5">
               <label className="grid gap-1.5">
-                <span className={`text-xs font-medium ${muted}`}>Satellite methane rate</span>
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>Methane emission rate</span>
                 <div className="relative">
                   <input
                     type="number"
@@ -269,14 +286,14 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
                     step="any"
                     value={kghr}
                     onChange={(event) => setKghr(Number(event.target.value))}
-                    className={`h-11 w-full rounded-xl border px-3 pr-16 text-sm outline-none transition ${input}`}
+                    className={`h-14 w-full rounded-2xl border px-4 pr-24 text-xl font-bold tabular-nums outline-none transition ${input}`}
                   />
-                  <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold ${muted}`}>kg CH4/hr</span>
+                  <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold ${dm ? 'text-teal-300' : 'text-teal-700'}`}>kg CH₄/hr</span>
                 </div>
               </label>
 
               <label className="grid gap-1.5">
-                <span className={`text-xs font-medium ${muted}`}>Reporting period</span>
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>Reporting period</span>
                 <select
                   value={period}
                   onChange={(event) => setPeriod(event.target.value)}
@@ -302,11 +319,11 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
                 </label>
               )}
 
-              <div className={`rounded-xl border p-3 ${softPanel}`}>
+              <div className={`rounded-2xl border p-4 ${softPanel}`}>
                 <div className="flex items-start gap-2">
                   <Info size={15} className={dm ? 'text-teal-300' : 'text-teal-700'} />
                   <div>
-                    <p className={`text-xs font-bold ${heading}`}>CO2e reporting basis</p>
+                    <p className={`text-xs font-bold ${heading}`}>Climate-impact basis</p>
                     <p className={`mt-0.5 text-[11px] leading-relaxed ${muted}`}>
                       Methane values stay as CH4. This only affects the CO2e climate-impact outputs.
                     </p>
@@ -335,8 +352,9 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
               </div>
 
               <div>
-                <p className={`text-xs font-medium ${muted}`}>Visible result units</p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <p className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>Output units</p>
+                <p className={`mt-1 text-[10px] ${muted}`}>Choose which measurements appear in the report.</p>
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {UNIT_DEFS.map((def) => {
                     const active = activeUnits.has(def.key);
                     return (
@@ -344,7 +362,7 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
                         key={def.key}
                         type="button"
                         onClick={() => toggleUnit(def.key)}
-                        className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition ${
+                        className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition ${
                           active
                             ? 'border-teal-500 bg-teal-500/10 text-teal-500'
                             : dm ? 'border-[#2d364a] text-gray-500 hover:text-gray-300' : 'border-gray-200 text-gray-500 hover:text-gray-800'
@@ -359,12 +377,13 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-5 ${panel}`}>
+          <div className={`rounded-3xl border p-5 md:p-6 ${panel}`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className={`text-sm font-bold ${heading}`}>Converted results</h2>
+                <div className={`mb-2 inline-flex h-7 min-w-7 items-center justify-center rounded-lg px-2 text-[10px] font-black tracking-wider ${dm ? 'bg-teal-400/10 text-teal-300' : 'bg-teal-50 text-teal-700'}`}>02 · OUTPUT</div>
+                <h2 className={`text-lg font-bold tracking-tight ${heading}`}>Reporting values</h2>
                 <p className={`mt-1 text-xs ${muted}`}>
-                  Showing {activeResultDefs.length} unit{activeResultDefs.length === 1 ? '' : 's'} for {periodLabel(hours)}.
+                  {activeResultDefs.length} selected measurement{activeResultDefs.length === 1 ? '' : 's'} · {periodLabel(hours)} reporting period
                 </p>
               </div>
               <button
@@ -398,7 +417,7 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
                         {group.items.length} result{group.items.length === 1 ? '' : 's'}
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3">
                       {group.items.map((def) => {
                         const value = formatNumber(results[def.key]);
                         const unit = def.unitFn(hours);
@@ -406,7 +425,8 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
                         const copied = copiedKey === def.key;
 
                         return (
-                          <article key={def.key} className={`relative rounded-xl border p-4 ${softPanel}`}>
+                          <article key={def.key} className={`group relative overflow-hidden rounded-2xl border p-4 transition-colors ${softPanel} ${dm ? 'hover:border-teal-400/20' : 'hover:border-teal-600/20 hover:bg-white'}`}>
+                            <span aria-hidden className={`absolute inset-y-3 left-0 w-0.5 rounded-full ${def.group === 'mass' ? 'bg-teal-500' : def.group === 'climate' ? 'bg-amber-500' : 'bg-sky-500'}`} />
                             <p className={`pr-8 text-[11px] font-bold uppercase tracking-wide ${muted}`}>{def.label}</p>
                             <p className={`mt-2 text-xl font-bold ${heading}`}>{value}</p>
                             <p className={`mt-1 text-xs font-semibold ${dm ? 'text-teal-300' : 'text-teal-700'}`}>{unit}</p>
@@ -434,7 +454,7 @@ const MethaneConverter: React.FC<MethaneConverterProps> = ({ darkMode = true, em
             )}
 
             <p className={`mt-4 text-[11px] leading-relaxed ${muted}`}>
-              Formula basis: methane mass = kg CH4/hr x duration; annual totals use 8,760 hr/yr; CO2e outputs multiply methane by the selected climate-impact factor; CH4 density at STP = 0.717 kg/m3; 1 m3 = 35.3147 scf.
+              Method: methane mass = kg CH₄/hr × duration; annual totals use 8,760 hr/year; CO₂e uses the selected climate factor; CH₄ density at standard conditions = 0.717 kg/m³; 1 m³ = 35.3147 scf.
             </p>
           </div>
         </div>

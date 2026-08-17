@@ -59,7 +59,8 @@ interface UnifiedSource {
   lastDate: string;
 }
 
-function providerLabel(p: string): string {
+function providerLabel(p: string, metadata?: Record<string, unknown>): string {
+  if (p === "imeo") return metadata?.imeoFeedMode === "manual" ? "IMEO — Manual upload" : "IMEO — API";
   return p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -169,7 +170,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly">("monthly");
   const [reportSource, setReportSource] = useState<"combined" | "satellite" | "ground">("combined");
   const [reportSubSector, setReportSubSector] = useState<"" | "Upstream" | "Midstream" | "Downstream">("");
-  const [reportProvider, setReportProvider] = useState<"" | "carbon_mapper" | "imeo" | "tropomi">("");
+  const [reportProvider, setReportProvider] = useState<"" | "carbon_mapper" | "imeo" | "tropomi" | "emit">("");
 
   const emissionUnit = useSettingsStore((s) => s.emissionUnit);
 
@@ -551,9 +552,9 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
   const reportMax = Math.max(...(analyticsReport?.rows ?? []).map((r) => r.combinedEmission), 1);
 
   return (
-    <div className={`flex flex-col h-full min-h-0 rounded-xl border overflow-hidden ${shell} ${border}`}>
+    <div className={`flex flex-col h-full min-h-0 border-0 overflow-hidden ${shell}`}>
       <div
-        className={`flex flex-wrap gap-1 p-2 border-b shrink-0 ${border} ${dm ? "bg-[#1a1f2b]" : "bg-gray-50"}`}
+        className={`flex flex-nowrap overflow-x-auto gap-1 p-2.5 border-b shrink-0 ${border} ${dm ? "bg-[#0e141e]" : "bg-slate-50"}`}
         role="tablist"
       >
         {TABS.map((t) => {
@@ -565,11 +566,11 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
               role="tab"
               aria-selected={on}
               onClick={() => setActiveTab(t.id)}
-              className={`relative px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
                 on
                   ? dm
-                    ? "text-teal-400"
-                    : "text-teal-600"
+                    ? "bg-teal-500/10 text-teal-300"
+                    : "bg-white text-teal-700 shadow-sm"
                   : dm
                     ? "text-gray-400 hover:text-gray-200"
                     : "text-gray-500 hover:text-gray-800"
@@ -602,7 +603,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
         })}
       </div>
 
-      <div className={`flex-1 min-h-0 flex flex-col p-4 ${panel} border-0`}>
+      <div className={`flex-1 min-h-0 flex flex-col p-3 sm:p-5 ${panel} border-0`}>
         {activeTab === "all" && (
           <>
             <div className="flex items-center gap-2 mb-3 shrink-0">
@@ -729,7 +730,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                           {sources.map((s) => (
                             <tr key={s.id} className={`border-b ${border} ${dm ? "hover:bg-white/[0.04]" : "hover:bg-gray-50"}`}>
                               <td className={`px-3 py-2 font-medium ${tdCls}`}>{s.name}</td>
-                              <td className={`px-3 py-2 ${tdCls}`}>{providerLabel(s.provider)}</td>
+                              <td className={`px-3 py-2 ${tdCls}`}>{providerLabel(s.provider, s.metadata)}</td>
                               <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(s.emissionRate, emissionUnit)}</td>
                               <td className={`px-3 py-2 ${tdCls}`}>{s.gas}</td>
                               <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{s.plumeCount}</td>
@@ -1125,6 +1126,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                   <option value="carbon_mapper">Carbon Mapper</option>
                   <option value="imeo">IMEO</option>
                   <option value="tropomi">TROPOMI</option>
+                  <option value="emit">NASA EMIT</option>
                 </select>
               </ReportField>
             </div>

@@ -48,12 +48,14 @@ const PROVIDER_LABELS: Record<ProviderId, string> = {
   carbon_mapper: "Carbon Mapper",
   imeo: "IMEO (UNEP)",
   tropomi: "TROPOMI",
+  emit: "NASA EMIT",
 };
 
 const PROVIDER_COLORS: Record<ProviderId, string> = {
   carbon_mapper: "#0d9488",
   imeo: "#22d3ee",
   tropomi: "#a78bfa",
+  emit: "#f59e0b",
 };
 
 interface RawObservation {
@@ -247,13 +249,14 @@ function emptyCell(): AggCell {
       carbon_mapper: { sum: 0, count: 0 },
       imeo: { sum: 0, count: 0 },
       tropomi: { sum: 0, count: 0 },
+      emit: { sum: 0, count: 0 },
     },
     byFeed: new Map(),
   };
 }
 
 function emptyByProvider(): Record<ProviderId, Record<number, number | null>> {
-  return { carbon_mapper: {}, imeo: {}, tropomi: {} };
+  return { carbon_mapper: {}, imeo: {}, tropomi: {}, emit: {} };
 }
 
 function rollupFeed(
@@ -423,6 +426,7 @@ export function buildAnnualTable(
       carbon_mapper: { sum: 0, count: 0 },
       imeo: { sum: 0, count: 0 },
       tropomi: { sum: 0, count: 0 },
+      emit: { sum: 0, count: 0 },
     };
     for (const row of rows) {
       if (!Number.isFinite(row.emissionRate)) continue;

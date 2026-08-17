@@ -67,6 +67,7 @@ const PROVIDER_DISPLAY: Record<GridProvider, { label: string; accent: string }> 
   carbon_mapper: { label: 'Carbon Mapper', accent: '#0d9488' },
   imeo: { label: 'IMEO (UNEP)', accent: '#22d3ee' },
   tropomi: { label: 'TROPOMI', accent: '#a78bfa' },
+  emit: { label: 'NASA EMIT', accent: '#f59e0b' },
 };
 
 const STAT_OPTIONS: { value: GridStatistic; label: string }[] = [
@@ -80,8 +81,8 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
 }) => {
   if (!visible) return null;
 
-  const bg = darkMode ? 'bg-[#12161f]/95' : 'bg-white/95';
-  const border = darkMode ? 'border-[#1e2430]' : 'border-gray-200';
+  const bg = darkMode ? 'bg-[#111827]/98' : 'bg-white/98';
+  const border = darkMode ? 'border-[#1e2430]' : 'border-slate-200/90';
   const heading = darkMode ? 'text-white' : 'text-gray-900';
   const sub = darkMode ? 'text-gray-400' : 'text-gray-500';
   const labelBold = darkMode ? 'text-gray-200' : 'text-gray-700';
@@ -155,13 +156,16 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
         // ~288px width doesn't push past the left side of the viewport.
         // Desktop (lg:): restores the original top-28 / right-20 spot beside
         // the legend toggle chip.
-        className={`absolute top-28 right-4 lg:top-28 lg:right-20 z-30 ${bg} backdrop-blur-md rounded-2xl border ${border} shadow-2xl p-5 w-72 md:w-80 max-h-[70vh] lg:max-h-[80vh] overflow-y-auto`}
+        className={`absolute top-28 right-4 lg:top-28 lg:right-20 z-30 ${bg} backdrop-blur-xl rounded-2xl border ${border} ${darkMode ? 'shadow-[0_18px_50px_rgba(0,0,0,0.28)]' : 'shadow-[0_16px_40px_rgba(15,23,42,0.14)]'} p-4 w-[calc(100%-2rem)] max-w-[19rem] max-h-[72vh] lg:max-h-[80vh] overflow-y-auto`}
         aria-label="Emission grid legend"
       >
-        <div className="flex items-start justify-between gap-2 mb-4">
-          <p className={`text-[11px] leading-snug ${sub}`}>
-            The maximum methane reading detected in each grid cell over the last 7 days.
-          </p>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className={`text-sm font-bold ${heading}`}>Methane concentration</p>
+            <p className={`text-[10px] leading-relaxed mt-0.5 ${sub}`}>
+              7-day highest reading · parts per billion (ppb)
+            </p>
+          </div>
           <button
             onClick={onClose}
             className={`p-1 rounded-lg transition ${darkMode ? 'hover:bg-white/5 text-gray-500' : 'hover:bg-gray-100 text-gray-400'}`}
@@ -171,25 +175,45 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
           </button>
         </div>
 
+        {currentlyShowing && (
+          <div className={`rounded-xl border px-3 py-2.5 mb-3 ${darkMode ? 'bg-white/[0.035]' : 'bg-slate-50'}`} style={{ borderColor: dividerColor }} role="status">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Active grid view</p>
+                <p className={`text-xs font-bold truncate ${heading}`}>{currentlyShowing.statistic}</p>
+              </div>
+              <span className={`text-[10px] whitespace-nowrap ${sub}`}>{currentlyShowing.timeLabel}</span>
+            </div>
+            <p className={`mt-1 text-[10px] leading-snug ${labelBold}`}>
+              {currentlyShowing.source}
+              {currentlyShowing.instrumentBreakdown ? ` · ${currentlyShowing.instrumentBreakdown}` : ''}
+            </p>
+          </div>
+        )}
+
         {/* PPB legend */}
-        <ul className="space-y-2 mb-4">
+        <ul className="grid grid-cols-2 gap-1.5 mb-3" aria-label="Methane concentration scale">
           {PPB_BREAKS.map((b) => (
-            <li key={b.label} className="flex items-center gap-3">
+            <li
+              key={b.label}
+              className="flex items-center gap-2 px-1 py-0.5"
+              style={{ borderColor: dividerColor }}
+            >
               <span
                 aria-hidden
-                className="w-7 h-5 rounded-sm border"
+                className="w-2.5 h-4 rounded-sm border flex-shrink-0"
                 style={{ backgroundColor: b.color, borderColor: dividerColor }}
               />
-              <span className={`text-xs font-medium ${labelBold}`}>{b.label}</span>
+              <span className={`text-[10px] leading-tight font-medium tabular-nums ${labelBold}`}>{b.label}</span>
             </li>
           ))}
-          <li className="flex items-center gap-3 pt-1">
+          <li className="col-span-2 flex items-center gap-2 border-t mt-1 pt-2 px-1" style={{ borderColor: dividerColor }}>
             <span
               aria-hidden
-              className="w-7 h-5 rounded-sm border-2"
+                className="w-5 h-3.5 rounded-sm border-2"
               style={{ backgroundColor: 'transparent', borderColor: NOTIFICATION_STROKE }}
             />
-            <label className={`flex items-center gap-2 text-xs font-medium ${labelBold}`}>
+            <label className={`flex items-center gap-2 text-[10px] font-medium ${labelBold}`}>
               <input
                 type="checkbox"
                 className="accent-teal-600 w-3.5 h-3.5"
@@ -202,8 +226,8 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
         </ul>
 
         {/* Sources tree (provider → instruments) */}
-        <div className="border-t pt-4 mt-1" style={{ borderColor: dividerColor }}>
-          <div className="flex items-center justify-between mb-3">
+        <div className="border-t pt-3 mt-1" style={{ borderColor: dividerColor }}>
+          <div className="flex items-center justify-between mb-2">
             <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Sources</p>
             <button
               type="button"
@@ -216,7 +240,7 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
             </button>
           </div>
 
-          <ul className="space-y-3" role="group" aria-label="Toggle satellite providers and instruments">
+          <ul className="space-y-1" role="group" aria-label="Toggle satellite providers and instruments">
             {ALL_GRID_PROVIDERS.map((p) => {
               const meta = PROVIDER_DISPLAY[p];
               const summary = summaries.find((s) => s.provider === p);
@@ -295,8 +319,8 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
                   )}
 
                   {providerChecked && knownInstruments.length === 0 && (
-                    <p className={`ml-7 mt-1 text-[10px] ${sub}`}>
-                      No instruments returned by the API for this provider yet.
+                    <p className={`ml-9 -mt-1 mb-1 text-[9px] ${sub}`}>
+                      No data available
                     </p>
                   )}
                 </li>
@@ -310,13 +334,13 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
         </div>
 
         {/* Statistic + global enable */}
-        <div className="space-y-3 border-t pt-4 mt-4" style={{ borderColor: dividerColor }}>
+        <div className="grid grid-cols-[1fr_auto] items-end gap-3 border-t pt-3 mt-3" style={{ borderColor: dividerColor }}>
           <div>
             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${sub}`}>Statistic</p>
             <select
               value={state.statistic}
               onChange={(e) => onChange({ ...state, statistic: e.target.value as GridStatistic })}
-              className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${
+              className={`w-full text-[11px] px-2.5 py-2 rounded-lg border outline-none ${
                 darkMode
                   ? 'bg-[#0b0e14] border-[#1e2430] text-gray-200 focus:border-teal-500'
                   : 'bg-white border-gray-200 text-gray-800 focus:border-teal-500'
@@ -328,71 +352,18 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
             </select>
           </div>
 
-          <label className={`flex items-center gap-2 text-xs font-medium ${labelBold}`}>
+          <label className={`flex items-center gap-2 text-[10px] font-medium ${labelBold}`}>
             <input
               type="checkbox"
               className="accent-teal-600 w-3.5 h-3.5"
               checked={state.enabled}
               onChange={(e) => onChange({ ...state, enabled: e.target.checked })}
             />
-            Show emissions grid
+            Show grid
           </label>
         </div>
       </aside>
 
-      {/* Currently Showing card */}
-      {currentlyShowing && (
-        <div
-          className={`absolute bottom-6 left-6 z-30 ${bg} backdrop-blur-md rounded-2xl border ${border} shadow-2xl px-5 py-4 w-72`}
-          role="status"
-        >
-          <p className={`text-sm font-bold ${heading} mb-2`}>Currently Showing</p>
-          <dl className="space-y-1 text-xs">
-            <div className="flex items-baseline gap-2">
-              <dt className={`w-16 ${sub}`}>Source:</dt>
-              <dd className={`font-semibold ${labelBold}`}>{currentlyShowing.source}</dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className={`w-16 ${sub}`}>Statistic:</dt>
-              <dd className={`font-semibold ${labelBold}`}>{currentlyShowing.statistic}</dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className={`w-16 ${sub}`}>Time:</dt>
-              <dd className={`font-semibold ${labelBold}`}>{currentlyShowing.timeLabel}</dd>
-            </div>
-            {currentlyShowing.instrumentBreakdown && (
-              <div className="flex items-baseline gap-2">
-                <dt className={`w-16 ${sub} flex-shrink-0`}>Sources:</dt>
-                <dd className={`font-semibold ${labelBold} text-[10.5px] leading-snug`}>
-                  {currentlyShowing.instrumentBreakdown}
-                </dd>
-              </div>
-            )}
-          </dl>
-          {(currentlyShowing.onPrev || currentlyShowing.onNext) && (
-            <div className="flex items-center gap-2 mt-3">
-              <button
-                onClick={currentlyShowing.onPrev}
-                disabled={currentlyShowing.canPrev === false}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold transition ${
-                  darkMode ? 'bg-[#1e2430] text-gray-300 hover:bg-[#262f3d] disabled:opacity-40' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40'
-                }`}
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button
-                onClick={currentlyShowing.onNext}
-                disabled={currentlyShowing.canNext === false}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold transition ${
-                  darkMode ? 'bg-[#1e2430] text-gray-300 hover:bg-[#262f3d] disabled:opacity-40' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40'
-                }`}
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </>
   );
 };

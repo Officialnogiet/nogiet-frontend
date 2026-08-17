@@ -282,10 +282,11 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
 
   return (
     <div className={`flex-1 overflow-y-auto ${surface}`}>
-      <header className="px-6 md:px-8 pt-12 pb-4 mx-auto">
+      <header className="px-5 md:px-8 pt-7 md:pt-10 pb-5 mx-auto">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <h1 className={`text-2xl md:text-3xl font-bold ${headingColor} truncate`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-500">Analytics</p>
+            <h1 className={`mt-1 text-2xl md:text-3xl font-black tracking-tight ${headingColor} truncate`}>
               Methane Trends — {scopeHeading}
             </h1>
             <p className={`text-sm mt-1 ${subColor}`}>

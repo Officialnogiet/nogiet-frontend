@@ -60,13 +60,14 @@ const PROVIDER_LABEL: Record<ProviderId, string> = {
   carbon_mapper: "Carbon Mapper",
   imeo: "IMEO",
   tropomi: "TROPOMI",
+  emit: "NASA EMIT",
 };
 
 /** Human label for a feed: "Carbon Mapper", "IMEO · EnMAP", "TROPOMI". */
 export function feedLabel(provider: ProviderId, instrument: string): string {
   const inst = shortInstrument(instrument);
-  // Carbon Mapper / TROPOMI: provider name alone is plenty unless the instrument disagrees.
-  if (provider === "carbon_mapper" || provider === "tropomi") {
+  // Carbon Mapper / TROPOMI / EMIT: provider name alone is plenty unless the instrument disagrees.
+  if (provider === "carbon_mapper" || provider === "tropomi" || provider === "emit") {
     if (
       !inst ||
       inst === UNKNOWN_INSTRUMENT ||
@@ -82,11 +83,12 @@ export function feedLabel(provider: ProviderId, instrument: string): string {
 
 /* ------------------------ deterministic color palette ------------------------ */
 
-/** Carbon Mapper and TROPOMI have stable canonical colors so the rest of the app stays in sync. */
+/** Carbon Mapper, TROPOMI, and EMIT have stable canonical colors so the rest of the app stays in sync. */
 const PROVIDER_BASE: Record<ProviderId, string> = {
   carbon_mapper: "#0d9488", // teal
   imeo: "#22d3ee",          // cyan (used as fallback only)
   tropomi: "#a78bfa",       // violet
+  emit: "#f59e0b",          // amber
 };
 
 /** IMEO instrument palette — distinct hues so multiple feeds are visually separable. */

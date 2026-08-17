@@ -33,7 +33,7 @@ const EmissionSummaryCard: React.FC<EmissionSummaryCardProps> = ({
   // the toggle), matching the prior always-on behaviour.
   const [open, setOpen] = useState(false);
   const dm = darkMode;
-  const shell = dm ? 'bg-[#12161f]/90 border-[#1e2430] text-white' : 'bg-white/95 border-gray-100/80 text-gray-900';
+  const shell = dm ? 'bg-[#111827]/98 border-[#1e2430] text-white' : 'bg-white/98 border-slate-200/90 text-gray-900';
   const labelMuted = 'text-gray-500';
   const accent = dm ? 'text-[#009688]' : 'text-gray-900';
 
@@ -42,9 +42,9 @@ const EmissionSummaryCard: React.FC<EmissionSummaryCardProps> = ({
       className={`
         absolute left-4 lg:left-6
         bottom-24 lg:bottom-8
-        z-40 backdrop-blur-lg shadow-2xl rounded-2xl lg:rounded-3xl border ${shell}
+        z-40 backdrop-blur-xl ${dm ? 'shadow-[0_18px_50px_rgba(0,0,0,0.28)]' : 'shadow-[0_16px_40px_rgba(15,23,42,0.14)]'} rounded-2xl border ${shell}
         w-[calc(100%-2rem)] max-w-[18rem] lg:w-80 lg:max-w-none
-        p-3 lg:p-8
+        p-3.5 lg:p-6
         transition-all
       `}
     >
@@ -72,17 +72,17 @@ const EmissionSummaryCard: React.FC<EmissionSummaryCardProps> = ({
 
       {/* Expanded detail — collapses on mobile, always rendered on desktop
           (`lg:block`) so the long-form view matches the previous default. */}
-      <div className={`${open ? 'block' : 'hidden'} lg:block mt-4 lg:mt-8 space-y-4 lg:space-y-8`}>
+      <div className={`${open ? 'block' : 'hidden'} lg:block mt-4 lg:mt-6 grid grid-cols-2 lg:grid-cols-1 gap-4 lg:gap-5`}>
         <div>
           <h3 className={`font-bold text-sm lg:text-lg ${dm ? 'text-white' : 'text-gray-900'}`}>Emission Sources</h3>
           <p className={`text-[10px] lg:text-xs ${labelMuted} mt-0.5`}>CH&#x2084; &bull; Loaded Region</p>
-          <p className={`text-3xl lg:text-5xl font-black mt-1.5 lg:mt-3 tracking-tight ${accent}`}>{formatCount(totalSources)}</p>
+          <p className={`text-3xl lg:text-4xl font-black mt-1.5 lg:mt-2 tracking-tight ${accent}`}>{formatCount(totalSources)}</p>
           <p className={`text-[10px] ${labelMuted} mt-0.5`}>{facilityCount} facilities · {formatCount(satelliteCount)} satellite</p>
         </div>
         <div>
           <h3 className={`font-bold text-sm lg:text-lg ${dm ? 'text-white' : 'text-gray-900'}`}>Plumes Detected</h3>
           <p className={`text-[10px] lg:text-xs ${labelMuted} mt-0.5`}>CH&#x2084; &bull; Satellite Sources</p>
-          <p className={`text-3xl lg:text-5xl font-black mt-1.5 lg:mt-3 tracking-tight ${accent}`}>{formatCount(totalPlumes)}</p>
+          <p className={`text-3xl lg:text-4xl font-black mt-1.5 lg:mt-2 tracking-tight ${accent}`}>{formatCount(totalPlumes)}</p>
         </div>
       </div>
     </div>

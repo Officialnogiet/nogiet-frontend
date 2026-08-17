@@ -36,11 +36,12 @@ import type { ProviderId } from "./methane-trends/types";
 
 /** Trend chart shows the last 7 calendar days, one bucket per UTC date. */
 const TREND_DAYS = 7;
-const PROVIDER_KEYS: ProviderId[] = ["carbon_mapper", "imeo", "tropomi"];
+const PROVIDER_KEYS: ProviderId[] = ["carbon_mapper", "imeo", "tropomi", "emit"];
 const PROVIDER_LABELS: Record<ProviderId, string> = {
   carbon_mapper: "Carbon Mapper",
   imeo: "IMEO (UNEP)",
   tropomi: "TROPOMI",
+  emit: "NASA EMIT",
 };
 // Reuse the same hue palette as the Methane Trends screen so the dashboard
 // agrees with what the user sees when they drill in.
@@ -48,6 +49,7 @@ const PROVIDER_COLORS: Record<ProviderId, string> = {
   carbon_mapper: feedColor("carbon_mapper", "carbon_mapper"),
   imeo: feedColor("imeo", "imeo"),
   tropomi: feedColor("tropomi", "tropomi"),
+  emit: feedColor("emit", "emit"),
 };
 
 interface DashboardHomeProps {
@@ -129,6 +131,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
       carbon_mapper: {},
       imeo: {},
       tropomi: {},
+      emit: {},
     };
     for (const s of satelliteSources) {
       const provider = (s.provider as ProviderId) ?? "carbon_mapper";
@@ -170,8 +173,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
   }, [last7Days, totalsByProviderDay, emissionUnit]);
 
   const cardBase = dm
-    ? "rounded-xl border border-[#1e2430] bg-[#1a1f2b] text-white shadow-lg shadow-black/20"
-    : "rounded-xl border border-gray-200 bg-white text-gray-900 shadow-md shadow-gray-200/50";
+    ? "rounded-2xl border border-white/[0.07] bg-[#111722] text-white shadow-xl shadow-black/10"
+    : "rounded-2xl border border-slate-200/80 bg-white text-gray-900 shadow-sm shadow-slate-200/70";
 
   const muted = dm ? "text-slate-400" : "text-gray-500";
   const sectionTitle = dm ? "text-white" : "text-gray-900";
@@ -262,13 +265,23 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
 
   return (
     <div
-      className={`space-y-6 p-4 sm:p-6 pb-16 overflow-y-auto ${
-        dm ? "bg-[#12161f] text-white" : "bg-gray-50 text-gray-900"
+      className={`space-y-7 p-4 sm:p-6 lg:p-8 pb-20 overflow-y-auto ${
+        dm ? "bg-[#0b0e14] text-white" : "bg-slate-50 text-gray-900"
       }`}
     >
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2dd4bf]">National overview</p>
+          <h1 className={`mt-1 text-2xl sm:text-3xl font-black tracking-tight ${sectionTitle}`}>Methane monitoring dashboard</h1>
+          <p className={`mt-1.5 text-sm ${muted}`}>Live operational picture across facilities, satellite feeds, and alerts.</p>
+        </div>
+        <button onClick={() => (onNavigate ? onNavigate("LIVE_MAP") : setActiveView("LIVE_MAP"))} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0d9488] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-950/20 hover:bg-[#0f766e]">
+          Open live map <ArrowRight size={16}/>
+        </button>
+      </header>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map(({ label, value, icon: Icon, subtitle }) => (
-          <div key={label} className={`${cardBase} p-5`} title={subtitle}>
+          <div key={label} className={`${cardBase} p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/30 hover:shadow-xl`} title={subtitle}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className={`text-sm font-medium ${muted}`}>{label}</p>
@@ -279,7 +292,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
                 </p>
                 <p className={`mt-1 text-xs ${muted} opacity-70`}>{subtitle}</p>
               </div>
-              <div className="rounded-lg bg-teal-600/15 p-2.5 text-teal-500">
+              <div className="rounded-xl bg-teal-500/10 p-2.5 text-teal-400 ring-1 ring-inset ring-teal-500/10">
                 <Icon className="h-5 w-5" strokeWidth={2} />
               </div>
             </div>

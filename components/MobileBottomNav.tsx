@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { DashboardView } from '../types';
+import { useAuthStore } from '../src/stores/auth.store';
 
 interface MobileBottomNavProps {
   activeView: DashboardView;
@@ -54,14 +55,17 @@ const MORE_ITEMS: { id: DashboardView; label: string }[] = [
   { id: 'DATA_COMPARISON', label: 'Data Comparison' },
   { id: 'FIELD_DATA', label: 'Field Data' },
   { id: 'USER_MANAGEMENT', label: 'User Management' },
+  { id: 'DATA_FEEDS', label: 'Data Feeds' },
   { id: 'DOCS', label: 'Documentation' },
   { id: 'SETTINGS', label: 'Settings' },
 ];
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeView, onViewChange, onLogout, darkMode }) => {
   const [showMore, setShowMore] = useState(false);
+  const isSuperAdmin = useAuthStore((state) => state.user?.role === 'super_admin');
+  const moreItems = MORE_ITEMS.filter((item) => item.id !== 'DATA_FEEDS' || isSuperAdmin);
   const dm = darkMode;
-  const isMoreActive = MORE_ITEMS.some(i => i.id === activeView);
+  const isMoreActive = moreItems.some(i => i.id === activeView);
 
   return (
     <>
@@ -76,7 +80,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeView, onViewCha
               <div className={`w-10 h-1 rounded-full ${dm ? 'bg-gray-700' : 'bg-gray-300'}`} />
             </div>
             <div className="px-4 py-2 space-y-1">
-              {MORE_ITEMS.map(item => (
+              {moreItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => { onViewChange(item.id); setShowMore(false); }}

@@ -25,6 +25,7 @@ const PROVIDER_GROUP_LABEL: Record<ProviderId, string> = {
   carbon_mapper: 'Carbon Mapper',
   imeo: 'IMEO (UNEP)',
   tropomi: 'TROPOMI',
+  emit: 'NASA EMIT',
 };
 
 /** Recharts dataKey safe — feedKey contains "::" which is fine in JS object keys. */

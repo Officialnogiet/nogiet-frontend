@@ -101,7 +101,7 @@ function buildPlumeScatterGeoJSON(satellites: any[]): GeoJSON.FeatureCollection 
     const lat = src.latitude ?? src.lat;
     const baseRate = src.emissionRate ?? src.emission_rate ?? 0;
     const maxR = 0.02 + Math.min(count, 20) * 0.002;
-    const provider = (src.provider ?? 'carbon_mapper') as 'carbon_mapper' | 'imeo' | 'tropomi';
+    const provider = (src.provider ?? 'carbon_mapper') as 'carbon_mapper' | 'imeo' | 'tropomi' | 'emit';
     const sourceColor = feedColor(provider, src.instrument ?? '');
 
     for (let i = 0; i < count; i++) {
@@ -188,7 +188,7 @@ function buildSatelliteGeoJSON(features: any[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: (features ?? []).map((src: any) => {
-      const provider = (src.provider ?? 'carbon_mapper') as 'carbon_mapper' | 'imeo' | 'tropomi';
+      const provider = (src.provider ?? 'carbon_mapper') as 'carbon_mapper' | 'imeo' | 'tropomi' | 'emit';
       const instrument = src.instrument ?? '';
       return {
         type: 'Feature' as const,
@@ -221,6 +221,7 @@ function satelliteProviderAttribution(provider: string | undefined): string {
   switch (provider) {
     case 'imeo': return 'UNEP IMEO (methanedata.unep.org)';
     case 'tropomi': return 'Sentinel-5P TROPOMI';
+    case 'emit': return 'NASA EMIT (JPL)';
     default: return 'Carbon Mapper (carbonmapper.org)';
   }
 }
@@ -229,6 +230,7 @@ const PROVIDER_SHORT_LABEL: Record<string, string> = {
   carbon_mapper: 'Carbon Mapper',
   imeo: 'IMEO',
   tropomi: 'TROPOMI',
+  emit: 'NASA EMIT',
 };
 
 /** "All providers" / "IMEO + Carbon Mapper" / "Carbon Mapper" / "None". */
@@ -281,7 +283,7 @@ interface LiveMapProps {
   filters?: MapFilters;
 }
 
-const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNavigateAlerts, onNavigateMethaneTrends, filters }) => {
+const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDarkMode = true, onNavigateAlerts, onNavigateMethaneTrends, filters }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const facilityMarkersRef = useRef<mapboxgl.Marker[]>([]);
@@ -310,11 +312,14 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const groundPopupRef = useRef<mapboxgl.Popup | null>(null);
   const groundLayerReady = useRef(false);
   const { mapStyle, defaultRegion } = useSettingsStore();
+  // Map overlays follow the basemap, independently of the dashboard theme.
+  // Satellite imagery uses dark chrome to preserve contrast over photography.
+  const mapUiDark = mapStyle !== 'light';
   const mapFilters = filters ?? DEFAULT_FILTERS;
   const prevFiltersRef = useRef(mapFilters);
-  const darkModeRef = useRef(darkMode);
-  darkModeRef.current = darkMode;
-  setBoundaryTheme(darkMode);
+  const darkModeRef = useRef(mapUiDark);
+  darkModeRef.current = mapUiDark;
+  setBoundaryTheme(mapUiDark);
   const mapStyleRef = useRef(mapStyle);
   mapStyleRef.current = mapStyle;
   const filteredSatRef = useRef<any[]>([]);
@@ -928,6 +933,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       carbon_mapper: new Map(),
       imeo: new Map(),
       tropomi: new Map(),
+      emit: new Map(),
     };
     for (const s of filteredSatellite) {
       const prov = (s.provider ?? 'carbon_mapper') as GridProvider;
@@ -1040,15 +1046,15 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     }
 
     const beforeId = m.getLayer(SAT_LAYER_GLOW) ? SAT_LAYER_GLOW : undefined;
-    addEmissionGridLayer(m, gridGeoJSON as any, { darkMode, beforeLayerId: beforeId });
+    addEmissionGridLayer(m, gridGeoJSON as any, { darkMode: mapUiDark, beforeLayerId: beforeId });
     updateEmissionGridLayer(m, gridGeoJSON as any);
-  }, [mapLoaded, mapLayers.emissionGrid, gridGeoJSON, darkMode]);
+  }, [mapLoaded, mapLayers.emissionGrid, gridGeoJSON, mapUiDark]);
 
-  // Theme-react when dark mode changes
+  // Keep grid styling aligned with the selected basemap.
   useEffect(() => {
     const m = map.current;
-    if (m && mapLoaded) setEmissionGridTheme(m, darkMode);
-  }, [darkMode, mapLoaded]);
+    if (m && mapLoaded) setEmissionGridTheme(m, mapUiDark);
+  }, [mapUiDark, mapLoaded]);
 
   // Click on a grid cell → zoom in to drill-in
   useEffect(() => {
@@ -1215,7 +1221,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
     scaleFacMarkers();
     m.on('zoom', scaleFacMarkers);
     return () => { m.off('zoom', scaleFacMarkers); };
-  }, [mapLoaded, filteredFacilities, darkMode, mapStyle, handleFacilityClick, groundDataVersion]);
+  }, [mapLoaded, filteredFacilities, mapUiDark, mapStyle, handleFacilityClick, groundDataVersion]);
 
   // Highlight plumes/measurements around selected source with connecting lines
   useEffect(() => {
@@ -1814,18 +1820,18 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
   const isRefreshing = isFetchingSatellite;
 
   return (
-    <div className={`relative h-full w-full overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'}`}>
-      <div ref={mapContainer} className="absolute inset-0 z-0" style={{ background: mapLoaded ? 'transparent' : (darkMode ? '#0b0e14' : '#e5e7eb') }} />
+    <div className={`relative h-full w-full overflow-hidden transition-colors duration-300 ${mapUiDark ? 'bg-[#0b0e14]' : 'bg-gray-50'}`}>
+      <div ref={mapContainer} className="absolute inset-0 z-0" style={{ background: mapLoaded ? 'transparent' : (mapUiDark ? '#0b0e14' : '#e5e7eb') }} />
 
       {(!mapLoaded || isLoadingFacilities) && !error && (
-        <MapDataLoader darkMode={darkMode} mapLoaded={mapLoaded} isLoadingData={isLoadingFacilities} />
+        <MapDataLoader darkMode={mapUiDark} mapLoaded={mapLoaded} isLoadingData={isLoadingFacilities} />
       )}
 
       {isRefreshing && mapLoaded && (
         // Mobile: floats at the TOP-CENTER so it doesn't collide with the
         // EmissionSummaryCard (bottom-left) or the zoom controls (bottom-right).
         // Desktop (lg:): drops back to the original bottom-center spot.
-        <div className={`absolute top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-8 z-50 flex items-center gap-2.5 px-4 py-2 lg:px-5 lg:py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-md ${darkMode ? 'bg-[#12161f]/95 text-teal-400 border border-[#1e2430]' : 'bg-white/95 text-teal-700 border border-gray-200'}`}>
+        <div className={`absolute top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-8 z-50 flex items-center gap-2.5 px-4 py-2 lg:px-5 lg:py-2.5 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-md ${mapUiDark ? 'bg-[#12161f]/95 text-teal-400 border border-[#1e2430]' : 'bg-white/95 text-teal-700 border border-gray-200'}`}>
           <div className="w-3.5 h-3.5 rounded-full border-2 border-transparent border-t-current animate-spin" />
           Fetching satellite data{globalSatSources.length > 0 ? ` (${globalSatSources.length} sources cached)` : ''}...
         </div>
@@ -1839,7 +1845,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         <div className="absolute top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-8 z-50">
           <button
             onClick={handleRefreshRegion}
-            className={`flex items-center gap-2 lg:gap-2.5 px-4 py-2.5 lg:px-6 lg:py-3 rounded-2xl text-xs lg:text-sm font-extrabold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 ${darkMode ? 'bg-[#009688] text-white hover:bg-[#00796b]' : 'bg-[#009688] text-white hover:bg-[#00796b]'}`}
+            className="flex items-center gap-2 lg:gap-2.5 px-4 py-2.5 lg:px-6 lg:py-3 rounded-2xl text-xs lg:text-sm font-extrabold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 bg-[#009688] text-white hover:bg-[#00796b]"
           >
             <RefreshCw size={14} className="lg:hidden" />
             <RefreshCw size={16} className="hidden lg:block" />
@@ -1851,15 +1857,15 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       {/* Satellite error banner */}
       {satelliteError && mapLoaded && (
         <div className={`absolute top-24 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[90%] animate-in fade-in slide-in-from-top-2 duration-300`}>
-          <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-md ${darkMode ? 'bg-[#1a1215]/95 border-red-500/20 text-red-400' : 'bg-red-50/95 border-red-200 text-red-700'}`}>
+          <div className={`flex items-start gap-3 px-4 sm:px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${mapUiDark ? 'bg-[#181217]/95 border-red-500/20 text-red-300' : 'bg-white/95 border-red-200 text-red-700'}`}>
             <Satellite className="flex-shrink-0 mt-0.5" size={20} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold">Satellite Data Unavailable</p>
-              <p className={`text-xs mt-1 ${darkMode ? 'text-red-400/70' : 'text-red-600/70'}`}>
-                Satellite data (Carbon Mapper, IMEO, TROPOMI) is not available at the moment. Facility data is still displayed. Please try refreshing later.
+              <p className="text-sm font-bold">Some satellite data is unavailable</p>
+              <p className={`text-xs mt-1 ${mapUiDark ? 'text-red-400/70' : 'text-red-600/70'}`}>
+                {satelliteError}. Facility data remains available on the map.
               </p>
             </div>
-            <button onClick={() => setSatelliteError(null)} className="flex-shrink-0 p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <button aria-label="Dismiss satellite warning" onClick={() => setSatelliteError(null)} className="flex-shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -1871,26 +1877,26 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
           error banner because the cause is local UI state, not the backend. */}
       {isFilteredToNothing && !satelliteError && mapLoaded && (
         <div className={`absolute top-24 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[90%] animate-in fade-in slide-in-from-top-2 duration-300`}>
-          <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-md ${darkMode ? 'bg-[#1a1f14]/95 border-amber-500/30 text-amber-200' : 'bg-amber-50/95 border-amber-200 text-amber-800'}`}>
+          <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-md ${mapUiDark ? 'bg-[#1a1f14]/95 border-amber-500/30 text-amber-200' : 'bg-amber-50/95 border-amber-200 text-amber-800'}`}>
             <Satellite className="flex-shrink-0 mt-0.5 text-amber-500" size={20} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">
                 {globalSatSources.length} source{globalSatSources.length === 1 ? '' : 's'} loaded — filters are hiding them all
               </p>
-              <p className={`text-xs mt-1 ${darkMode ? 'text-amber-200/70' : 'text-amber-700/80'}`}>
+              <p className={`text-xs mt-1 ${mapUiDark ? 'text-amber-200/70' : 'text-amber-700/80'}`}>
                 The backend returned data, but the current filter selection (legend providers / instruments, or filter panel sliders) excludes every source. Reset the legend or open Filters to widen the selection.
               </p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 <button
                   onClick={() => setGridControls(DEFAULT_GRID_CONTROLS)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${darkMode ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-100' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-100' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                 >
                   Reset legend
                 </button>
                 {onOpenFilters && (
                   <button
                     onClick={onOpenFilters}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${darkMode ? 'bg-white/10 hover:bg-white/20 text-amber-100' : 'bg-white hover:bg-gray-50 text-amber-800 border border-amber-200'}`}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-white/10 hover:bg-white/20 text-amber-100' : 'bg-white hover:bg-gray-50 text-amber-800 border border-amber-200'}`}
                   >
                     Open Filters
                   </button>
@@ -1902,30 +1908,30 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       )}
 
       {error && (
-        <div className={`absolute inset-0 flex items-center justify-center z-50 p-6 ${darkMode ? 'bg-[#0b0e14]/90' : 'bg-red-50/90'}`} onClick={() => setError(null)}>
-          <div className={`p-8 rounded-2xl shadow-xl max-w-md text-center border relative ${darkMode ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setError(null)} className={`absolute top-3 right-3 p-1.5 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'}`}>
+        <div className={`absolute inset-0 flex items-center justify-center z-50 p-6 ${mapUiDark ? 'bg-[#0b0e14]/90' : 'bg-red-50/90'}`} onClick={() => setError(null)}>
+          <div className={`p-8 rounded-2xl shadow-xl max-w-md text-center border relative ${mapUiDark ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white'}`} onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setError(null)} className={`absolute top-3 right-3 p-1.5 rounded-full transition-colors ${mapUiDark ? 'hover:bg-gray-800 text-gray-500' : 'hover:bg-gray-100 text-gray-400'}`}>
               <X size={18} />
             </button>
             <AlertCircle className="mx-auto text-red-500" size={48} />
-            <h3 className={`mt-4 text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Map Error</h3>
-            <p className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
-            <button onClick={() => setError(null)} className={`mt-4 px-6 py-2 rounded-xl text-sm font-bold transition-all ${darkMode ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+            <h3 className={`mt-4 text-xl font-bold ${mapUiDark ? 'text-white' : 'text-gray-900'}`}>Map Error</h3>
+            <p className={`mt-2 ${mapUiDark ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
+            <button onClick={() => setError(null)} className={`mt-4 px-6 py-2 rounded-xl text-sm font-bold transition-all ${mapUiDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
               Dismiss
             </button>
           </div>
         </div>
       )}
 
-      <div className={`absolute inset-0 pointer-events-none z-10 ${darkMode ? 'opacity-[0.12]' : 'opacity-[0.25]'}`}>
-        <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(${darkMode ? 'rgba(148,163,184,1)' : 'rgba(30,41,59,1)'} 1px, transparent 1px), linear-gradient(90deg, ${darkMode ? 'rgba(148,163,184,1)' : 'rgba(30,41,59,1)'} 1px, transparent 1px)`, backgroundSize: '100px 100px' }} />
+      <div className={`absolute inset-0 pointer-events-none z-10 ${mapUiDark ? 'opacity-[0.12]' : 'opacity-[0.25]'}`}>
+        <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(${mapUiDark ? 'rgba(148,163,184,1)' : 'rgba(30,41,59,1)'} 1px, transparent 1px), linear-gradient(90deg, ${mapUiDark ? 'rgba(148,163,184,1)' : 'rgba(30,41,59,1)'} 1px, transparent 1px)`, backgroundSize: '100px 100px' }} />
       </div>
 
-      <MapSearchBar darkMode={darkMode} onOpenFilters={onOpenFilters} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <MapSearchBar darkMode={mapUiDark} onOpenFilters={onOpenFilters} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <div className="absolute top-20 md:top-28 left-3 md:left-6 z-40">
         <button onClick={() => { setShowAlerts(!showAlerts); if (!showAlerts) markAllRead.mutate(); }}
-          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showAlerts ? 'bg-red-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}>
+          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showAlerts ? 'bg-red-600 text-white' : mapUiDark ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}>
           <AlertCircle size={24} />
           {!isLoadingAlerts && unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">{unreadCount}</span>
@@ -1934,19 +1940,23 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       </div>
 
       <MapZoomControls onZoomIn={() => map.current?.zoomIn()} onZoomOut={() => map.current?.zoomOut()} />
-      <EmissionSummaryCard darkMode={darkMode} totalSources={totalSources} totalPlumes={totalPlumes} facilityCount={filteredFacilities.length} satelliteCount={filteredSatellite.length} />
+      <EmissionSummaryCard darkMode={mapUiDark} totalSources={totalSources} totalPlumes={totalPlumes} facilityCount={filteredFacilities.length} satelliteCount={filteredSatellite.length} />
 
       {/* Top-right control stack: Layers + Grid Legend toggles */}
       <div className="absolute top-20 md:top-28 right-3 md:right-6 z-40 flex flex-col gap-2.5">
         <button
-          onClick={() => setShowGridLegend(v => !v)}
+          onClick={() => setShowGridLegend((visible) => {
+            const next = !visible;
+            if (next) setShowLayerPanel(false);
+            return next;
+          })}
           aria-label="Toggle methane grid legend"
           aria-pressed={showGridLegend}
           title="Methane grid legend"
           className={`relative w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${
             showGridLegend && mapLayers.emissionGrid
               ? 'bg-teal-600 text-white'
-              : darkMode
+              : mapUiDark
                 ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]'
                 : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'
           }`}
@@ -1956,22 +1966,26 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
             <span
               aria-hidden
               className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2"
-              style={{ backgroundColor: '#94a3b8', borderColor: darkMode ? '#0b0e14' : '#003d33' }}
+              style={{ backgroundColor: '#94a3b8', borderColor: mapUiDark ? '#0b0e14' : '#003d33' }}
             />
           )}
         </button>
         <button
-          onClick={() => setShowLayerPanel(v => !v)}
+          onClick={() => setShowLayerPanel((visible) => {
+            const next = !visible;
+            if (next) setShowGridLegend(false);
+            return next;
+          })}
           aria-label="Toggle layer panel"
           title="Layers"
-          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showLayerPanel ? 'bg-teal-600 text-white' : darkMode ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}
+          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transition-all ${showLayerPanel ? 'bg-teal-600 text-white' : mapUiDark ? 'bg-[#12161f] text-gray-400 hover:bg-[#1e2430]' : 'bg-[#003d33] text-teal-300 hover:bg-[#004d40]'}`}
         >
           <Layers size={22} />
         </button>
       </div>
 
       <LayerTogglePanel
-        darkMode={darkMode}
+        darkMode={mapUiDark}
         layers={mapLayers}
         onToggle={(layer) => {
           if (layer === 'satelliteView' && map.current) {
@@ -1989,7 +2003,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       />
 
       <EmissionGridLegend
-        darkMode={darkMode}
+        darkMode={mapUiDark}
         visible={showGridLegend}
         state={{
           enabled: mapLayers.emissionGrid,
@@ -2020,11 +2034,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
         onClose={() => setShowGridLegend(false)}
       />
 
-      <SourceLegendHint darkMode={darkMode} providerSources={providerSourceSummaries} />
+      <SourceLegendHint darkMode={mapUiDark} providerSources={providerSourceSummaries} />
 
       {showAlerts && (
         <AlertsPanel
-          darkMode={darkMode}
+          darkMode={mapUiDark}
           alerts={(alerts as any[]).map((a: any) => ({
             id: a.id, title: a.title, description: a.description,
             emissionRate: a.emissionRate, severity: a.severity, createdAt: a.createdAt,
@@ -2035,12 +2049,12 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
       )}
 
       {selectedFacility && !isExpanded && (
-        <FacilityPopup darkMode={darkMode} facility={selectedFacility} onExpand={() => setIsExpanded(true)} onClose={() => setSelectedFacility(null)} />
+        <FacilityPopup darkMode={mapUiDark} facility={selectedFacility} onExpand={() => setIsExpanded(true)} onClose={() => setSelectedFacility(null)} />
       )}
 
       {selectedFacility && isExpanded && (
         <FacilityDetailModal
-          darkMode={darkMode} facility={selectedFacility} chartData={chartData}
+          darkMode={mapUiDark} facility={selectedFacility} chartData={chartData}
           isLoadingChart={isLoadingGround} onClose={() => setIsExpanded(false)}
           onShareReport={handleShareReport} onExportCSV={handleExportCSV}
         />
@@ -2048,7 +2062,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode = true, onNav
 
       {selectedOilBlock && (
         <OilBlockDetailModal
-          darkMode={darkMode}
+          darkMode={mapUiDark}
           block={selectedOilBlock}
           satelliteSources={filteredSatellite as any}
           facilities={filteredFacilities as any}
