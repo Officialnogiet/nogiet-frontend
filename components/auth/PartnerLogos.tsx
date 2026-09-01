@@ -10,7 +10,7 @@ export default function PartnerLogos() {
       <div className="mb-3 flex items-center gap-3">
         <span className="h-px flex-1 bg-slate-200" aria-hidden />
         <p id="project-sponsors-title" className="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">
-          Project sponsors
+          Owners
         </p>
         <span className="h-px flex-1 bg-slate-200" aria-hidden />
       </div>
@@ -25,7 +25,7 @@ export default function PartnerLogos() {
           />
           <div className="min-w-0 text-left">
             <p className="text-[11px] font-extrabold tracking-wide text-slate-800">NUPRC</p>
-            <p className="mt-0.5 text-[8px] font-medium leading-[1.35] text-slate-500">Upstream Petroleum Regulatory Commission</p>
+            <p className="mt-0.5 text-[8px] font-medium leading-[1.35] text-slate-500">Nigerian Upstream Petroleum Regulatory Commission</p>
           </div>
         </div>
 
@@ -38,13 +38,13 @@ export default function PartnerLogos() {
           />
           <div className="min-w-0 text-left">
             <p className="text-[11px] font-extrabold tracking-wide text-slate-800">NMDPRA</p>
-            <p className="mt-0.5 text-[8px] font-medium leading-[1.35] text-slate-500">Midstream &amp; Downstream Petroleum Regulatory Authority</p>
+            <p className="mt-0.5 text-[8px] font-medium leading-[1.35] text-slate-500">Nigerian Midstream and Downstream Petroleum Regulatory Authority</p>
           </div>
         </div>
       </div>
 
       <p className="mt-3 text-center text-[9px] font-medium text-slate-400">
-        Supporting Nigeria’s methane transparency and emissions intelligence
+        Owners of Nigeria’s national oil and gas emissions intelligence platform
       </p>
     </section>
   );

@@ -23,6 +23,56 @@ body {
   overflow: hidden;
 }
 
+.nogiet-home-grid {
+  background-image: linear-gradient(rgba(94, 234, 212, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(94, 234, 212, 0.035) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+.nogiet-hero-noise {
+  background-image: linear-gradient(rgba(94, 234, 212, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(94, 234, 212, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+.nogiet-nigeria-map {
+  background-color: #cbdad0;
+  background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px), radial-gradient(ellipse at 55% 55%, #b3cbbd 0 25%, transparent 26%);
+  background-size: 38px 38px, 38px 38px, auto;
+}
+.nogiet-nigeria-map::before, .nogiet-nigeria-map::after { content: ''; position: absolute; border: 1px solid rgba(7, 57, 48, .15); border-radius: 48% 42% 55% 35% / 35% 50% 42% 55%; }
+.nogiet-nigeria-map::before { inset: 18% 13% 12% 18%; transform: rotate(-7deg); }
+.nogiet-nigeria-map::after { inset: 28% 26% 25% 30%; transform: rotate(13deg); }
+.nogiet-home-gradient {
+  color: transparent;
+  background: linear-gradient(105deg, #f8fafc 5%, #5eead4 52%, #34d399 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+.nogiet-map-panel {
+  background-image: radial-gradient(circle at 55% 38%, rgba(45, 212, 191, 0.16), transparent 25%), linear-gradient(rgba(94, 234, 212, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(94, 234, 212, 0.055) 1px, transparent 1px);
+  background-size: auto, 30px 30px, 30px 30px;
+}
+.nogiet-map-panel::before {
+  content: '';
+  position: absolute;
+  inset: 15% 18% 23% 21%;
+  border: 1px solid rgba(94, 234, 212, 0.24);
+  border-radius: 48% 35% 55% 42% / 35% 58% 38% 60%;
+  transform: rotate(-7deg);
+  box-shadow: inset 0 0 40px rgba(45, 212, 191, 0.04), 0 0 40px rgba(45, 212, 191, 0.04);
+}
+.nogiet-home-enter { animation: nogiet-home-enter 700ms cubic-bezier(.2,.8,.2,1) both; }
+.nogiet-home-enter-delayed { animation: nogiet-home-enter 850ms 140ms cubic-bezier(.2,.8,.2,1) both; }
+.nogiet-scan { animation: nogiet-scan 5s ease-in-out infinite; }
+.nogiet-map-pulse { animation: nogiet-marker 2.8s ease-in-out infinite; }
+.nogiet-progress { width: 78%; animation: nogiet-progress 2.2s 700ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes nogiet-home-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes nogiet-scan { 0%, 100% { transform: translateY(35px); opacity: 0; } 15%, 85% { opacity: .9; } 50% { transform: translateY(310px); } }
+@keyframes nogiet-marker { 0%, 100% { transform: scale(.8); opacity: .7; } 50% { transform: scale(1.15); opacity: 1; } }
+@keyframes nogiet-progress { from { width: 0; } to { width: 78%; } }
+@media (prefers-reduced-motion: reduce) {
+  .nogiet-home-enter, .nogiet-home-enter-delayed, .nogiet-scan, .nogiet-map-pulse, .nogiet-progress { animation: none !important; }
+}
+
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button:not(:disabled), a { cursor: pointer; }
 button, input, select, textarea { outline: none; }

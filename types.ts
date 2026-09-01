@@ -1,5 +1,6 @@
 
 export enum AuthScreen {
+  HOME = 'HOME',
   LOGIN = 'LOGIN',
   FORGOT_PASSWORD = 'FORGOT_PASSWORD',
   VERIFY_CODE = 'VERIFY_CODE',
