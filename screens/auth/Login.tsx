@@ -37,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-white">
       <LoginHeroPanel />
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-8 lg:p-12 relative bg-white">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 pt-16 md:px-8 md:pb-8 md:pt-20 lg:px-12 lg:pb-12 relative bg-white">
         <button type="button" onClick={() => onNavigate(AuthScreen.HOME)} className="absolute left-6 top-5 text-xs font-bold text-slate-500 hover:text-teal-700 md:left-8 md:top-7">← Back to homepage</button>
         <div className="w-full max-w-[390px]">
           <div className="md:hidden flex items-center justify-center mb-8">
