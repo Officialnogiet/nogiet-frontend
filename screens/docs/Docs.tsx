@@ -186,11 +186,12 @@ const Docs: React.FC<DocsProps> = ({ darkMode, onClose }) => {
         <button
           type="button"
           onClick={onClose}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${dm ? 'border-[#2d364a] text-gray-200 hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+          className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#008f81] px-3 text-sm font-semibold text-white shadow-md shadow-[#008f81]/25 transition-colors hover:bg-[#00776c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008f81]"
           aria-label="Close Learn NOGIET and return to app"
           title="Return to app"
         >
-          <X size={18} />
+          <X size={20} strokeWidth={2.5} />
+          <span className="hidden sm:inline">Close</span>
         </button>
         <button
           onClick={() => setNavOpen((v) => !v)}
@@ -298,7 +299,7 @@ const Docs: React.FC<DocsProps> = ({ darkMode, onClose }) => {
 
         {/* MIDDLE: rendered doc -------------------------------------------- */}
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-y-auto relative">
-          <article className="max-w-3xl mx-auto px-5 md:px-10 py-8 md:py-12">
+          <article className="w-full max-w-5xl mx-auto px-5 md:px-8 xl:px-10 py-8 md:py-12">
             {/* Page header card with breadcrumb + meta */}
             <div className={`p-5 md:p-6 rounded-2xl border ${card} mb-8`}>
               <div className={`flex items-center gap-2 text-[11px] uppercase tracking-widest ${subtle} mb-2`}>
@@ -372,7 +373,7 @@ const Docs: React.FC<DocsProps> = ({ darkMode, onClose }) => {
         </div>
 
         {/* RIGHT: TOC ------------------------------------------------------ */}
-        <aside className={`hidden xl:block w-64 flex-shrink-0 border-l ${dm ? 'border-[#1e2430]' : 'border-gray-200'}`}>
+        <aside className={`hidden 2xl:block w-56 flex-shrink-0 border-l ${dm ? 'border-[#1e2430]' : 'border-gray-200'}`}>
           <div className="sticky top-0 px-5 py-8">
             <p className={`text-[10px] font-bold uppercase tracking-widest ${subtle} mb-3`}>
               On this page
