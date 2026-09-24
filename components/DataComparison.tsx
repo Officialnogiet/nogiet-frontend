@@ -147,7 +147,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
         ['Ground-only', String(summary.groundOnly)],
         ['Mean ground (kg/hr)', summary.meanGround.toFixed(1)],
         ['Mean satellite (kg/hr)', summary.meanSatellite.toFixed(1)],
-        ['Mean ratio (sat / ground)', summary.meanRatio == null ? '—' : `${summary.meanRatio.toFixed(2)}×`],
+        ['Mean ratio (sat / ground)', summary.meanRatio == null ? 'N/A' : `${summary.meanRatio.toFixed(2)}×`],
       ],
       theme: 'grid',
       headStyles: { fillColor: [13, 148, 136] },
@@ -160,14 +160,14 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
         startY: finalY + 8,
         head: [['Date', 'Source', 'Sat (kg/hr)', 'Ground (kg/hr)', 'Δ rate', 'Δ days', 'Verdict']],
         body: pairs.slice(0, 50).map((p) => {
-          const date = (p.satellite?.date ?? p.ground?.date)?.toLocaleDateString('en-GB') ?? '—';
+          const date = (p.satellite?.date ?? p.ground?.date)?.toLocaleDateString('en-GB') ?? 'N/A';
           return [
             date,
-            p.satellite ? `${p.satellite.sourceName} (${p.satellite.provider})` : '—',
-            p.satellite ? p.satellite.rate.toFixed(1) : '—',
-            p.ground ? p.ground.reading.toFixed(1) : '—',
-            p.deltaRate == null ? '—' : `${p.deltaRate >= 0 ? '+' : ''}${p.deltaRate.toFixed(1)}`,
-            p.deltaDays == null ? '—' : `${p.deltaDays.toFixed(1)}`,
+            p.satellite ? `${p.satellite.sourceName} (${p.satellite.provider})` : 'N/A',
+            p.satellite ? p.satellite.rate.toFixed(1) : 'N/A',
+            p.ground ? p.ground.reading.toFixed(1) : 'N/A',
+            p.deltaRate == null ? 'N/A' : `${p.deltaRate >= 0 ? '+' : ''}${p.deltaRate.toFixed(1)}`,
+            p.deltaDays == null ? 'N/A' : `${p.deltaDays.toFixed(1)}`,
             VERDICT_META[p.verdict].label,
           ];
         }),
@@ -238,7 +238,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
             <select value={selectedFacilityId} onChange={(e) => handleFacilityChange(e.target.value)} className={selectCls}>
               <option value="">Select a facility…</option>
               {(facilities as Facility[]).map((f) => (
-                <option key={f.id} value={f.id}>{f.name} — {f.sector}</option>
+                <option key={f.id} value={f.id}>{f.name}: {f.sector}</option>
               ))}
             </select>
             {selectedFacility && (
@@ -291,7 +291,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
             For every satellite detection, NOGIET searches for the **closest in time** ground reading
             within the chosen time tolerance. If a match exists, the rates are compared: when both rates
             agree within the agreement band the pair is "Confirmed". A satellite reading higher than the
-            ground reading by more than the band is "Likely under-reported" — a possible missed leak the
+            ground reading by more than the band is "Likely under-reported": a possible missed leak the
             operator should investigate. The reverse case is "Possibly over-reported". Detections without
             a partner end up as Satellite-only or Ground-only respectively.
           </p>
@@ -300,7 +300,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
 
       {submitSuccess && (
         <div className={`mb-4 px-5 py-2.5 rounded-2xl text-xs font-bold ${dm ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'bg-teal-50 text-teal-700 border border-teal-200'}`}>
-          Ground reading submitted — comparison updating.
+          Ground reading submitted: comparison updating.
         </div>
       )}
 

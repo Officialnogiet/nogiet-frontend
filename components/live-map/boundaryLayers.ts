@@ -156,7 +156,7 @@ function statePopupHTML(name: string, lng: number, lat: number): string {
 
 function lgaPopupHTML(name: string, lng: number, lat: number): string {
   const t = themeColors();
-  // Tertiary admin tier — quiet slate on both themes. Always one luminance step lighter
+  // Tertiary admin tier: quiet slate on both themes. Always one luminance step lighter
   // than the oil-block layer so the hierarchy reads at a glance.
   const accent = currentThemeDark ? '#60a5fa' : '#2563eb';
   return `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.7;padding:4px 2px;">
@@ -179,7 +179,7 @@ function pipelinePopupHTML(name: string, lng: number, lat: number): string {
 function oilBlockPopupHTML(props: Record<string, any>, _lng: number, _lat: number): string {
   const name = props.name ?? 'Unknown';
   const t = themeColors();
-  // Match the slate oil-block strokes — popup accent stays in the secondary tier.
+  // Match the slate oil-block strokes: popup accent stays in the secondary tier.
   const accent = currentThemeDark ? '#e2e8f0' : '#64748b';
   const operator = props.operator || '';
   const area = props.area_sqkm ? `${Number(props.area_sqkm).toLocaleString()} km²` : '';
@@ -353,7 +353,7 @@ export interface OilBlockClickPayload {
   properties: Record<string, any>;
   /** Click coordinates on the map (use for zooming or "back to point" links). */
   lngLat: { lng: number; lat: number };
-  /** Polygon geometry — lets the React side compute bbox / "inside this block" queries. */
+  /** Polygon geometry: lets the React side compute bbox / "inside this block" queries. */
   geometry: GeoJSON.Geometry | null;
 }
 
@@ -370,8 +370,8 @@ export function setOilBlockClickHandler(fn: ((payload: OilBlockClickPayload) => 
 }
 
 export function installOilBlockClick(m: mapboxgl.Map) {
-  // Already wired to THIS map instance — skip. Different map (or first install
-  // after a remount) — fall through and bind.
+  // Already wired to THIS map instance: skip. Different map (or first install
+  // after a remount): fall through and bind.
   if (oilBlockClickInstalledOn === m) return;
   oilBlockClickInstalledOn = m;
   m.on('click', OIL_BLOCKS_FILL, (e: mapboxgl.MapLayerMouseEvent) => {
@@ -392,7 +392,7 @@ export function installOilBlockClick(m: mapboxgl.Map) {
 /**
  * Call this from the React cleanup when the map is destroyed (LiveMap
  * unmount). Without it the next mount sees the stale install flag and never
- * rebinds the click listener — the symptom being: oil-block modal opens on
+ * rebinds the click listener: the symptom being: oil-block modal opens on
  * the very first visit but stops responding after the user navigates away
  * (e.g. to Methane Trends) and comes back.
  */
@@ -404,11 +404,11 @@ export function uninstallOilBlockClick() {
 // Used by the oil-block detail modal to look up "which state/LGA contains
 // this block centroid" without a network round-trip. The same `statesGeoJSON`,
 // `lgasGeoJSON`, and `oilBlocksGeoJSON` loaded by the layer renderers are
-// reused here — no extra fetch, no extra dependency on turf.
+// reused here: no extra fetch, no extra dependency on turf.
 
 function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
   // Ray-casting algorithm. Returns true when `(lon, lat)` lies inside the
-  // outer ring of a simple polygon. Holes are intentionally ignored — for
+  // outer ring of a simple polygon. Holes are intentionally ignored: for
   // our use cases (Nigerian state / LGA / oil-block polygons) the rare
   // hole-in-polygon case isn't worth the complexity.
   let inside = false;
@@ -467,7 +467,7 @@ export function findLGAAtPoint(lon: number, lat: number): string | null {
 
 /**
  * Finds the oil-block polygon containing `(lon, lat)` and returns its full
- * properties object — useful for "which block is this satellite plume in"
+ * properties object: useful for "which block is this satellite plume in"
  * lookups, where the caller already has lat/lon and wants the block name.
  */
 export function findOilBlockAtPoint(lon: number, lat: number): Record<string, any> | null {
@@ -537,7 +537,7 @@ export async function addStatesLayer(m: mapboxgl.Map, beforeLayer?: string, isDa
     id: STATES_FILL, type: 'fill', source: STATES_SOURCE,
     paint: {
       'fill-color': fillColor,
-      // Resting fill is barely-there on both themes — the brand-teal border carries the
+      // Resting fill is barely-there on both themes: the brand-teal border carries the
       // boundary, the fill only confirms shape on hover.
       'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], isDark ? 0.18 : 0.1, isDark ? 0.06 : 0.03],
     },
@@ -587,7 +587,7 @@ export async function addLGAsLayer(m: mapboxgl.Map, beforeLayer?: string, isDark
   const data = await loadLGAsGeoJSON();
   if (!data || !isMapAlive(m)) return;
 
-  // Tertiary admin tier. Quiet cool slate on both themes — by far the lightest weight
+  // Tertiary admin tier. Quiet cool slate on both themes: by far the lightest weight
   // in the boundary hierarchy so it only appears when you zoom in, never dominates.
   const borderColor = isDark ? '#60a5fa' : '#2563eb';
   const fillColor = isDark ? '#3b82f6' : '#60a5fa';

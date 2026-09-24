@@ -12,7 +12,7 @@ export interface GridControlsViewState {
   enabled: boolean;
   /** Multi-select. Empty array means no providers visible. */
   providers: GridProvider[];
-  /** Per-provider instrument allowlist — `null` per provider = all instruments allowed. */
+  /** Per-provider instrument allowlist: `null` per provider = all instruments allowed. */
   instrumentsByProvider: InstrumentAllowlist;
   statistic: GridStatistic;
   showAlerts: boolean;
@@ -29,7 +29,7 @@ export interface ProviderInstrumentSummary {
   count: number;
 }
 
-/** Per-provider summary block — drives the nested checkbox tree. */
+/** Per-provider summary block: drives the nested checkbox tree. */
 export interface ProviderSourcesSummary {
   provider: GridProvider;
   /** Total points for this provider in the current viewport (sum of all instruments). */
@@ -329,7 +329,7 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
           </ul>
 
           {providerSet.size === 0 && (
-            <p className={`text-[10px] mt-3 ${sub}`}>No source selected — grid will be empty.</p>
+            <p className={`text-[10px] mt-3 ${sub}`}>No source selected: grid will be empty.</p>
           )}
         </div>
 
@@ -368,7 +368,7 @@ const EmissionGridLegend: React.FC<EmissionGridLegendProps> = ({
   );
 };
 
-/** Top-level provider checkbox row — supports the indeterminate visual state. */
+/** Top-level provider checkbox row: supports the indeterminate visual state. */
 const ProviderRow: React.FC<{
   darkMode: boolean;
   accent: string;

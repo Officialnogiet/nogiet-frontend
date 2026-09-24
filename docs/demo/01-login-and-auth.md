@@ -7,9 +7,9 @@
 
 The first thing the user sees is a split-screen login:
 
-- **Left panel** — Brand hero with the NOGIET logo, tagline, and a short
+- **Left panel**: Brand hero with the NOGIET logo, tagline, and a short
   description (handled by `LoginHeroPanel.tsx`).
-- **Right panel** — Email + password form with **show/hide password toggle**,
+- **Right panel**: Email + password form with **show/hide password toggle**,
   a "Remember me" checkbox, and "Forgot password?" link.
 
 Branding (logo + colors) is consistent with the dashboard theme so users know
@@ -20,7 +20,7 @@ they're in the right place.
 1. **Login** (`screens/auth/Login.tsx`)
    - Validates email format + password length client-side.
    - POST `/api/v1/auth/login` returns a JWT access token + refresh token.
-   - Tokens are persisted in `useAuthStore` (Zustand) — never in `localStorage`
+   - Tokens are persisted in `useAuthStore` (Zustand): never in `localStorage`
      directly, so React stays the source of truth.
 2. **Forgot password** (`screens/auth/ForgotPassword.tsx`)
    - User enters their email; backend generates a 6-digit OTP and emails it via
@@ -33,7 +33,7 @@ they're in the right place.
    - Auto-redirects back to login after 3 seconds.
 
 After a successful login, the user lands in the Dashboard
-([02-dashboard-home.md](./02-dashboard-home.md)) — except for **Facility Owners**,
+([02-dashboard-home.md](./02-dashboard-home.md)): except for **Facility Owners**,
 who are routed straight to the **Field Data** form (see
 [09-field-data.md](./09-field-data.md)) so they never see screens they don't
 have permission for.
@@ -45,7 +45,7 @@ have permission for.
 | `super_admin` | Every screen |
 | `admin` | Every screen except User Management management modes |
 | `member` | Read-only across most screens |
-| `facility_owner` | **Field Data only** — no map, no alerts, no settings |
+| `facility_owner` | **Field Data only**: no map, no alerts, no settings |
 
 Role enforcement happens in **two places**:
 - Frontend: `Sidebar.tsx` filters menu items.
@@ -86,5 +86,5 @@ limits damage if a token is ever leaked.
 > ► *"NOGIET ships with role-based access. I'm logging in as a Super Admin,
 > which unlocks every screen. A regulator at a regional desk would see the same
 > screens minus User Management; a facility operator opens the app and goes
-> straight to the field-data form. The app handles the redirect — they can't
+> straight to the field-data form. The app handles the redirect: they can't
 > get to the map at all."*

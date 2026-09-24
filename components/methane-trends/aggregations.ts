@@ -62,7 +62,7 @@ interface RawObservation {
   provider: ProviderId;
   date: string;
   emissionRate: number;
-  /** Optional — the satellite instrument (e.g. "EnMAP - DLR"). When present, enables feed splits. */
+  /** Optional: the satellite instrument (e.g. "EnMAP - DLR"). When present, enables feed splits. */
   instrument?: string | null;
 }
 
@@ -226,7 +226,7 @@ interface AggCell {
   sum: number;
   count: number;
   byProvider: Record<ProviderId, { sum: number; count: number }>;
-  /** Per-feed (provider+instrument) sums — keyed by `feedKey`. */
+  /** Per-feed (provider+instrument) sums: keyed by `feedKey`. */
   byFeed: Map<FeedKey, { sum: number; count: number; provider: ProviderId; instrument: string }>;
 }
 

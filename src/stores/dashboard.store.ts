@@ -22,7 +22,7 @@ export const DEFAULT_LAYERS: MapLayerState = {
   emissionGrid: true,
 };
 
-/** Concrete satellite providers — the legend's "all" virtual entry just selects every one. */
+/** Concrete satellite providers: the legend's "all" virtual entry just selects every one. */
 export type GridProvider = 'carbon_mapper' | 'imeo' | 'tropomi' | 'emit';
 export const ALL_GRID_PROVIDERS: GridProvider[] = ['carbon_mapper', 'imeo', 'tropomi', 'emit'];
 export type GridStatistic = 'max' | 'average' | 'sum';
@@ -37,7 +37,7 @@ export type InstrumentAllowlist = Partial<Record<GridProvider, string[] | null>>
 export interface GridControlsState {
   /** Multi-select: each entry is an active provider. Empty = mirror "no source selected". */
   providers: GridProvider[];
-  /** Per-provider instrument allowlist — supports Carbon Mapper, IMEO, TROPOMI uniformly. */
+  /** Per-provider instrument allowlist: supports Carbon Mapper, IMEO, TROPOMI uniformly. */
   instrumentsByProvider: InstrumentAllowlist;
   statistic: GridStatistic;
   showAlerts: boolean;
@@ -64,7 +64,7 @@ export interface TrendsScope {
   kind: 'nigeria' | 'state' | 'oilBlock';
   /** Display + filter value. e.g. "Rivers" for state, "OML 60" for oilBlock. */
   name: string;
-  /** Optional state context for an oil-block scope — surfaces in the heading. */
+  /** Optional state context for an oil-block scope: surfaces in the heading. */
   state?: string | null;
 }
 
@@ -127,14 +127,14 @@ export const useDashboardStore = create<DashboardState>()(
         }),
       // Drill-in context populated by the Live Map's oil-block / state click;
       // consumed (and immediately cleared) by MethaneTrends on mount. Not
-      // persisted — a fresh browser tab should never inherit a stale scope.
+      // persisted: a fresh browser tab should never inherit a stale scope.
       trendsScope: null,
       setTrendsScope: (scope: TrendsScope | null) => set({ trendsScope: scope }),
       gridControls: DEFAULT_GRID_CONTROLS,
       setGridControls: (next: Partial<GridControlsState>) =>
         set((s) => {
           // Always maintain a fully-shaped object so consumers never crash on a missing field
-          // — even if the merge originated from an older persisted snapshot.
+          //: even if the merge originated from an older persisted snapshot.
           const merged: GridControlsState = {
             ...DEFAULT_GRID_CONTROLS,
             ...s.gridControls,
@@ -225,7 +225,7 @@ export const useDashboardStore = create<DashboardState>()(
         }
         if (version < 8) {
           // Swap default layer visibility: oil blocks were on by default, pipelines were off.
-          // From v8 onwards pipelines are shown by default and oil blocks are off — they were
+          // From v8 onwards pipelines are shown by default and oil blocks are off: they were
           // visually noisy and most users only want to drill into them on demand. Override the
           // persisted values so existing sessions adopt the new defaults on next load.
           persisted.mapLayers = {
@@ -276,7 +276,7 @@ export const useDashboardStore = create<DashboardState>()(
       },
       onRehydrateStorage: () => (state, error) => {
         if (error || !state) return;
-        // Re-hydrate guard — guarantees the live state is fully shaped, even if a
+        // Re-hydrate guard: guarantees the live state is fully shaped, even if a
         // previous session persisted an older snapshot or migration silently failed.
         const gc = (state as DashboardState).gridControls;
         if (!gc || !gc.instrumentsByProvider) {

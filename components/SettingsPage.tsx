@@ -1,15 +1,17 @@
 import React, { useCallback, useRef } from 'react';
-import { Settings, Bell, Shield, Globe, Palette, X } from 'lucide-react';
+import { Settings, Bell, Shield, Globe, Palette, X, Sparkles } from 'lucide-react';
 import { useDashboardStore } from '../src/stores/dashboard.store';
 import { useSettingsStore } from '../src/stores/settings.store';
+import { EMISSION_UNITS, UNIT_LABELS, type EmissionUnit } from '../src/utils/unit-conversion';
 import { useSetAlertThreshold, useSetEmailAlerts } from '../src/hooks/useEmissions';
 
 interface SettingsPageProps {
   darkMode?: boolean;
   onClose?: () => void;
+  onStartTour?: () => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true, onClose }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true, onClose, onStartTour }) => {
   const { toggleDarkMode } = useDashboardStore();
   const settings = useSettingsStore();
   const setThresholdMut = useSetAlertThreshold();
@@ -62,9 +64,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ darkMode = true, onClose })
         </div>
 
         <div className="space-y-6">
+          {onStartTour && (
+            <SettingsSection title="Guided tour" icon={<Sparkles size={20} />} darkMode={darkMode}>
+              <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <div>
+                  <p className={`text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Learn your way around NOGIET</p>
+                  <p className={`mt-1 text-xs leading-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Replay the step-by-step tour of the dashboard and main tools.</p>
+                </div>
+                <button type="button" onClick={onStartTour} className="nogiet-button nogiet-button-primary inline-flex shrink-0 self-start sm:self-auto">Start guided tour</button>
+              </div>
+            </SettingsSection>
+          )}
+
           <SettingsSection title="Appearance" icon={<Palette size={20} />} darkMode={darkMode}>
             <SettingsRow darkMode={darkMode} label="Dark Mode" description="Use dark theme across the application">
               <ToggleSwitch on={darkMode} onToggle={toggleDarkMode} />
+            </SettingsRow>
+            <SettingsRow darkMode={darkMode} label="Emission Unit" description="Unit used in dashboard figures, charts, and tables" last>
+              <select
+                data-tour="settings-unit"
+                value={settings.emissionUnit}
+                onChange={(e) => settings.setEmissionUnit(e.target.value as EmissionUnit)}
+                aria-label="Emission unit"
+                className={`max-w-full rounded-xl border px-4 py-2 text-sm font-bold ${darkMode ? 'bg-[#0b0e14] border-[#1e2430] text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              >
+                {EMISSION_UNITS.map((unit) => <option key={unit} value={unit}>{UNIT_LABELS[unit]}</option>)}
+              </select>
             </SettingsRow>
           </SettingsSection>
 
@@ -170,7 +195,7 @@ const SettingsSection: React.FC<{ title: string; icon: React.ReactNode; darkMode
 );
 
 const SettingsRow: React.FC<{ darkMode: boolean; label: string; description: string; children: React.ReactNode; last?: boolean }> = ({ darkMode, label, description, children, last }) => (
-  <div className={`px-8 py-5 flex items-center justify-between ${!last ? `border-b ${darkMode ? 'border-[#1e2430]/50' : 'border-gray-50'}` : ''}`}>
+  <div className={`px-6 py-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:px-8 ${!last ? `border-b ${darkMode ? 'border-[#1e2430]/50' : 'border-gray-50'}` : ''}`}>
     <div>
       <p className={`text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{label}</p>
       <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{description}</p>

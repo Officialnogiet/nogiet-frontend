@@ -83,7 +83,7 @@ export async function lookupNigeriaState(lon: number, lat: number): Promise<stri
   return null;
 }
 
-/** Bulk attribution helper — runs the lookup in parallel using already-loaded data. */
+/** Bulk attribution helper: runs the lookup in parallel using already-loaded data. */
 export async function attachStateNames<T extends { latitude: number; longitude: number }>(
   rows: T[],
 ): Promise<(T & { state: string | null })[]> {

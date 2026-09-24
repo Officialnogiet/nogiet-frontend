@@ -12,7 +12,7 @@ backed by a dedicated query.
 |---|---|
 | **Satellite Sources** | All current points from Carbon Mapper, IMEO, TROPOMI in one paginated, sortable, filterable table. Provider chip per row. |
 | **Individual Sources** | Each emission source with full attributes (sector, instrument, persistence, plume count, first/last detected). |
-| **Emission Rates** | Sources ranked by kg/hr output — the "leaderboard of leaks". |
+| **Emission Rates** | Sources ranked by kg/hr output: the "leaderboard of leaks". |
 | **Cumulative Totals** | Total emissions per facility over the selected time window. |
 | **Aggregated Averages** | Average emission per region and per operator. |
 
@@ -49,7 +49,7 @@ Returns the structured tables consumed by DataTabs.tsx
 
 ## Demo script
 
-> ► *"Some users prefer rows and columns to maps. This is the same data —
-> Carbon Mapper, IMEO, TROPOMI — but in five tabs ready to filter, sort, and
+> ► *"Some users prefer rows and columns to maps. This is the same data N/A
+> Carbon Mapper, IMEO, TROPOMI: but in five tabs ready to filter, sort, and
 > export. Click any header to sort, search the box at the top, hit Download CSV
 > when you're done."*

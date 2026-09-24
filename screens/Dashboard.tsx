@@ -19,8 +19,10 @@ import SettingsPage from '../components/SettingsPage';
 import DashboardHome from '../components/DashboardHome';
 import FieldDataForm from '../components/FieldDataForm';
 import ScreenGuide from '../components/ScreenGuide';
+import GuidedTour from '../components/GuidedTour';
 import ErrorBoundary from '../components/ErrorBoundary';
 import Docs from './docs/Docs';
+import { getDocBySlug } from './docs/manifest';
 import DataFeedsPage from '../components/DataFeedsPage';
 
 interface DashboardProps {
@@ -33,6 +35,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [mapFilters, setMapFilters] = useState<MapFilters>(DEFAULT_FILTERS);
   const user = useAuthStore((s) => s.user);
   const isFacilityOwner = user?.role === 'facility_owner';
+  const returnFromDocs = React.useRef<typeof activeView>('LIVE_MAP');
+  const previousView = React.useRef(activeView);
+  const tourStorageKey = `nogiet-guided-tour-v1:${user?.id ?? 'guest'}`;
+  const [tourOpen, setTourOpen] = useState(() => user?.id && !new URLSearchParams(window.location.search).get('guide') ? localStorage.getItem(`nogiet-guided-tour-v1:${user.id}`) !== 'done' : false);
+  const [tourViewReady, setTourViewReady] = useState(false);
+  const displayedView = tourOpen && !tourViewReady ? (isFacilityOwner ? 'FIELD_DATA' : 'DASHBOARD_HOME') : activeView;
+  const closeTour = React.useCallback(() => {
+    localStorage.setItem(tourStorageKey, 'done');
+    setTourOpen(false);
+  }, [tourStorageKey]);
+  const startTour = React.useCallback(() => { setTourViewReady(false); setTourOpen(true); }, []);
+  const showTourView = React.useCallback((view: typeof activeView) => {
+    setTourViewReady(true);
+    setActiveView(view);
+  }, [setActiveView]);
+
+  useEffect(() => {
+    if (activeView === 'DOCS' && previousView.current !== 'DOCS') returnFromDocs.current = previousView.current;
+    previousView.current = activeView;
+  }, [activeView]);
+
+  useEffect(() => {
+    const guide = new URLSearchParams(window.location.search).get('guide');
+    if (guide && getDocBySlug(guide)) setActiveView('DOCS');
+  }, [setActiveView]);
+
 
   useEffect(() => {
     if (isFacilityOwner && activeView !== 'FIELD_DATA' && activeView !== 'METHANE_CONVERTER' && activeView !== 'DOCS') {
@@ -50,7 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     let content: React.ReactNode;
     let label = 'Screen';
 
-    switch (activeView) {
+    switch (displayedView) {
       case 'DASHBOARD_HOME':
         content = <DashboardHome darkMode={darkMode} onNavigate={(v) => setActiveView(v as any)} />;
         label = 'Dashboard';
@@ -92,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         label = 'User Management';
         break;
       case 'SETTINGS':
-        content = <SettingsPage darkMode={darkMode} onClose={() => setActiveView('DASHBOARD_HOME')} />;
+        content = <SettingsPage darkMode={darkMode} onClose={() => setActiveView('DASHBOARD_HOME')} onStartTour={startTour} />;
         label = 'Settings';
         break;
       case 'DATA_FEEDS':
@@ -100,7 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         label = 'Data Feeds';
         break;
       case 'DOCS':
-        content = <Docs darkMode={darkMode} />;
+        content = <Docs darkMode={darkMode} onClose={() => setActiveView(returnFromDocs.current)} />;
         label = 'Documentation';
         break;
       default:
@@ -120,9 +148,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     // that we render the mobile bottom-nav, even on tablets / small laptops.
     // We picked `lg` because at `md` (768px) the 256px sidebar + 320px summary
     // card + Mapbox UI overflowed small-laptop viewports (1366×768 zoomed to
-    // 125% effective ≈ 1093×614) — the very screen the client was on.
+    // 125% effective ≈ 1093×614): the very screen the client was on.
     <div className={`flex h-screen transition-colors duration-300 ${darkMode ? 'bg-[#0b0e14]' : 'bg-gray-50'} overflow-hidden`}>
-      <div className="hidden lg:flex">
+      {activeView !== 'DOCS' && <div className="hidden lg:flex">
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={toggleSidebar}
@@ -132,22 +160,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
         />
-      </div>
+      </div>}
       <main className="flex-1 relative overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom)] lg:pb-0">
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeView !== 'LIVE_MAP' ? 'pb-16 lg:pb-0' : ''}`}>
+        <div data-tour-screen={displayedView} className={`flex-1 overflow-hidden flex flex-col ${displayedView !== 'LIVE_MAP' && displayedView !== 'DOCS' ? 'pb-16 lg:pb-0' : ''}`}>
           {renderContent()}
         </div>
         {isFilterOpen && <FilterPanel onClose={() => setFilterOpen(false)} darkMode={darkMode} filters={mapFilters} onApply={setMapFilters} />}
-        <ScreenGuide darkMode={darkMode} screenKey={activeView} />
+        <ScreenGuide darkMode={darkMode} screenKey={activeView} onStartTour={startTour} />
       </main>
-      <div className="lg:hidden">
+      {tourOpen && <GuidedTour darkMode={darkMode} isFacilityOwner={isFacilityOwner} onViewChange={showTourView} onClose={closeTour} />}
+      {activeView !== 'DOCS' && <div className="lg:hidden">
         <MobileBottomNav
           activeView={activeView}
           onViewChange={setActiveView}
           onLogout={handleLogout}
           darkMode={darkMode}
         />
-      </div>
+      </div>}
     </div>
   );
 };

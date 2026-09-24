@@ -139,7 +139,7 @@ const MatchTable: React.FC<MatchTableProps> = ({ darkMode, pairs }) => {
                 const sat = pair.satellite;
                 const gnd = pair.ground;
                 const dateRow = sat?.date ?? gnd?.date;
-                const dateStr = dateRow ? dateRow.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+                const dateStr = dateRow ? dateRow.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
 
                 const meta = VERDICT_META[pair.verdict];
 
@@ -150,20 +150,20 @@ const MatchTable: React.FC<MatchTableProps> = ({ darkMode, pairs }) => {
                       {sat ? (
                         <SourceCell sat={sat} dm={dm} />
                       ) : (
-                        <span className={sub}>—</span>
+                        <span className={sub}>N/A</span>
                       )}
                     </td>
                     <td className={`px-4 py-3 align-top tabular-nums ${labelBold}`}>
-                      {sat ? sat.rate.toFixed(1) : <span className={sub}>—</span>}
+                      {sat ? sat.rate.toFixed(1) : <span className={sub}>N/A</span>}
                     </td>
                     <td className={`px-4 py-3 align-top tabular-nums ${labelBold}`}>
-                      {gnd ? gnd.reading.toFixed(1) : <span className={sub}>—</span>}
+                      {gnd ? gnd.reading.toFixed(1) : <span className={sub}>N/A</span>}
                     </td>
                     <td className={`px-4 py-3 align-top tabular-nums ${labelBold}`}>
-                      {pair.deltaRate == null ? <span className={sub}>—</span> : `${pair.deltaRate >= 0 ? '+' : ''}${pair.deltaRate.toFixed(1)}`}
+                      {pair.deltaRate == null ? <span className={sub}>N/A</span> : `${pair.deltaRate >= 0 ? '+' : ''}${pair.deltaRate.toFixed(1)}`}
                     </td>
                     <td className={`px-4 py-3 align-top tabular-nums ${sub}`}>
-                      {pair.deltaDays == null ? '—' : `${pair.deltaDays.toFixed(1)} d`}
+                      {pair.deltaDays == null ? 'N/A' : `${pair.deltaDays.toFixed(1)} d`}
                     </td>
                     <td className="px-4 py-3 align-top">
                       <VerdictChip dm={dm} tone={meta.tone} label={meta.label} emoji={meta.emoji} />

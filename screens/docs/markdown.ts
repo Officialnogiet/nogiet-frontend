@@ -3,7 +3,7 @@ import { marked, type Tokens } from 'marked';
 export interface TocEntry {
   id: string;
   text: string;
-  /** Heading depth — only h2 (2) and h3 (3) are surfaced in the TOC. */
+  /** Heading depth: only h2 (2) and h3 (3) are surfaced in the TOC. */
   depth: 2 | 3;
 }
 
@@ -32,9 +32,9 @@ function slugify(text: string): string {
  * - Every heading gets a stable `id` and a clickable `#` anchor so users can deep-link.
  * - External links open in a new tab with `noopener`.
  * - `mermaid` fenced blocks are rendered as labelled code blocks (not diagrammed); we
- *   intentionally do NOT pull mermaid into the bundle — the markup is preserved so a
+ *   intentionally do NOT pull mermaid into the bundle: the markup is preserved so a
  *   future enhancement can render it lazily.
- * - Tables, blockquotes, lists, and inline code are unstyled here on purpose — the
+ * - Tables, blockquotes, lists, and inline code are unstyled here on purpose: the
  *   surrounding `.docs-prose` class in the Docs screen owns the visual design.
  */
 export function renderMarkdown(source: string): RenderedDoc {

@@ -10,15 +10,15 @@ This document describes how **NOGIET** pulls methane-related data from the **IME
 
 ## API versions (per UNEP docs)
 
-- **V2** — Paths under **`/api/v2/`**. This is the **current, maintained** API; all new integrations should use it.
-- **V1** — Older root-style paths (e.g. `/api/plumes`) are **deprecated** and will be removed.
+- **V2**: Paths under **`/api/v2/`**. This is the **current, maintained** API; all new integrations should use it.
+- **V1**: Older root-style paths (e.g. `/api/plumes`) are **deprecated** and will be removed.
 
 This codebase uses **v2** only, with base URL default  
 `https://methanedata.unep.org/api/v2`.
 
 ### Troubleshooting: `fetch failed`
 
-If logs show **`[IMEO v2] fetch failed: fetch failed`** with **`code: ENOTFOUND`** (or similar), the hostname cannot be resolved. **Do not use** `https://api.methanedata.unep.org/...` — that subdomain often **does not exist in public DNS**. Use the same origin as the docs: **`https://methanedata.unep.org/api/v2`**. The service rewrites `api.methanedata.unep.org` → `methanedata.unep.org` automatically when present in `IMEO_API_URL`.
+If logs show **`[IMEO v2] fetch failed: fetch failed`** with **`code: ENOTFOUND`** (or similar), the hostname cannot be resolved. **Do not use** `https://api.methanedata.unep.org/...`: that subdomain often **does not exist in public DNS**. Use the same origin as the docs: **`https://methanedata.unep.org/api/v2`**. The service rewrites `api.methanedata.unep.org` → `methanedata.unep.org` automatically when present in `IMEO_API_URL`.
 
 ## Authentication (v2)
 
@@ -41,10 +41,10 @@ X-API-Key: <your-key>
 
 The credential is stored in **`IMEO_API_KEY`** regardless of scheme.
 
-If you still see **401**, verify the token in the docs **Authorize** dialog and copy it again — the value is **un-prefixed** (no `Bearer `). If you see **403** with an HTML body containing `Just a moment...` / `cloudflare`, the request is being blocked by **Cloudflare WAF** before it ever reaches the IMEO API. The service auto-detects this and logs:
+If you still see **401**, verify the token in the docs **Authorize** dialog and copy it again: the value is **un-prefixed** (no `Bearer `). If you see **403** with an HTML body containing `Just a moment...` / `cloudflare`, the request is being blocked by **Cloudflare WAF** before it ever reaches the IMEO API. The service auto-detects this and logs:
 
 ```
-[IMEO v2] BLOCKED BY CLOUDFLARE (403). Not an auth problem — your egress IP is being challenged.
+[IMEO v2] BLOCKED BY CLOUDFLARE (403). Not an auth problem: your egress IP is being challenged.
 ```
 
 ### Request tagging for UNEP support
@@ -53,9 +53,9 @@ Every outbound IMEO request includes **`X-Nigeria-Traffic: 1`** so UNEP technica
 
 ### Cloudflare bypass options
 
-1. **IP whitelisting (recommended)** — email **unep-methanedata@un.org** with the public IPs of your server(s) and ask for API access from those IPs.
-2. **Outbound proxy** — set `IMEO_PROXY_URL=http://user:pass@host:port` to a clean residential or business proxy. Routed via `undici.ProxyAgent`.
-3. **CF clearance cookie (temporary)** — open `https://methanedata.unep.org/api/docs` in a real browser, complete the challenge once, copy the `cf_clearance` (and optionally `__cf_bm`) cookie value, and set `IMEO_COOKIE=cf_clearance=...; __cf_bm=...`. Cookies expire (often 24h) and are tied to your IP, so this is a stop-gap for development only.
+1. **IP whitelisting (recommended)**: email **unep-methanedata@un.org** with the public IPs of your server(s) and ask for API access from those IPs.
+2. **Outbound proxy**: set `IMEO_PROXY_URL=http://user:pass@host:port` to a clean residential or business proxy. Routed via `undici.ProxyAgent`.
+3. **CF clearance cookie (temporary)**: open `https://methanedata.unep.org/api/docs` in a real browser, complete the challenge once, copy the `cf_clearance` (and optionally `__cf_bm`) cookie value, and set `IMEO_COOKIE=cf_clearance=...; __cf_bm=...`. Cookies expire (often 24h) and are tied to your IP, so this is a stop-gap for development only.
 
 ## High-level architecture
 
@@ -88,7 +88,7 @@ flowchart LR
 | Concern | Carbon Mapper | IMEO |
 |---|---|---|
 | Cache key helper | `bboxCacheKey(gasType)` | `imeoCacheKey(gasType)` |
-| Stale fallback key | — (token cache only) | `imeoStaleKey(gasType)` (7-day) |
+| Stale fallback key |: (token cache only) | `imeoStaleKey(gasType)` (7-day) |
 | Service-level cache | via `EmissionService.getAllSourcesCached` (30 minutes) | `ImeoService.fetchAllSourcesCached` (30 minutes) |
 | In-flight dedupe | `EmissionService.fetchPromise` | `ImeoService.fetchPromise` |
 | BBox filter helper | `getSourcesInBBox(all, bbox)` | `getSourcesInBBox(all, bbox)` |
@@ -96,7 +96,7 @@ flowchart LR
 | Refresh path | aggregator `refreshAllSources` (cache `del`) | `refreshSources(bbox, gas)` |
 | Resilience on outage | re-auth on 401, error bubbles | **stale cache fallback** when live fetch fails (Cloudflare blocks, IMEO downtime) |
 
-Practical effect: once IMEO has been fetched **once successfully**, subsequent Cloudflare blocks no longer empty the map — the service serves the **last-known good** result for up to 7 days while logging a `serving STALE cache` warning.
+Practical effect: once IMEO has been fetched **once successfully**, subsequent Cloudflare blocks no longer empty the map: the service serves the **last-known good** result for up to 7 days while logging a `serving STALE cache` warning.
 
 ### V2 endpoints
 
@@ -132,7 +132,7 @@ Practical effect: once IMEO has been fetched **once successfully**, subsequent C
 
 | Aspect | Carbon Mapper | IMEO (Eye on Methane) |
 |--------|----------------|------------------------|
-| **Idea** | Satellite-detected methane **sources** and associated **plume** observations for facilities and regions. | UNEP’s integrated platform: plumes, studies, density/context — aligned with **MARS** and multi-sensor views. |
+| **Idea** | Satellite-detected methane **sources** and associated **plume** observations for facilities and regions. | UNEP’s integrated platform: plumes, studies, density/context: aligned with **MARS** and multi-sensor views. |
 | **API shape** | JWT + `/sources`, `/plumes` per source. | **v2** list endpoints (we use **`/plumes`** first, then **`/events`**). |
 | **In NOGIET** | Full **plume detail** (`/satellite/plumes/:id`) is still **Carbon Mapper–backed**. | IMEO rows are **normalized to map points** (`provider: imeo`) with rates, instrument, dates, and `metadata.imeoResource` = `plume` or `event`. |
 

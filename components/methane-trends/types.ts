@@ -25,11 +25,11 @@ export interface ProviderSeries {
 
 /**
  * A "feed" is (provider, instrument). IMEO returns plumes from many independent
- * satellites (EnMAP, Sentinel-2, GHGSat, …) — each is its own feed and gets its own
+ * satellites (EnMAP, Sentinel-2, GHGSat, …): each is its own feed and gets its own
  * series in the Trends chart. Carbon Mapper / TROPOMI typically resolve to one feed each.
  */
 export interface FeedSeries {
-  /** Stable id — `${provider}::${instrument}` (see `feeds.ts → feedKey`). */
+  /** Stable id: `${provider}::${instrument}` (see `feeds.ts → feedKey`). */
   feedKey: string;
   provider: ProviderId;
   instrument: string;
@@ -52,7 +52,7 @@ export interface GeoLocation {
   count: number;
 }
 
-/** Aggregated row in the Annual Statistics table — works for any group-by mode. */
+/** Aggregated row in the Annual Statistics table: works for any group-by mode. */
 export interface AnnualRow {
   /** Display label (state name, region name, facility name, or "Nigeria"/"Global"). */
   key: string;
@@ -66,7 +66,7 @@ export interface AnnualRow {
   changes: Record<number, number | null>;
   /** Per-provider per-year averages (kept for callers that don't care about instruments). */
   byProvider: Record<ProviderId, Record<number, number | null>>;
-  /** Per-feed (provider+instrument) per-year averages — IMEO splits into multiple entries. */
+  /** Per-feed (provider+instrument) per-year averages: IMEO splits into multiple entries. */
   byFeed: Record<string, {
     feedKey: string;
     provider: ProviderId;
@@ -80,5 +80,5 @@ export interface AnnualRow {
   countsByYear: Record<number, number>;
 }
 
-/** @deprecated kept for legacy imports — use AnnualRow. */
+/** @deprecated kept for legacy imports: use AnnualRow. */
 export type AnnualStateRow = AnnualRow;

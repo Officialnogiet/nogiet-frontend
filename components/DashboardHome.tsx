@@ -98,7 +98,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
   /**
    * 7-day per-source trend.
    *
-   * The previous version aggregated rows from the `alerts` table into a single line —
+   * The previous version aggregated rows from the `alerts` table into a single line N/A
    * which hides which feed (Carbon Mapper / IMEO / TROPOMI) actually drove emissions.
    * This now derives the trend directly from the live satellite sources so each
    * provider gets its own series on the chart.
@@ -269,7 +269,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
         dm ? "bg-[#0b0e14] text-white" : "bg-slate-50 text-gray-900"
       }`}
     >
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <header data-tour="dashboard-header" className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2dd4bf]">National overview</p>
           <h1 className={`mt-1 text-2xl sm:text-3xl font-black tracking-tight ${sectionTitle}`}>Methane monitoring dashboard</h1>
@@ -279,7 +279,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
           Open live map <ArrowRight size={16}/>
         </button>
       </header>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div data-tour="dashboard-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map(({ label, value, icon: Icon, subtitle }) => (
           <div key={label} className={`${cardBase} p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/30 hover:shadow-xl`} title={subtitle}>
             <div className="flex items-start justify-between gap-3">
@@ -300,7 +300,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
         ))}
       </div>
 
-      <div className={cardBase}>
+      <div data-tour="dashboard-trend" className={cardBase}>
         <div className={`border-b px-5 py-4 flex items-start justify-between gap-4 ${cardSectionBorder}`}>
           <div>
             <h2 className={`text-lg font-semibold ${sectionTitle}`}>
@@ -309,7 +309,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
             <p className={`mt-1 text-sm ${muted}`}>
               {hasSatelliteTrend
                 ? `Daily total emission rate by data source (${getUnitLabel(emissionUnit)})`
-                : `No satellite data in the last 7 days yet — chart populates as Carbon Mapper, IMEO and TROPOMI feeds load (${getUnitLabel(emissionUnit)})`}
+                : `No satellite data in the last 7 days yet: chart populates as Carbon Mapper, IMEO and TROPOMI feeds load (${getUnitLabel(emissionUnit)})`}
             </p>
           </div>
           {hasSatelliteTrend && (
@@ -391,7 +391,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className={cardBase}>
+        <div data-tour="dashboard-emitters" className={cardBase}>
           <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
             <h2 className={`text-lg font-semibold ${sectionTitle}`}>
               Top emitters
@@ -445,7 +445,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
           </div>
         </div>
 
-        <div className={cardBase}>
+        <div data-tour="dashboard-alerts" className={cardBase}>
           <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
             <h2 className={`text-lg font-semibold ${sectionTitle}`}>
               Recent alerts
@@ -493,7 +493,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
       </div>
 
       {/* Quick Actions */}
-      <div className={cardBase}>
+      <div data-tour="dashboard-actions" className={cardBase}>
         <div className={`border-b px-5 py-4 ${cardSectionBorder}`}>
           <h2 className={`text-lg font-semibold ${sectionTitle}`}>Quick Actions</h2>
         </div>

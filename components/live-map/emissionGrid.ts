@@ -4,7 +4,7 @@
  * Aggregates point sources (Carbon Mapper + IMEO + ground facilities + measurements)
  * into a square geographic grid, coloring each cell by an emissions intensity proxy
  * scaled to ppb-equivalent thresholds (matches the legend in the client's reference
- * design — "0–1970 ppb", "1970–2000 ppb", … "2080+ ppb"). Cells whose centroid emission
+ * design: "0–1970 ppb", "1970–2000 ppb", … "2080+ ppb"). Cells whose centroid emission
  * intensity exceeds the upper threshold get the darkest fill so they stand out.
  *
  * The grid degrades gracefully: zero points → empty FeatureCollection (no draw artifacts).
@@ -46,7 +46,7 @@ export type EmissionStatistic = "max" | "average" | "sum";
 export interface EmissionPoint {
   longitude: number;
   latitude: number;
-  /** Methane emission rate in kg/hr — typically `emissionRate` on a normalized source. */
+  /** Methane emission rate in kg/hr: typically `emissionRate` on a normalized source. */
   emissionRate: number;
   /** Provider for tooltip / drill-in. */
   provider?: "carbon_mapper" | "imeo" | "tropomi" | "emit" | "ground";
@@ -214,7 +214,7 @@ export function buildEmissionGrid(
 
 /** Resolves a sensible cell size from the current map zoom. */
 export function cellDegForZoom(zoom: number): number {
-  if (zoom >= 11) return 0.04;   // ~4 km — drill-in
+  if (zoom >= 11) return 0.04;   // ~4 km: drill-in
   if (zoom >= 9) return 0.08;
   if (zoom >= 7.5) return 0.15;
   if (zoom >= 6) return 0.25;

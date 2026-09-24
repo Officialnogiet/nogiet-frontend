@@ -32,16 +32,16 @@ export const DOC_GROUPS: DocGroup[] = [
   {
     id: 'getting-started',
     label: 'Getting Started',
-    description: 'High-level overview and how to run the demo.',
+    description: 'Choose a topic or learn what NOGIET does.',
   },
   {
     id: 'walkthrough',
-    label: 'Screen-by-Screen Walkthrough',
-    description: 'A narrative tour of every screen in the portal.',
+    label: 'How to Use the Platform',
+    description: 'Step-by-step help for every screen.',
   },
   {
     id: 'reference',
-    label: 'Technical Reference',
+    label: 'Data & Technical Reference',
     description: 'Feature tracker and provider integration details.',
   },
 ];
@@ -70,16 +70,23 @@ function estimateReadingTime(markdown: string): number {
 // is also used as the default landing page when /docs is opened.
 const RAW_PAGES: Omit<DocPage, 'readingTime'>[] = [
   {
+    slug: 'guide-index',
+    title: 'All platform guides',
+    summary: 'Find a practical guide to every NOGIET screen and integration.',
+    group: 'getting-started',
+    source: '# All platform guides',
+  },
+  {
     slug: 'overview',
     title: 'What NOGIET is and why it matters',
-    summary: 'The one-page elevator pitch — the problem, the users, what success looks like.',
+    summary: 'The one-page elevator pitch: the problem, the users, what success looks like.',
     group: 'getting-started',
     source: overview,
   },
   {
     slug: 'demo-readme',
-    title: 'How to run a live demo',
-    summary: 'The presenter playbook — running order, conventions, and how to start the stack.',
+    title: 'Demo guide for presenters',
+    summary: 'Running order and notes for a live demonstration.',
     group: 'getting-started',
     source: demoReadme,
   },
@@ -99,7 +106,7 @@ const RAW_PAGES: Omit<DocPage, 'readingTime'>[] = [
   },
   {
     slug: 'live-map',
-    title: 'Live Map — the crown jewel',
+    title: 'Live Map',
     summary: 'Square emissions grid, per-source plumes, filters, layers, and drill-in.',
     group: 'walkthrough',
     source: liveMap,
@@ -163,7 +170,7 @@ const RAW_PAGES: Omit<DocPage, 'readingTime'>[] = [
   {
     slug: 'integrations',
     title: 'Satellite Integrations',
-    summary: 'Carbon Mapper, IMEO V2, and TROPOMI — what we ingest and how we authenticate.',
+    summary: 'Carbon Mapper, IMEO V2, and TROPOMI: what we ingest and how we authenticate.',
     group: 'reference',
     source: integrations,
   },
@@ -203,4 +210,24 @@ export function getDocsByGroup(group: DocGroupId): DocPage[] {
   return DOC_PAGES.filter((p) => p.group === group);
 }
 
-export const DEFAULT_DOC_SLUG = DOC_PAGES[0]?.slug ?? 'overview';
+export const DEFAULT_DOC_SLUG = 'guide-index';
+
+export const DOC_FILE_SLUGS: Record<string, string> = {
+  '00-overview.md': 'overview',
+  '01-login-and-auth.md': 'login-and-auth',
+  '02-dashboard-home.md': 'dashboard-home',
+  '03-live-map.md': 'live-map',
+  '04-methane-trends.md': 'methane-trends',
+  '05-data-comparison.md': 'data-comparison',
+  '06-data-explorer.md': 'data-explorer',
+  '07-manage-data.md': 'manage-data',
+  '08-alerts.md': 'alerts',
+  '09-field-data.md': 'field-data',
+  '10-user-management.md': 'user-management',
+  '11-settings.md': 'settings',
+  '12-integrations.md': 'integrations',
+  '13-architecture.md': 'architecture',
+  'README.md': 'demo-readme',
+  'FEATURES.md': 'features',
+  'IMEO_INTEGRATION.md': 'imeo-integration',
+};

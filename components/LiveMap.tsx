@@ -278,7 +278,7 @@ interface LiveMapProps {
   onOpenFilters?: () => void;
   darkMode?: boolean;
   onNavigateAlerts?: () => void;
-  /** Optional navigator to the Methane Trends screen — called from the oil-block detail modal. */
+  /** Optional navigator to the Methane Trends screen: called from the oil-block detail modal. */
   onNavigateMethaneTrends?: () => void;
   filters?: MapFilters;
 }
@@ -295,7 +295,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
   const [error, setError] = useState<string | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<FacilityData | null>(null);
-  // Oil-block detail modal — populated when the user clicks any oil block
+  // Oil-block detail modal: populated when the user clicks any oil block
   // polygon. Contains the polygon props, geometry, derived state/LGA, and
   // centroid; consumed by `OilBlockDetailModal` at the bottom of the render.
   const [selectedOilBlock, setSelectedOilBlock] = useState<OilBlockData | null>(null);
@@ -325,7 +325,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
   const filteredSatRef = useRef<any[]>([]);
 
   const [showLayerPanel, setShowLayerPanel] = useState(false);
-  // Grid legend is collapsed by default — opens via the dedicated toggle button
+  // Grid legend is collapsed by default: opens via the dedicated toggle button
   // in the top-right legend chip. Showing it on every map load was visual noise
   // for clients on small screens where the legend covered key plumes.
   const [showGridLegend, setShowGridLegend] = useState(false);
@@ -378,7 +378,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
 
   // Bridge the vanilla Mapbox oil-block click into React state. Re-registers
   // on every render so the closure captures the latest setSelectedOilBlock
-  // reference (cheap — single function assignment).
+  // reference (cheap: single function assignment).
   useEffect(() => {
     setOilBlockClickHandler((payload: OilBlockClickPayload) => {
       // Compute a rough centroid from the polygon for both the modal display
@@ -428,7 +428,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
     return result;
   }, [facilities, searchQuery, mapFilters.showFacilities, mapFilters.sectors]);
 
-  // Defensive accessors — declared once here so both `filteredSatellite` (above) and
+  // Defensive accessors: declared once here so both `filteredSatellite` (above) and
   // the grid logic (below) share a single computation. Persisted snapshots that
   // predate the v7 store migration can be missing these fields, so we guard.
   const providerSet = useMemo(
@@ -459,7 +459,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
     }
     // Source-legend parity: when the user unchecks a provider OR an individual
     // IMEO instrument in the grid legend, that source must disappear from the
-    // map entirely — not just from the grid layer.
+    // map entirely: not just from the grid layer.
     features = features.filter((s: any) => {
       const provider = (s.provider ?? 'carbon_mapper') as GridProvider;
       if (!providerSet.has(provider)) return false;
@@ -794,7 +794,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
 
   // Latest grid GeoJSON kept in a ref so the stable rebuildAllLayers can re-attach it
   // after a Mapbox style swap (style change wipes all sources/layers, so we need to
-  // recreate them from scratch — including the emissions grid the user wants persisted).
+  // recreate them from scratch: including the emissions grid the user wants persisted).
   const gridGeoJSONRef = useRef<ReturnType<typeof buildEmissionGrid> | null>(null);
 
   const rebuildAllLayers = useCallback((m: mapboxgl.Map) => {
@@ -925,7 +925,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
 
   /**
    * Discover every (provider, instrument) pair returned by the API for the current viewport,
-   * with point counts. No truncation — every distinct instrument is exposed to the legend so
+   * with point counts. No truncation: every distinct instrument is exposed to the legend so
    * the user can pick precisely which ones drive the grid.
    */
   const providerSourceSummaries = useMemo<ProviderSourcesSummary[]>(() => {
@@ -1007,7 +1007,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
   /**
    * Compact "Carbon Mapper · EMIT 14 · IMEO · EnMAP 12 · S-2 5 · GHGSat 3 · TROPOMI 8"
    * Lists every selected provider and every selected instrument under it.
-   * No truncation — the user explicitly asked to see all sources from the API.
+   * No truncation: the user explicitly asked to see all sources from the API.
    */
   const instrumentBreakdown = useMemo(() => {
     const parts: string[] = [];
@@ -1521,7 +1521,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
       1000, 0.45,
     ];
 
-    // Main source glow: ambient halo — sized by plume_count, lit by emission_rate
+    // Main source glow: ambient halo: sized by plume_count, lit by emission_rate
     m.addLayer({
       id: SAT_LAYER_GLOW, type: 'circle', source: SAT_SOURCE_ID,
       paint: {
@@ -1537,7 +1537,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
       },
     });
 
-    // Main source dot — fill = source color, stroke = white (or near-white in dark mode)
+    // Main source dot: fill = source color, stroke = white (or near-white in dark mode)
     m.addLayer({
       id: SAT_LAYER_POINT, type: 'circle', source: SAT_SOURCE_ID,
       paint: {
@@ -1554,7 +1554,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
       },
     });
 
-    // Plume count number centered inside source dot (only if > 1) — zoom responsive
+    // Plume count number centered inside source dot (only if > 1): zoom responsive
     m.addLayer({
       id: SAT_COUNT_LABEL, type: 'symbol', source: SAT_SOURCE_ID,
       filter: ['>', ['get', 'plume_count'], 1],
@@ -1872,7 +1872,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
         </div>
       )}
 
-      {/* "Filtered to nothing" banner — backend returned data but our filter pipeline
+      {/* "Filtered to nothing" banner: backend returned data but our filter pipeline
           (legend toggles, sliders, search) dropped everything. Distinct from the
           error banner because the cause is local UI state, not the backend. */}
       {isFilteredToNothing && !satelliteError && mapLoaded && (
@@ -1881,7 +1881,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
             <Satellite className="flex-shrink-0 mt-0.5 text-amber-500" size={20} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">
-                {globalSatSources.length} source{globalSatSources.length === 1 ? '' : 's'} loaded — filters are hiding them all
+                {globalSatSources.length} source{globalSatSources.length === 1 ? '' : 's'} loaded: filters are hiding them all
               </p>
               <p className={`text-xs mt-1 ${mapUiDark ? 'text-amber-200/70' : 'text-amber-700/80'}`}>
                 The backend returned data, but the current filter selection (legend providers / instruments, or filter panel sliders) excludes every source. Reset the legend or open Filters to widen the selection.
@@ -2093,7 +2093,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
 };
 
 /**
- * Cheap polygon centroid — averages all outer-ring vertices. Good enough for
+ * Cheap polygon centroid: averages all outer-ring vertices. Good enough for
  * "where on the map should we anchor the modal-derived state/LGA lookup"; we
  * deliberately don't pull in turf for this since the few-hundred-vertex max
  * makes a hand-rolled average more than fast enough.

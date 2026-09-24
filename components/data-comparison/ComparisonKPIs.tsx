@@ -70,7 +70,7 @@ const ComparisonKPIs: React.FC<ComparisonKPIsProps> = ({ darkMode, summary }) =>
         <SummaryCell label="Mean satellite" value={`${summary.meanSatellite.toFixed(1)} kg/hr`} dm={dm} />
         <SummaryCell
           label="Sat / Ground ratio"
-          value={summary.meanRatio == null ? '—' : `${summary.meanRatio.toFixed(2)}×`}
+          value={summary.meanRatio == null ? 'N/A' : `${summary.meanRatio.toFixed(2)}×`}
           tone={summary.meanRatio == null ? 'neutral' : summary.meanRatio >= 1.25 ? 'danger' : summary.meanRatio <= 0.75 ? 'caution' : 'positive'}
           dm={dm}
         />

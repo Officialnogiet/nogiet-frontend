@@ -342,7 +342,7 @@ export default FacilityDetail;
 const InfoRow: React.FC<{ label: string; value?: string | null; darkMode: boolean }> = ({ label, value, darkMode }) => (
   <div>
     <p className={`text-[10px] font-bold uppercase tracking-wide ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>{label}</p>
-    <p className={`mt-0.5 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>{value || '—'}</p>
+    <p className={`mt-0.5 text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>{value || 'N/A'}</p>
   </div>
 );
 

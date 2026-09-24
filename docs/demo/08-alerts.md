@@ -22,7 +22,7 @@ view.
 
 Two pathways:
 
-1. **Threshold alerts** — `CronService` runs every minute, calls the satellite
+1. **Threshold alerts**: `CronService` runs every minute, calls the satellite
    aggregator, and for any source whose emission rate exceeds the configured
    facility threshold, calls `NotificationService.evaluateSatelliteSources()`.
    That service inserts an alert row and dispatches:
@@ -30,7 +30,7 @@ Two pathways:
      alerts enabled).
    - **SMS** via Termii (if `TERMII_API_KEY` is set + owner has SMS enabled).
 
-2. **Manual alerts** — admins can also create alerts from the Manage Data desk.
+2. **Manual alerts**: admins can also create alerts from the Manage Data desk.
 
 ## Auto-purge
 

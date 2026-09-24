@@ -56,7 +56,7 @@ const MORE_ITEMS: { id: DashboardView; label: string }[] = [
   { id: 'FIELD_DATA', label: 'Field Data' },
   { id: 'USER_MANAGEMENT', label: 'User Management' },
   { id: 'DATA_FEEDS', label: 'Data Feeds' },
-  { id: 'DOCS', label: 'Documentation' },
+  { id: 'DOCS', label: 'Learn NOGIET' },
   { id: 'SETTINGS', label: 'Settings' },
 ];
 

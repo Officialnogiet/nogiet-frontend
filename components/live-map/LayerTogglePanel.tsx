@@ -16,7 +16,7 @@ interface LayerItem {
   key: keyof MapLayerState;
   label: string;
   icon: React.ReactNode;
-  /** Swatch colour — paired with `boundaryLayers.ts` so the legend matches the map. */
+  /** Swatch colour: paired with `boundaryLayers.ts` so the legend matches the map. */
   color: { dark: string; light: string };
 }
 

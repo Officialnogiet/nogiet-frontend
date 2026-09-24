@@ -25,11 +25,11 @@ A **team members** table (name, email, role, last login, status) with:
 
 ## Workflow
 
-1. **Invite** — Super Admin enters email + role; backend generates a
+1. **Invite**: Super Admin enters email + role; backend generates a
    one-time-use invitation link emailed via Resend.
-2. **First login** — invitee sets a password and lands in the dashboard
+2. **First login**: invitee sets a password and lands in the dashboard
    (or Field Data, depending on role).
-3. **Edit** — change role, name, deactivate. Deactivated users can no longer
+3. **Edit**: change role, name, deactivate. Deactivated users can no longer
    log in but their submissions remain in the audit trail.
 
 ## Demo script

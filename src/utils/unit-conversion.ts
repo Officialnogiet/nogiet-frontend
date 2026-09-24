@@ -25,3 +25,10 @@ export function getUnitLabel(unit: EmissionUnit): string {
 }
 
 export const EMISSION_UNITS: EmissionUnit[] = ["kg/hr", "kg/day", "tonnes/year", "CO2e/hr"];
+
+export const UNIT_LABELS: Record<EmissionUnit, string> = {
+  "kg/hr": "kg/hr",
+  "kg/day": "kg/day",
+  "tonnes/year": "tonnes/year",
+  "CO2e/hr": "CO₂e/hr",
+};

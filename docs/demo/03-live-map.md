@@ -1,4 +1,4 @@
-# 03 · Live Map — the crown jewel
+# 03 · Live Map
 
 > **Source code:** `nogiet-frontend/components/LiveMap.tsx`,
 > `nogiet-frontend/components/live-map/*`,
@@ -13,7 +13,7 @@ spend their entire day here.
 ┌──────────────────────────────────────────────────────────────────────┐
 │  [search bar]                                                        │
 │                                                                      │
-│  [alerts]    Mapbox canvas — Nigeria + viewport          [Layers]    │
+│  [alerts]    Mapbox canvas: Nigeria + viewport          [Layers]    │
 │                                                          [Info]      │
 │                                                                      │
 │              · square emissions grid (ppb-themed)                    │
@@ -42,14 +42,14 @@ spend their entire day here.
 | **Search bar** | Free-text search across facility names, sectors, source names. |
 | **Alerts button** (left) | Pops a panel of unread alerts, with a count badge. |
 | **Layers button** (right, top) | Toggles state boundaries, LGAs, oil blocks, pipelines, satellite imagery basemap, emission grid. |
-| **Info button** (right, top, just below Layers) | Opens the **grid legend** — see below. |
+| **Info button** (right, top, just below Layers) | Opens the **grid legend**: see below. |
 | **Source legend hint** (right, bottom) | Floating "?" button. Opens the **Source Legend** showing every active source/instrument and its color. |
 | **Currently Showing card** (left, bottom) | Shows the active grid configuration: source(s), statistic, time window, instrument breakdown. |
 | **Emission Sources / Plumes Detected** | Two small KPI cards in the bottom-left summarising what's visible. |
 
 ## The grid legend (Info icon, top-right)
 
-A nested **Sources tree** — provider checkboxes with **per-instrument
+A nested **Sources tree**: provider checkboxes with **per-instrument
 sub-checkboxes** underneath:
 
 ```
@@ -58,7 +58,7 @@ Sources                     [Select all | Clear all]
    ☑ ● EMIT                       88
    ☑ ● AVIRIS-NG                  54
 ☑ ● IMEO (UNEP)                 264
-   ☑ ● EnMAP — EnMAP - DLR       124
+   ☑ ● EnMAP: EnMAP - DLR       124
    ☑ ● Sentinel-2                 87
    ☑ ● GHGSat                     31
    ☑ ● PRISMA                     15
@@ -69,7 +69,7 @@ Sources                     [Select all | Clear all]
 - Provider checkbox toggles the whole feed; a checkbox shows the **indeterminate**
   state when only some instruments under it are enabled.
 - Per-instrument sub-checkbox lets the user focus on a single satellite.
-- **Removing a source from the legend removes it from the entire map** — both
+- **Removing a source from the legend removes it from the entire map**: both
   the grid AND the individual plume markers (filter parity).
 
 ## The source legend (Help icon, bottom-right)
@@ -89,6 +89,13 @@ never has to translate between screens.
 5. Use **Layers** to toggle oil blocks → see which lease the plume sits on.
 6. If the plume needs investigation, the Alerts panel surfaces existing alerts
    for that source.
+
+### Inspect an oil block and open its trends
+
+1. Turn on **Oil blocks** in Layers if the outlines are hidden.
+2. Click an oil block. Its detail panel shows the operator, location, facilities and satellite-detected sources inside the boundary. A zero means no matching data is currently available.
+3. Select **View Methane Trends** at the bottom of the panel. The Trends screen opens with that block selected and includes observations whose coordinates fall within its polygon.
+4. Use **Clear** beside the block context to return to the Nigeria-wide trend, or return to the map with the close button.
 
 ## Data flow
 
@@ -135,7 +142,7 @@ SatelliteAggregator.fetchAllSources()
 
 | What | Color from |
 |---|---|
-| Plume marker fill | `feedColor(provider, instrument)` — Carbon Mapper teal, IMEO instrument-hashed, TROPOMI violet |
+| Plume marker fill | `feedColor(provider, instrument)`: Carbon Mapper teal, IMEO instrument-hashed, TROPOMI violet |
 | Plume halo size | Plume count (more plumes = bigger halo) |
 | Plume halo opacity | Emission rate (hotter source = brighter halo) |
 | Grid cell fill | Methane intensity binned to the IMEO ppb scale (0-1970, 1970-2000, …, 2080+) |
@@ -144,10 +151,10 @@ SatelliteAggregator.fetchAllSources()
 ## Demo script
 
 > ► *"This is the heart of NOGIET. The colored squares behind everything is the
-> emissions grid — darker means more methane. Sitting on top, you have one dot
+> emissions grid: darker means more methane. Sitting on top, you have one dot
 > per detected plume, **colored by the satellite that detected it**. UNEP IMEO
-> is an aggregator, so they actually return data from many satellites — EnMAP,
-> Sentinel-2, GHGSat — each gets its own color. Click any source on/off in the
+> is an aggregator, so they actually return data from many satellites: EnMAP,
+> Sentinel-2, GHGSat: each gets its own color. Click any source on/off in the
 > legend on the right and the map updates immediately. The little ? button in
 > the bottom-right gives the audience a colour key without having to open the
 > filter modal."*

@@ -19,7 +19,7 @@ export const STATE_ZONES: Record<string, string> = {
   'Zamfara': 'North West',
 };
 
-/** Tolerant lookup — accepts state names with extra suffixes / casing differences. */
+/** Tolerant lookup: accepts state names with extra suffixes / casing differences. */
 export function getRegionForState(stateName: string | null | undefined): string | null {
   if (!stateName) return null;
   const lower = stateName.trim().toLowerCase();

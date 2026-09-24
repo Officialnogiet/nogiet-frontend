@@ -1,4 +1,4 @@
-# 12 · Integrations — Carbon Mapper, IMEO, TROPOMI
+# 12 · Integrations: Carbon Mapper, IMEO, TROPOMI
 
 > **Source code:** `noiget-backend/src/services/third-party/*`.
 > Detailed IMEO writeup: [../IMEO_INTEGRATION.md](../IMEO_INTEGRATION.md).
@@ -76,10 +76,10 @@ for the full troubleshooting playbook.
 
 ## Demo script
 
-> ► *"NOGIET integrates three independent satellite providers — Carbon Mapper,
+> ► *"NOGIET integrates three independent satellite providers: Carbon Mapper,
 > UNEP IMEO, TROPOMI. We don't pick a winner; we show all three side-by-side,
 > color-coded by source. IMEO is special because it's an aggregator that
-> re-publishes data from many satellites — we expose every underlying
+> re-publishes data from many satellites: we expose every underlying
 > instrument so you can see exactly which sensor caught which plume. We cache
 > for 24 hours, fall back to a 7-day stale copy if the upstream is down, so
 > the map never goes blank during a network blip."*

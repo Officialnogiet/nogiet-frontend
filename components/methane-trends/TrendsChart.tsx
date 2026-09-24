@@ -28,7 +28,7 @@ const PROVIDER_GROUP_LABEL: Record<ProviderId, string> = {
   emit: 'NASA EMIT',
 };
 
-/** Recharts dataKey safe — feedKey contains "::" which is fine in JS object keys. */
+/** Recharts dataKey safe: feedKey contains "::" which is fine in JS object keys. */
 const valueKey = (feedKey: string) => `${feedKey}::value`;
 const rollingKey = (feedKey: string) => `${feedKey}::rolling`;
 const countKey = (feedKey: string) => `${feedKey}::count`;
@@ -90,7 +90,7 @@ const TrendsChart: React.FC<TrendsChartProps> = ({ darkMode, series, title, desc
         ))}
       </header>
 
-      {/* Custom grouped legend — Recharts default can't represent provider hierarchy well */}
+      {/* Custom grouped legend: Recharts default can't represent provider hierarchy well */}
       <FeedLegend
         darkMode={darkMode}
         grouped={grouped}
@@ -117,7 +117,7 @@ const TrendsChart: React.FC<TrendsChartProps> = ({ darkMode, series, title, desc
               <Line
                 key={`${s.feedKey}-value`}
                 hide={hidden.has(s.feedKey)}
-                name={`${s.label} — methane`}
+                name={`${s.label}: methane`}
                 type="monotone"
                 dataKey={valueKey(s.feedKey)}
                 stroke={s.color}
@@ -129,7 +129,7 @@ const TrendsChart: React.FC<TrendsChartProps> = ({ darkMode, series, title, desc
               <Line
                 key={`${s.feedKey}-rolling`}
                 hide={hidden.has(s.feedKey)}
-                name={`${s.label} — rolling avg`}
+                name={`${s.label}: rolling avg`}
                 type="monotone"
                 dataKey={rollingKey(s.feedKey)}
                 stroke={s.color}
@@ -161,7 +161,7 @@ const TrendsChart: React.FC<TrendsChartProps> = ({ darkMode, series, title, desc
                 key={s.feedKey}
                 hide={hidden.has(s.feedKey)}
                 dataKey={(row: any) => coveragePct(row[countKey(s.feedKey)])}
-                name={`${s.label} — coverage`}
+                name={`${s.label}: coverage`}
                 fill={s.color}
                 opacity={0.9}
                 isAnimationActive={false}

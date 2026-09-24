@@ -48,7 +48,7 @@ const EmissionSummaryCard: React.FC<EmissionSummaryCardProps> = ({
         transition-all
       `}
     >
-      {/* Compact summary line — always visible. Switches to a stacked title
+      {/* Compact summary line: always visible. Switches to a stacked title
           treatment from lg: upward to match the original card design. */}
       <button
         type="button"
@@ -70,7 +70,7 @@ const EmissionSummaryCard: React.FC<EmissionSummaryCardProps> = ({
         </span>
       </button>
 
-      {/* Expanded detail — collapses on mobile, always rendered on desktop
+      {/* Expanded detail: collapses on mobile, always rendered on desktop
           (`lg:block`) so the long-form view matches the previous default. */}
       <div className={`${open ? 'block' : 'hidden'} lg:block mt-4 lg:mt-6 grid grid-cols-2 lg:grid-cols-1 gap-4 lg:gap-5`}>
         <div>

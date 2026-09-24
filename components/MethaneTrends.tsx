@@ -165,7 +165,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
     return () => { cancelled = true; };
   }, [baseObservations, facilities]);
 
-  // Scope filter — narrows the dataset before chart + table aggregation. For
+  // Scope filter: narrows the dataset before chart + table aggregation. For
   // 'nigeria' we pass through; for 'state' we match the resolved state name;
   // for 'oilBlock' we look up each observation's containing oil block via the
   // shared point-in-polygon helper (same one the live map uses, so the trends
@@ -204,7 +204,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
     return buildAnnualTable(scopedEnriched, years, groupBy, globalLabel);
   }, [scopedEnriched, years, groupBy, scope.name]);
 
-  // Distinct Nigerian states extracted from the enriched data — used to
+  // Distinct Nigerian states extracted from the enriched data: used to
   // populate the scope dropdown so the user can switch between Nigeria-wide
   // and any state they have observations for.
   const availableStates = useMemo(() => {
@@ -273,7 +273,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
 
   // Scope dropdown serializes to "kind:name" so we can round-trip the union
   // type through a plain <select>. Oil-block scope only ever arrives via
-  // drill-in from the live map — not selectable in the dropdown — so we add
+  // drill-in from the live map: not selectable in the dropdown: so we add
   // a one-off option for it when active so the dropdown reflects current state.
   const scopeValue = `${scope.kind}:${scope.name}`;
   const scopeHeading = scope.kind === 'oilBlock'
@@ -282,12 +282,12 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
 
   return (
     <div className={`flex-1 overflow-y-auto ${surface}`}>
-      <header className="px-5 md:px-8 pt-7 md:pt-10 pb-5 mx-auto">
+      <header data-tour="trends-header" className="px-5 md:px-8 pt-7 md:pt-10 pb-5 mx-auto">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-500">Analytics</p>
             <h1 className={`mt-1 text-2xl md:text-3xl font-black tracking-tight ${headingColor} truncate`}>
-              Methane Trends — {scopeHeading}
+              Methane Trends: {scopeHeading}
             </h1>
             <p className={`text-sm mt-1 ${subColor}`}>
               {scope.kind === 'oilBlock'
@@ -472,7 +472,7 @@ const FetchingPanel: React.FC<{ dm: boolean; text: string }> = ({ dm, text }) =>
         {text}
       </p>
       <p className={`mt-1.5 text-[11px] ${dm ? 'text-gray-500' : 'text-gray-500'}`}>
-        Hang tight — pulling from Carbon Mapper, IMEO (UNEP) and TROPOMI feeds, then resolving each point to a Nigerian state and nearest facility.
+        Hang tight: pulling from Carbon Mapper, IMEO (UNEP) and TROPOMI feeds, then resolving each point to a Nigerian state and nearest facility.
       </p>
     </div>
   </div>

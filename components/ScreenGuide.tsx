@@ -5,12 +5,12 @@ import type { DashboardView } from '../types';
 const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: string[] }> = {
   DASHBOARD_HOME: {
     title: 'Dashboard Overview',
-    description: 'Your central command center for methane emission monitoring across all Nigerian oil and gas facilities.',
+    description: 'Your starting point for a national view of facilities, satellite observations, ground measurements, and alerts.',
     tips: [
-      'KPI cards show real-time facility counts, active satellite sources, total emission rates, and weekly alerts.',
-      'The trend chart displays emission patterns over time. Use the unit selector in Settings to change units.',
-      'Top emitters table highlights facilities with the highest aggregate readings.',
-      'Recent alerts show the 5 latest emission threshold breaches.',
+      'KPI cards show registered facilities, satellite-detected sources, their combined emission rate, and alerts from the past week. Figures depend on available data.',
+      'The seven-day chart separates daily satellite observations by provider. Choose your preferred emission unit in Settings.',
+      'Top emitters ranks facilities by the total of their recorded ground measurements.',
+      'Recent alerts shows the five newest threshold alerts. Quick Actions opens the map, alerts, or data management.',
     ],
   },
   LIVE_MAP: {
@@ -19,7 +19,7 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
     tips: [
       'Click any orange dot to view satellite source details (emission rate, plume count, instrument).',
       'Click green facility markers to see ground-truth measurement history.',
-      'The square emissions grid colors each cell by methane intensity — click any cell to drill in.',
+      'The square emissions grid colors each cell by methane intensity: click any cell to drill in.',
       'Use the source/statistic dropdowns in the legend to switch between IMEO, Carbon Mapper, or "All".',
       'Cells with thicker dark borders indicate alerts that exceed the configured threshold.',
       'Open Filters to narrow by state, LGA, oil block, operator, emission range, or satellite provider.',
@@ -92,7 +92,7 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
       'Select a facility, then enter your GPS coordinates, methane reading, and conditions.',
       'Attach photos of equipment or site conditions.',
       'Submissions go through an approval workflow before being added to the main dataset.',
-      'Works offline — submissions are queued and synced when connectivity returns.',
+      'Works offline: submissions are queued and synced when connectivity returns.',
     ],
   },
   USER_MANAGEMENT: {
@@ -108,19 +108,19 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
     title: 'Settings',
     description: 'Configure your personal preferences and platform-wide settings.',
     tips: [
-      'Choose your preferred emission unit (kg/hr, kg/day, tonnes/year, CO₂e/hr).',
+      'Choose the emission unit used across dashboard figures and charts.',
       'Toggle dark/light mode for comfortable viewing.',
-      'Configure alert thresholds and email notification preferences.',
-      'Change map style between standard, satellite, light, and dark views.',
+      'Configure the default alert threshold and email notification preference.',
+      'Choose a default region and map style, or restart the guided tour at any time.',
     ],
   },
   DOCS: {
     title: 'Documentation',
-    description: 'A page-by-page narrative of the NOGIET portal — what each screen does, the data behind it, and how the satellite integrations work.',
+    description: 'A page-by-page narrative of the NOGIET portal: what each screen does, the data behind it, and how the satellite integrations work.',
     tips: [
-      'Start with the Overview to get the elevator pitch — problem, users, and what success looks like.',
+      'Start with the Overview to get the elevator pitch: problem, users, and what success looks like.',
       'Walk through the Walkthrough section to see every screen explained the way you would demo it.',
-      'Search the entire docs from the sidebar — matches title, summary, and the raw markdown body.',
+      'Search the entire docs from the sidebar: matches title, summary, and the raw markdown body.',
       'The right-hand "On this page" panel jumps to any section; headings have copyable # links.',
       'The Reference group has the Carbon Mapper / IMEO / TROPOMI integration deep-dive and the system architecture.',
     ],
@@ -130,9 +130,10 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
 interface ScreenGuideProps {
   darkMode: boolean;
   screenKey: DashboardView | string;
+  onStartTour?: () => void;
 }
 
-const ScreenGuide: React.FC<ScreenGuideProps> = ({ darkMode, screenKey }) => {
+const ScreenGuide: React.FC<ScreenGuideProps> = ({ darkMode, screenKey, onStartTour }) => {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const guide = SCREEN_GUIDES[screenKey];
@@ -164,6 +165,8 @@ const ScreenGuide: React.FC<ScreenGuideProps> = ({ darkMode, screenKey }) => {
               : 'bg-white text-gray-500 border border-gray-200 hover:text-teal-600 hover:border-teal-300'
         }`}
         title="Screen guide"
+        aria-label={open ? "Close screen guide" : "Open screen guide"}
+        aria-expanded={open}
       >
         {open ? <X size={18} /> : <HelpCircle size={20} />}
       </button>
@@ -198,6 +201,7 @@ const ScreenGuide: React.FC<ScreenGuideProps> = ({ darkMode, screenKey }) => {
               </div>
             ))}
           </div>
+          {onStartTour && <div className={`border-t px-5 py-4 ${dm ? 'border-[#1e2430]' : 'border-gray-100'}`}><button type="button" onClick={() => { setOpen(false); onStartTour(); }} className="nogiet-button nogiet-button-primary inline-flex w-full">Start guided tour</button></div>}
         </div>
       )}
     </>

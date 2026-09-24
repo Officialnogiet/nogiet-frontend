@@ -231,8 +231,8 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
         </p>
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* LEFT — Form */}
-          <div className="w-full lg:w-[680px] lg:flex-shrink-0">
+          {/* LEFT: Form */}
+          <div data-tour="field-data-form" className="w-full lg:w-[680px] lg:flex-shrink-0">
             <div className={`rounded-2xl border p-4 shadow-sm sm:p-6 ${shell}`}>
               <h2 className="text-base font-bold tracking-tight sm:text-lg">New submission</h2>
 
@@ -366,11 +366,11 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
                   <div className={`space-y-3 rounded-xl border p-4 ${inner}`}>
                     <h3 className="text-sm font-bold text-[#009688]">Review</h3>
                     <dl className="space-y-2 text-sm">
-                      <ReviewRow darkMode={darkMode} label="Facility" value={selectedFacility?.name ?? "—"} />
-                      <ReviewRow darkMode={darkMode} label="Coordinates" value={latitude != null && longitude != null ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` : "—"} mono />
-                      <ReviewRow darkMode={darkMode} label="Weather" value={weatherConditions.trim() || "—"} />
-                      <ReviewRow darkMode={darkMode} label="Equipment" value={equipmentUsed.trim() || "—"} />
-                      <ReviewRow darkMode={darkMode} label="Methane" value={methaneReading || "—"} highlight />
+                      <ReviewRow darkMode={darkMode} label="Facility" value={selectedFacility?.name ?? "N/A"} />
+                      <ReviewRow darkMode={darkMode} label="Coordinates" value={latitude != null && longitude != null ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` : "N/A"} mono />
+                      <ReviewRow darkMode={darkMode} label="Weather" value={weatherConditions.trim() || "N/A"} />
+                      <ReviewRow darkMode={darkMode} label="Equipment" value={equipmentUsed.trim() || "N/A"} />
+                      <ReviewRow darkMode={darkMode} label="Methane" value={methaneReading || "N/A"} highlight />
                       <ReviewRow darkMode={darkMode} label="Photos" value={String(photos.length)} />
                       {notes.trim() && (
                         <div>
@@ -417,13 +417,13 @@ export const FieldDataForm: React.FC<FieldDataFormProps> = ({ darkMode }) => {
             </div>
           </div>
 
-          {/* RIGHT — Past submissions */}
-          <div className="min-w-0 flex-1">
+          {/* RIGHT: Past submissions */}
+          <div data-tour="field-data-submissions" className="min-w-0 flex-1">
             <div className={`rounded-2xl border shadow-sm ${shell}`}>
               <div className={`border-b px-5 py-4 ${darkMode ? "border-[#1e2430]" : "border-gray-200"}`}>
                 <h3 className="text-base font-bold">Past field submissions</h3>
                 <p className={`mt-0.5 text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                  {isAdmin ? "All submissions — review and approve/reject below." : "Your submissions for the selected facility."}
+                  {isAdmin ? "All submissions: review and approve/reject below." : "Your submissions for the selected facility."}
                 </p>
               </div>
               <div className="max-h-[calc(100vh-280px)] overflow-y-auto p-4 sm:p-5">

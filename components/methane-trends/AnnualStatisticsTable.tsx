@@ -14,14 +14,14 @@ interface AnnualStatisticsTableProps {
   onDownloadCsv?: () => void;
 }
 
-const formatVal = (v: number | null | undefined) => v == null ? '—' : v.toFixed(1);
+const formatVal = (v: number | null | undefined) => v == null ? 'N/A' : v.toFixed(1);
 const formatPct = (v: number | null | undefined) => {
   if (v == null) return '';
   const sign = v >= 0 ? '+' : '';
   return `(${sign}${v.toFixed(1)}%)`;
 };
 const formatGeo = (g: AnnualRow['geo']) =>
-  g ? `${g.latitude.toFixed(3)}°, ${g.longitude.toFixed(3)}°` : '—';
+  g ? `${g.latitude.toFixed(3)}°, ${g.longitude.toFixed(3)}°` : 'N/A';
 
 const GROUP_LABELS: Record<GroupByMode, { col: string; helper: string; pseudoRow: string }> = {
   state: {
@@ -106,7 +106,7 @@ const AnnualStatisticsTable: React.FC<AnnualStatisticsTableProps> = ({
           <h2 className={`text-lg md:text-xl font-bold ${heading}`}>Annual Statistics</h2>
           <p className={`text-xs md:text-sm mt-1 ${sub}`}>
             Annual average methane readings across wide regions, with year-over-year change.
-            Click a row to expand the per-source breakdown — Carbon Mapper, TROPOMI, and each individual IMEO instrument
+            Click a row to expand the per-source breakdown: Carbon Mapper, TROPOMI, and each individual IMEO instrument
             (EnMAP, Sentinel-2, GHGSat, …) appear on their own line.
           </p>
         </div>
@@ -177,7 +177,7 @@ const AnnualStatisticsTable: React.FC<AnnualStatisticsTableProps> = ({
                     <td className={`px-4 py-3 font-semibold align-top ${labelBold}`}>{row.key}</td>
                     {showRegionCol && (
                       <td className={`px-4 py-3 align-top ${labelBold}`}>
-                        {row.region ?? <span className={sub}>—</span>}
+                        {row.region ?? <span className={sub}>N/A</span>}
                       </td>
                     )}
                     {showGeoCol && (
@@ -194,7 +194,7 @@ const AnnualStatisticsTable: React.FC<AnnualStatisticsTableProps> = ({
                             {formatGeo(row.geo)}
                           </a>
                         ) : (
-                          <span className={`text-[11px] ${sub}`}>—</span>
+                          <span className={`text-[11px] ${sub}`}>N/A</span>
                         )}
                       </td>
                     )}
@@ -302,7 +302,7 @@ const ExpandedFeedRow: React.FC<{
               {grouped.length === 0 ? (
                 <tr>
                   <td colSpan={years.length + 2} className={`px-4 py-3 text-center ${sub}`}>
-                    No per-source data — observations were aggregated without provider attribution.
+                    No per-source data: observations were aggregated without provider attribution.
                   </td>
                 </tr>
               ) : (

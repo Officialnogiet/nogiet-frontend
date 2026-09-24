@@ -10,9 +10,11 @@ import {
   Rocket,
   Compass,
   Wrench,
+  ArrowRight,
 } from 'lucide-react';
 import {
   DEFAULT_DOC_SLUG,
+  DOC_FILE_SLUGS,
   DOC_GROUPS,
   DOC_PAGES,
   type DocGroupId,
@@ -24,6 +26,7 @@ import { renderMarkdown, type TocEntry } from './markdown';
 
 interface DocsProps {
   darkMode: boolean;
+  onClose: () => void;
 }
 
 const GROUP_ICON: Record<DocGroupId, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -32,9 +35,12 @@ const GROUP_ICON: Record<DocGroupId, React.ComponentType<{ size?: number; classN
   reference: Wrench,
 };
 
-const Docs: React.FC<DocsProps> = ({ darkMode }) => {
+const Docs: React.FC<DocsProps> = ({ darkMode, onClose }) => {
   const dm = darkMode;
-  const [activeSlug, setActiveSlug] = useState<string>(DEFAULT_DOC_SLUG);
+  const [activeSlug, setActiveSlug] = useState<string>(() => {
+    const requested = new URLSearchParams(window.location.search).get('guide');
+    return requested && getDocBySlug(requested) ? requested : DEFAULT_DOC_SLUG;
+  });
   const [query, setQuery] = useState('');
   const [navOpen, setNavOpen] = useState(false);
   const [activeHeading, setActiveHeading] = useState<string>('');
@@ -96,6 +102,14 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
     return () => observer.disconnect();
   }, [rendered.html]);
 
+  // A guide can be shared as /app?guide=<slug> after sign-in.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (activeSlug === DEFAULT_DOC_SLUG) url.searchParams.delete('guide');
+    else url.searchParams.set('guide', activeSlug);
+    window.history.replaceState(window.history.state, '', url);
+  }, [activeSlug]);
+
   // Reset scroll + close mobile drawer when the user switches docs.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
@@ -110,9 +124,18 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
     if (!container) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement | null;
+      const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
       if (!anchor) return;
-      const id = anchor.getAttribute('href')!.slice(1);
+      const href = anchor.getAttribute('href') ?? '';
+      const filename = decodeURIComponent(href.split('#')[0].split('/').pop() ?? '');
+      const linkedSlug = DOC_FILE_SLUGS[filename];
+      if (linkedSlug) {
+        e.preventDefault();
+        setActiveSlug(linkedSlug);
+        return;
+      }
+      if (!href.startsWith('#')) return;
+      const id = href.slice(1);
       const el = container.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
       if (!el) return;
       e.preventDefault();
@@ -143,7 +166,7 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
   const groupedFilter = (group: DocGroupId): DocPage[] =>
     filteredPages.filter((p) => p.group === group);
 
-  // Visible groups when filtering — only show a group header if it has matches.
+  // Visible groups when filtering: only show a group header if it has matches.
   const visibleGroups = useMemo(
     () => DOC_GROUPS.filter((g) => groupedFilter(g.id).length > 0),
     [filteredPages],
@@ -158,8 +181,17 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
 
   return (
     <div className={`h-full flex flex-col ${surface}`}>
-      {/* Header bar — same teal-on-neutral pattern as the rest of the app. */}
+      {/* Header bar: same teal-on-neutral pattern as the rest of the app. */}
       <header className={`border-b ${dm ? 'border-[#1e2430]' : 'border-gray-200'} px-4 md:px-8 py-4 flex items-center gap-3`}>
+        <button
+          type="button"
+          onClick={onClose}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${dm ? 'border-[#2d364a] text-gray-200 hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+          aria-label="Close Learn NOGIET and return to app"
+          title="Return to app"
+        >
+          <X size={18} />
+        </button>
         <button
           onClick={() => setNavOpen((v) => !v)}
           className={`lg:hidden p-2 rounded-lg ${dm ? 'bg-[#12161f] border border-[#1e2430] text-gray-300' : 'bg-white border border-gray-200 text-gray-700'}`}
@@ -172,10 +204,10 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
         </div>
         <div className="min-w-0">
           <h1 className={`text-base md:text-lg font-bold leading-tight ${dm ? 'text-white' : 'text-gray-900'}`}>
-            NOGIET Documentation
+            Learn NOGIET
           </h1>
           <p className={`text-[11px] md:text-xs ${subtle} truncate`}>
-            Page-by-page walkthrough of the portal, satellite integrations, and architecture.
+            Practical guides for every screen, plus data and system references.
           </p>
         </div>
       </header>
@@ -264,7 +296,7 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
           />
         )}
 
-        {/* MIDDLE — rendered doc -------------------------------------------- */}
+        {/* MIDDLE: rendered doc -------------------------------------------- */}
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-y-auto relative">
           <article className="max-w-3xl mx-auto px-5 md:px-10 py-8 md:py-12">
             {/* Page header card with breadcrumb + meta */}
@@ -282,28 +314,45 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
               <p className={`mt-2 text-sm md:text-base leading-relaxed ${dm ? 'text-gray-400' : 'text-gray-600'}`}>
                 {activeDoc.summary}
               </p>
-              <div className={`mt-4 flex items-center gap-4 text-xs ${subtle}`}>
-                <span className="flex items-center gap-1.5">
-                  <Clock size={12} />
-                  {activeDoc.readingTime} min read
-                </span>
-                <span>·</span>
-                <span className="font-mono text-[11px]">{activeDoc.slug}.md</span>
-              </div>
+              {activeSlug !== DEFAULT_DOC_SLUG && <div className={`mt-4 flex items-center gap-1.5 text-xs ${subtle}`}>
+                <Clock size={12} />
+                {activeDoc.readingTime} min read
+              </div>}
             </div>
 
+            {activeSlug === DEFAULT_DOC_SLUG && (
+              <div className="mb-8">
+                <div className={`rounded-2xl border p-5 md:p-6 ${card}`}>
+                  <h3 className={`text-lg font-bold ${dm ? 'text-white' : 'text-gray-900'}`}>Start with the screen you need</h3>
+                  <p className={`mt-2 text-sm leading-6 ${subtle}`}>Every guide opens here in the app. Choose a topic below or search by name in the guide menu. Use the ? button for help on the screen you are viewing.</p>
+                </div>
+                {DOC_GROUPS.map((group) => (
+                  <section key={group.id} className="mt-8">
+                    <h3 className={`mb-3 text-xs font-bold uppercase tracking-widest ${dm ? 'text-teal-300' : 'text-teal-700'}`}>{group.label}</h3>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {getDocsByGroup(group.id).filter((page) => page.slug !== DEFAULT_DOC_SLUG).map((page) => (
+                        <button key={page.slug} type="button" onClick={() => setActiveSlug(page.slug)} className={`group flex items-start justify-between gap-3 rounded-2xl border p-4 text-left transition hover:border-teal-500/50 ${card}`}>
+                          <span><strong className={`block text-sm ${dm ? 'text-white' : 'text-gray-900'}`}>{page.title}</strong><span className={`mt-1 block text-xs leading-5 ${subtle}`}>{page.summary}</span></span>
+                          <ArrowRight size={16} className="mt-1 shrink-0 text-teal-500 transition group-hover:translate-x-0.5" />
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
             <div
               ref={contentRef}
-              className={`docs-prose ${dm ? 'docs-prose-dark' : 'docs-prose-light'}`}
+              className={`docs-prose ${activeSlug === DEFAULT_DOC_SLUG ? 'hidden' : ''} ${dm ? 'docs-prose-dark' : 'docs-prose-light'}`}
               dangerouslySetInnerHTML={{ __html: rendered.html }}
             />
 
             {/* Prev / next navigation at the foot of every page. */}
-            <PageFooter
+            {activeSlug !== DEFAULT_DOC_SLUG && <PageFooter
               active={activeDoc}
               onNavigate={setActiveSlug}
               dm={dm}
-            />
+            />}
           </article>
 
           {/* Floating "back to top" */}
@@ -322,7 +371,7 @@ const Docs: React.FC<DocsProps> = ({ darkMode }) => {
           </button>
         </div>
 
-        {/* RIGHT — TOC ------------------------------------------------------ */}
+        {/* RIGHT: TOC ------------------------------------------------------ */}
         <aside className={`hidden xl:block w-64 flex-shrink-0 border-l ${dm ? 'border-[#1e2430]' : 'border-gray-200'}`}>
           <div className="sticky top-0 px-5 py-8">
             <p className={`text-[10px] font-bold uppercase tracking-widest ${subtle} mb-3`}>

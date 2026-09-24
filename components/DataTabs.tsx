@@ -60,12 +60,12 @@ interface UnifiedSource {
 }
 
 function providerLabel(p: string, metadata?: Record<string, unknown>): string {
-  if (p === "imeo") return metadata?.imeoFeedMode === "manual" ? "IMEO — Manual upload" : "IMEO — API";
+  if (p === "imeo") return metadata?.imeoFeedMode === "manual" ? "IMEO: Manual upload" : "IMEO: API";
   return p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatDate(s: string | undefined): string {
-  if (!s) return "—";
+  if (!s) return "N/A";
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString();
 }
@@ -232,11 +232,11 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
       id: f.id,
       name: f.name,
       sourceType: "Facility" as const,
-      providerOrOperator: f.operator || "—",
+      providerOrOperator: f.operator || "N/A",
       latitude: f.latitude,
       longitude: f.longitude,
       emissionRate: 0,
-      gas: "—",
+      gas: "N/A",
       lastDate: "",
     }));
     return [...satRows, ...facRows];
@@ -419,7 +419,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
         rows.push([
           instrument.toUpperCase(), s.name, providerLabel(s.provider),
           rateStr(s.emissionRate, emissionUnit), s.gas, s.plumeCount,
-          s.sector || "—", formatDate(s.lastDetected),
+          s.sector || "N/A", formatDate(s.lastDetected),
         ]);
       });
     });
@@ -431,8 +431,8 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
     const rows = filteredSortedRates.map((f) => [
       f.name,
       providerLabel(f.provider),
-      f.instrument || "—",
-      f.sector || "—",
+      f.instrument || "N/A",
+      f.sector || "N/A",
       rateStr(f.emissionRate, emissionUnit),
       f.gas,
       f.persistence,
@@ -480,7 +480,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
       p.status.replace(/_/g, " "),
       p.sourceCount,
       rateStr(p.totalEmissionRate, emissionUnit),
-      p.latestDetection ? formatDate(p.latestDetection) : "—",
+      p.latestDetection ? formatDate(p.latestDetection) : "N/A",
     ]);
     const metadataRows = completenessAudit.facilityMetadata.map((m) => [
       "Facility metadata",
@@ -734,7 +734,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                               <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(s.emissionRate, emissionUnit)}</td>
                               <td className={`px-3 py-2 ${tdCls}`}>{s.gas}</td>
                               <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{s.plumeCount}</td>
-                              <td className={`px-3 py-2 ${tdCls}`}>{s.sector || "—"}</td>
+                              <td className={`px-3 py-2 ${tdCls}`}>{s.sector || "N/A"}</td>
                               <td className={`px-3 py-2 ${tdCls}`}>{formatDate(s.lastDetected)}</td>
                             </tr>
                           ))}
@@ -799,8 +799,8 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                             {providerLabel(f.provider)}
                           </span>
                         </td>
-                        <td className={`px-3 py-2 ${tdCls}`}>{f.instrument || <span className={dm ? "text-gray-600" : "text-gray-400"}>—</span>}</td>
-                        <td className={`px-3 py-2 ${tdCls}`}>{f.sector || <span className={dm ? "text-gray-600" : "text-gray-400"}>—</span>}</td>
+                        <td className={`px-3 py-2 ${tdCls}`}>{f.instrument || <span className={dm ? "text-gray-600" : "text-gray-400"}>N/A</span>}</td>
+                        <td className={`px-3 py-2 ${tdCls}`}>{f.sector || <span className={dm ? "text-gray-600" : "text-gray-400"}>N/A</span>}</td>
                         <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(f.emissionRate, emissionUnit)}</td>
                         <td className={`px-3 py-2 ${tdCls}`}>{f.gas}</td>
                         <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{f.persistence}</td>
@@ -1011,7 +1011,7 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                           </td>
                           <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{p.sourceCount}</td>
                           <td className={`px-3 py-2 tabular-nums ${tdCls}`}>{rateStr(p.totalEmissionRate, emissionUnit)}</td>
-                          <td className={`px-3 py-2 ${tdCls}`}>{p.latestDetection ? formatDate(p.latestDetection) : "—"}</td>
+                          <td className={`px-3 py-2 ${tdCls}`}>{p.latestDetection ? formatDate(p.latestDetection) : "N/A"}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -51,7 +51,7 @@ interface OilBlockDetailModalProps {
   /** All currently-visible facilities (filtered by the live map filters). */
   facilities: FacilityLike[];
   onClose: () => void;
-  /** Fires when the user clicks "View Methane Trends" — parent navigates and may prefill filters. */
+  /** Fires when the user clicks "View Methane Trends": parent navigates and may prefill filters. */
   onOpenMethaneTrends: (context: { blockName: string; state: string | null; lga: string | null }) => void;
   /** Optional callback for "fly to block centroid" action. */
   onFlyTo?: (lng: number, lat: number) => void;
@@ -136,7 +136,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
     );
   }, [block.geometry, satelliteSources]);
 
-  // Facilities likewise — only those inside the polygon.
+  // Facilities likewise: only those inside the polygon.
   const facilitiesInside = useMemo<FacilityLike[]>(() => {
     if (!block.geometry || facilities.length === 0) return [];
     return facilities.filter((f) =>
@@ -167,7 +167,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
     [plumesInside],
   );
 
-  // Theme tokens — match the FacilityDetailModal so the two detail surfaces
+  // Theme tokens: match the FacilityDetailModal so the two detail surfaces
   // feel like the same component family.
   const shell = dm ? 'bg-[#12161f] text-white' : 'bg-white text-gray-900';
   const headerBg = dm ? 'bg-[#0b0e14]/50 border-[#1e2430]' : 'bg-gray-50/50 border-gray-100';
@@ -176,8 +176,8 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
   const card = dm ? 'bg-[#1a1f2b] border-[#1e2430]' : 'bg-gray-50 border-gray-200';
   const divider = dm ? 'border-[#1e2430]' : 'border-gray-100';
 
-  const stateLabel = block.state ?? '—';
-  const lgaLabel = block.lga ?? '—';
+  const stateLabel = block.state ?? 'N/A';
+  const lgaLabel = block.lga ?? 'N/A';
 
   return (
     <div
@@ -209,7 +209,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
             </h2>
             <p className={`text-xs md:text-sm mt-1 ${muted} flex items-center gap-2`}>
               <MapPin size={14} className="text-teal-500" />
-              {stateLabel} State{lgaLabel !== '—' ? ` · ${lgaLabel} LGA` : ''}
+              {stateLabel} State{lgaLabel !== 'N/A' ? ` · ${lgaLabel} LGA` : ''}
               {operator ? <> · <Building2 size={12} className="inline" /> {operator}</> : null}
             </p>
           </div>
@@ -236,7 +236,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
 
         {/* Body: left sidebar (block metadata) + right content (plumes + facilities) */}
         <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-          {/* Sidebar — block metadata */}
+          {/* Sidebar: block metadata */}
           <div className={`w-full md:w-80 md:border-r border-b md:border-b-0 ${sidebar} overflow-y-auto p-6 md:p-8 space-y-5 flex-shrink-0`}>
             <SectionTitle dm={dm}>Block info</SectionTitle>
             {isEditing ? (
@@ -263,13 +263,13 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
               </div>
             ) : (
               <>
-                <MetaRow dm={dm} label="Operator" value={operator || '—'} />
-                <MetaRow dm={dm} label="Terrain" value={terrain || '—'} />
-                <MetaRow dm={dm} label="Basin" value={basin || '—'} />
-                <MetaRow dm={dm} label="Area" value={areaKm2 || '—'} />
-                <MetaRow dm={dm} label="Contract" value={contract || '—'} />
-                <MetaRow dm={dm} label="Rights" value={rights || '—'} />
-                <MetaRow dm={dm} label="Awarded" value={awardDate || '—'} />
+                <MetaRow dm={dm} label="Operator" value={operator || 'N/A'} />
+                <MetaRow dm={dm} label="Terrain" value={terrain || 'N/A'} />
+                <MetaRow dm={dm} label="Basin" value={basin || 'N/A'} />
+                <MetaRow dm={dm} label="Area" value={areaKm2 || 'N/A'} />
+                <MetaRow dm={dm} label="Contract" value={contract || 'N/A'} />
+                <MetaRow dm={dm} label="Rights" value={rights || 'N/A'} />
+                <MetaRow dm={dm} label="Awarded" value={awardDate || 'N/A'} />
               </>
             )}
 
@@ -355,7 +355,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className={`text-sm font-bold tabular-nums ${p.emissionRate > 0 ? (dm ? 'text-teal-300' : 'text-teal-700') : muted}`}>
-                            {p.emissionRate > 0 ? `${p.emissionRate.toFixed(1)} kg/h` : '—'}
+                            {p.emissionRate > 0 ? `${p.emissionRate.toFixed(1)} kg/h` : 'N/A'}
                           </p>
                           <p className={`text-[10px] ${muted}`}>{p.plumeCount} plume{p.plumeCount === 1 ? '' : 's'}</p>
                         </div>
@@ -363,7 +363,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
                     ))}
                     {plumesInside.length > topEmitters.length && (
                       <div className={`px-4 py-2 text-[11px] text-center ${muted}`}>
-                        + {plumesInside.length - topEmitters.length} more — open Methane Trends for the full list.
+                        + {plumesInside.length - topEmitters.length} more: open Methane Trends for the full list.
                       </div>
                     )}
                   </div>

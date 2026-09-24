@@ -1,5 +1,5 @@
 /**
- * "Feed" = (provider, instrument) — the unit of comparison on the Methane Trends chart.
+ * "Feed" = (provider, instrument): the unit of comparison on the Methane Trends chart.
  *
  * IMEO is an aggregator that returns plumes from many independent satellites/sensors
  * (EnMAP, Sentinel-2, Sentinel-5P, GHGSat, PRISMA, MethaneSAT, …). Treating them as
@@ -14,7 +14,7 @@ import type { ProviderId } from "./types";
 export const FEED_KEY_DELIMITER = "::";
 const UNKNOWN_INSTRUMENT = "Unknown instrument";
 
-/** Stable lookup key — `${provider}::${instrument}`. */
+/** Stable lookup key: `${provider}::${instrument}`. */
 export type FeedKey = string;
 
 export interface Feed {
@@ -39,7 +39,7 @@ export function parseFeedKey(key: FeedKey): { provider: ProviderId; instrument: 
   };
 }
 
-/** Friendly instrument label — strips long supplier suffixes ("EnMAP - DLR" → "EnMAP"). */
+/** Friendly instrument label: strips long supplier suffixes ("EnMAP - DLR" → "EnMAP"). */
 export function shortInstrument(name: string | null | undefined): string {
   const n = normalizeInstrument(name);
   if (n === UNKNOWN_INSTRUMENT) return n;
@@ -91,12 +91,12 @@ const PROVIDER_BASE: Record<ProviderId, string> = {
   emit: "#f59e0b",          // amber
 };
 
-/** IMEO instrument palette — distinct hues so multiple feeds are visually separable. */
+/** IMEO instrument palette: distinct hues so multiple feeds are visually separable. */
 const IMEO_INSTRUMENT_PALETTE = [
-  "#0ea5e9", // sky-500    — Sentinel-5P / TROPOMI-style
+  "#0ea5e9", // sky-500   : Sentinel-5P / TROPOMI-style
   "#14b8a6", // teal-500
-  "#f59e0b", // amber-500  — EnMAP-style yellow-orange
-  "#ec4899", // pink-500   — GHGSat-style hot pink
+  "#f59e0b", // amber-500 : EnMAP-style yellow-orange
+  "#ec4899", // pink-500  : GHGSat-style hot pink
   "#8b5cf6", // violet-500
   "#10b981", // emerald-500
   "#f97316", // orange-500
@@ -115,7 +115,7 @@ function hashString(s: string): number {
   return Math.abs(h);
 }
 
-/** Color for a feed — provider canonical for CM/TROPOMI, instrument-hashed palette for IMEO. */
+/** Color for a feed: provider canonical for CM/TROPOMI, instrument-hashed palette for IMEO. */
 export function feedColor(provider: ProviderId, instrument: string): string {
   if (provider !== "imeo") return PROVIDER_BASE[provider];
   const inst = shortInstrument(instrument);

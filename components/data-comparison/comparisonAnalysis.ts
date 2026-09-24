@@ -5,7 +5,7 @@
  * detections (from any provider), produce a structured "do they agree?" view.
  *
  * The product question is: *Does what the satellite saw match what the operator
- * reports?* Everything here flows from that — pairing, verdicts, summaries.
+ * reports?* Everything here flows from that: pairing, verdicts, summaries.
  */
 
 import type { ProviderId } from '../methane-trends/types';

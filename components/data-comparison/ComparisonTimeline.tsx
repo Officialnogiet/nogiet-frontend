@@ -35,7 +35,7 @@ const ComparisonTimeline: React.FC<ComparisonTimelineProps> = ({ darkMode, satel
     };
   }, [expanded]);
 
-  /** One Recharts series per (provider, instrument) — same hues as the live map. */
+  /** One Recharts series per (provider, instrument): same hues as the live map. */
   const satelliteSeries = useMemo(() => {
     const byFeed = new Map<string, { provider: ProviderId; instrument: string; rows: ScatterPoint[] }>();
     for (const s of satellite) {

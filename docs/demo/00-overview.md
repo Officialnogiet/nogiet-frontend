@@ -1,8 +1,8 @@
-# 00 · Overview — what NOGIET is and why it matters
+# 00 · Overview: what NOGIET is and why it matters
 
 ## In one sentence
 
-NOGIET is a **government-grade methane emissions tracker** for Nigeria's oil &
+NOGIET is a **methane emissions tracker** for Nigeria's oil &
 gas sector that combines **satellite plume detections** from three independent
 providers with **ground-truth measurements** submitted by facility operators,
 then surfaces actionable insight through a single map, dashboard, and alert system.
@@ -12,7 +12,7 @@ then surfaces actionable insight through a single map, dashboard, and alert syst
 Methane is the second most powerful driver of climate change after CO₂, with
 human activity contributing roughly a third of current warming. Nigeria's oil &
 gas sector is one of West Africa's largest methane sources, but the country has
-historically lacked a **single source of truth** for emissions — multiple
+historically lacked a **single source of truth** for emissions: multiple
 agencies, multiple datasets, no shared canvas.
 
 NOGIET is that canvas.
@@ -62,11 +62,11 @@ All of this without leaving the browser, without spreadsheet juggling, and with
 
 ## What's deliberately NOT in scope (yet)
 
-- **Real-time alerting** — alerts fire on an hourly cron, not the second a
+- **Real-time alerting**: alerts fire on an hourly cron, not the second a
   satellite detects a plume.
-- **Predictive modelling** — the platform shows what *is* happening, not what
+- **Predictive modelling**: the platform shows what *is* happening, not what
   *will* happen. Models can be added on top later.
-- **Multi-country deployment** — the Nigeria boundary, oil-block, and pipeline
+- **Multi-country deployment**: the Nigeria boundary, oil-block, and pipeline
   data are baked in. The architecture is portable but not multi-tenant today.
 
 ## Architecture in one diagram
@@ -80,7 +80,7 @@ All of this without leaving the browser, without spreadsheet juggling, and with
                                    │ pull every cron tick
                                    ▼
                   ┌────────────────────────────────────┐
-                  │  Backend — Node.js (Fastify)       │
+                  │  Backend: Node.js (Fastify)       │
                   │  · SatelliteAggregatorService      │
                   │  · Per-provider service classes    │
                   │  · Redis cache + stale fallback    │
@@ -90,7 +90,7 @@ All of this without leaving the browser, without spreadsheet juggling, and with
                                    │ REST + Socket.IO
                                    ▼
                 ┌──────────────────────────────────────┐
-                │  Frontend — React + Vite + Mapbox    │
+                │  Frontend: React + Vite + Mapbox    │
                 │  · Live Map (square grid + points)   │
                 │  · Methane Trends (per-feed charts)  │
                 │  · Dashboard, Alerts, Manage Data    │

@@ -160,7 +160,7 @@ const SatelliteDataPanel: React.FC<{ darkMode: boolean; facility: FacilityData }
           <a href={facility.plumeImageUrl} target="_blank" rel="noopener noreferrer" className="block">
             <img
               src={facility.plumeImageUrl}
-              alt={`IMEO methane plume detection — ${facility.name}`}
+              alt={`IMEO methane plume detection: ${facility.name}`}
               loading="lazy"
               className={`w-full max-w-md rounded-xl border ${darkMode ? 'border-[#1e2430]' : 'border-gray-200'}`}
             />

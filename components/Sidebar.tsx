@@ -74,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       )
     },
     {
-      id: 'DOCS' as DashboardView, label: 'Documentation', icon: (
+      id: 'DOCS' as DashboardView, label: 'Learn NOGIET', icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
       )
     },
@@ -100,7 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     // aside would expand to fit its intrinsic content height and the footer
     // (user pill + Logout) would slide off-screen with no scroll mechanism.
     <aside className={`${bgColor} ${borderColor} border-r h-full flex flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
-      {/* Brand Section — flex-shrink-0 prevents the brand from collapsing
+      {/* Brand Section: flex-shrink-0 prevents the brand from collapsing
           when the middle nav is taller than available space. */}
       <div className="p-6 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3 overflow-hidden">
@@ -118,7 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Middle nav — `min-h-0` lets this flex child shrink below its content
+      {/* Middle nav: `min-h-0` lets this flex child shrink below its content
           size so `overflow-y-auto` can actually scroll. On a ~600px-tall
           viewport (small laptop at 125% scaling) the menu + system sections
           exceed the available space; without scroll, the user pill and Logout
@@ -225,7 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Footer — flex-shrink-0 so the user pill + Logout always stay visible
+      {/* Footer: flex-shrink-0 so the user pill + Logout always stay visible
           even when the middle nav scrolls. */}
       <div className={`p-4 border-t flex-shrink-0 ${darkMode ? 'border-gray-800' : 'border-gray-50'} space-y-4`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>

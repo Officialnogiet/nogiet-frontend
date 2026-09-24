@@ -1,4 +1,4 @@
-# 13 · Architecture — under the hood
+# 13 · Architecture: under the hood
 
 A short technical reference for the engineering members of the audience. Every
 file path below is verified against the running code.
@@ -83,7 +83,7 @@ file path below is verified against the running code.
 - **Realtime:** Socket.IO client; `useSocket` hook invalidates the right query
   keys on `alert:new` and `satellite:update` events.
 - **Routing:** simple enum-based screen switcher (`AuthScreen` /
-  `DashboardView`) — there's no react-router because the app is single-page
+  `DashboardView`): there's no react-router because the app is single-page
   with sidebar navigation.
 
 ## Backend stack
@@ -101,7 +101,7 @@ file path below is verified against the running code.
 
 Every column is typed in `noiget-backend/src/db/schema.ts`. Migrations live in
 `noiget-backend/src/db/migrations/`. There's no production migration runner
-inside the app yet — migrations are applied manually with `drizzle-kit push`
+inside the app yet: migrations are applied manually with `drizzle-kit push`
 during deployments.
 
 ## Configuration

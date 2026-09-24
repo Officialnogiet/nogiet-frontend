@@ -10,27 +10,27 @@ A facility-by-facility "ground truth vs satellite" reconciliation tool.
 
 The user picks a facility from a dropdown; the page splits into:
 
-- **Left rail** — facility metadata, ground submission form, and a list of
+- **Left rail**: facility metadata, ground submission form, and a list of
   ground readings + nearby satellite sources (each can be excluded with a
   toggle).
-- **Centre** — a bar chart that compares **monthly ground measurements** vs
+- **Centre**: a bar chart that compares **monthly ground measurements** vs
   **monthly satellite emission rates**.
-- **Top of centre** — a **comparison mode toggle**:
-  - **Closest match** — picks the single satellite source nearest to the
+- **Top of centre**: a **comparison mode toggle**:
+  - **Closest match**: picks the single satellite source nearest to the
     facility coordinates.
-  - **Area sources** — includes every satellite source within a configurable
+  - **Area sources**: includes every satellite source within a configurable
     radius (default 300 km).
 
 ## Workflow
 
 1. Pick a facility.
 2. Set the comparison mode + radius.
-3. The left rail lists every nearby satellite source with its distance — uncheck
+3. The left rail lists every nearby satellite source with its distance: uncheck
    any that look unrelated (e.g. a different operator next door).
 4. The chart updates in real time to reflect the active selection.
-5. **Add ground reading** — collapsible form that submits a new methane reading
+5. **Add ground reading**: collapsible form that submits a new methane reading
    for the facility (date, methodology, latitude/longitude).
-6. **Export** — generate a PDF or CSV for the comparison.
+6. **Export**: generate a PDF or CSV for the comparison.
 
 ## Why this screen exists
 

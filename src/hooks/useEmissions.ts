@@ -150,7 +150,7 @@ export function useSubmitGroundData() {
       const parsed = submitGroundDataSchema.parse(data);
       if (isOffline()) {
         await queuePendingSubmission(parsed);
-        return { data: null, message: "Queued offline — will sync when online" };
+        return { data: null, message: "Queued offline: will sync when online" };
       }
       return emissionsApi.submitGroundData(parsed);
     },
@@ -319,7 +319,7 @@ export function useCreateFieldSubmission() {
     }) => {
       if (isOffline()) {
         await queuePendingSubmission({ ...data, type: "field-submission" });
-        return { data: null, message: "Queued offline — will sync when online" };
+        return { data: null, message: "Queued offline: will sync when online" };
       }
       return emissionsApi.createFieldSubmission(data);
     },

@@ -3,7 +3,7 @@ import { X, ChevronDown, Calendar } from 'lucide-react';
 import { useDashboardStore } from '../src/stores/dashboard.store';
 import { useFacilityFilterOptions } from '../src/hooks/useEmissions';
 import { useSettingsStore } from '../src/stores/settings.store';
-import { EMISSION_UNITS, type EmissionUnit } from '../src/utils/unit-conversion';
+import { EMISSION_UNITS, UNIT_LABELS, type EmissionUnit } from '../src/utils/unit-conversion';
 
 export interface MapFilters {
   showFacilities: boolean;
@@ -71,12 +71,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   emit: 'NASA EMIT',
 };
 
-const UNIT_LABELS: Record<EmissionUnit, string> = {
-  'kg/hr': 'kg/hr',
-  'kg/day': 'kg/day',
-  'tonnes/year': 'tonnes/year',
-  'CO2e/hr': 'CO₂e/hr',
-};
+
 
 const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, filters, onApply }) => {
   const [local, setLocal] = useState<MapFilters>(filters ?? DEFAULT_FILTERS);
