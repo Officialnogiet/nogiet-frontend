@@ -401,11 +401,13 @@ button:active:not(:disabled) { transform: translateY(1px); }
 }
 .nogiet-button-primary {
   color: #fff;
-  background-color: #171717;
-  border-color: #525252;
+  background-color: #064b42;
+  border-color: #064b42;
 }
-.nogiet-button-primary:hover:not(:disabled) { background-color: #00796b; border-color: #00796b; }
-.nogiet-button-primary:active:not(:disabled) { background-color: #005b50; border-color: #005b50; }
+.nogiet-button-primary:hover:not(:disabled) { background-color: #043d36; border-color: #043d36; }
+.nogiet-button-primary:active:not(:disabled) { background-color: #032f2a; border-color: #032f2a; }
+.nogiet-home .nogiet-button-on-dark { background-color: #fff; border-color: #fff; color: #064b42; }
+.nogiet-home .nogiet-button-on-dark:hover:not(:disabled) { background-color: #e5f1e9; border-color: #e5f1e9; }
 .nogiet-button:focus-visible { outline: 2px solid var(--nogiet-accent); outline-offset: 3px; }
 .nogiet-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
