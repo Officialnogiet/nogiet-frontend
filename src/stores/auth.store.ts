@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   resetEmail: "",
-  setResetEmail: (email) => set({ resetEmail: email }),
+  setResetEmail: (email) => set({ resetEmail: email, resetCode: "" }),
   resetCode: "",
   setResetCode: (code) => set({ resetCode: code }),
 }));

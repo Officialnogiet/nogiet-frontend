@@ -98,7 +98,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ darkMode, onClose, data, titl
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          className="nogiet-button nogiet-button-primary w-full flex"
         >
           <Download size={16} />
           {exporting ? 'Exporting...' : 'Export'}

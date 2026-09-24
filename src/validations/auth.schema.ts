@@ -14,14 +14,14 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const verifyCodeSchema = z.object({
   email: z.string().email(),
-  code: z.string().length(6, "Code must be 6 digits"),
+  code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
 });
 export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
 
 export const resetPasswordSchema = z
   .object({
     email: z.string().email(),
-    code: z.string().min(1),
+    code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")

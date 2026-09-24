@@ -31,7 +31,7 @@ const Success: React.FC<SuccessProps> = ({ onNavigate }) => {
 
           <button
             onClick={() => onNavigate(AuthScreen.LOGIN)}
-            className="w-full bg-[#009688] text-white py-3.5 rounded-lg font-semibold text-lg hover:bg-[#00796b] transition-colors shadow-sm"
+            className="nogiet-button nogiet-button-primary inline-flex w-full"
           >
             Sign in
           </button>

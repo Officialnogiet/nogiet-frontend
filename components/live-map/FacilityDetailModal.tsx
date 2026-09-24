@@ -49,7 +49,7 @@ const FacilityDetailModal: React.FC<FacilityDetailModalProps> = ({
         <button onClick={onShareReport} className={`flex items-center gap-2 px-7 py-3 border-2 rounded-2xl font-medium transition-all ${darkMode ? 'border-[#1e2430] text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-500 hover:bg-white hover:border-teal-200'}`}>
           <Share2 size={18} className="text-gray-500" /> Share Report
         </button>
-        <button onClick={onExportCSV} className="flex items-center gap-2 bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-teal-700 shadow-lg transition-all">
+        <button onClick={onExportCSV} className="nogiet-button nogiet-button-primary flex">
           <Download size={18} /> Export Data
         </button>
       </div>

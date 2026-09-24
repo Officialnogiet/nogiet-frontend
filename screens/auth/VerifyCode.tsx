@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthScreen } from '../../types';
-import { useVerifyCode } from '../../src/hooks/useAuth';
+import { useVerifyCode, useForgotPassword } from '../../src/hooks/useAuth';
 import { useAuthStore } from '../../src/stores/auth.store';
 import logoFull from '../../assets/logo-full.png';
 import Footer from '../../components/Footer';
@@ -11,9 +11,19 @@ interface VerifyCodeProps {
 
 const VerifyCode: React.FC<VerifyCodeProps> = ({ onNavigate }) => {
   const [codes, setCodes] = useState(['', '', '', '', '', '']);
-  const [timer, setTimer] = useState(3540);
+  const [timer, setTimer] = useState(60);
   const resetEmail = useAuthStore((s) => s.resetEmail);
   const verifyMutation = useVerifyCode();
+  const resendMutation = useForgotPassword();
+
+  useEffect(() => {
+    if (!resetEmail) onNavigate(AuthScreen.FORGOT_PASSWORD);
+  }, [resetEmail, onNavigate]);
+
+  const resendCode = () => {
+    verifyMutation.reset();
+    resendMutation.mutate(resetEmail, { onSuccess: () => { setTimer(60); setCodes(['', '', '', '', '', '']); } });
+  };
 
   useEffect(() => {
     const interval = setInterval(() => setTimer((p) => (p > 0 ? p - 1 : 0)), 1000);
@@ -27,11 +37,19 @@ const VerifyCode: React.FC<VerifyCodeProps> = ({ onNavigate }) => {
   };
 
   const handleInput = (index: number, value: string) => {
-    if (value.length > 1) value = value[0];
+    value = value.replace(/\D/g, '').slice(-1);
     const next = [...codes];
     next[index] = value;
     setCodes(next);
     if (value && index < 5) document.getElementById(`code-${index + 1}`)?.focus();
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const digits = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!digits) return;
+    event.preventDefault();
+    setCodes(Array.from({ length: 6 }, (_, index) => digits[index] ?? ''));
+    document.getElementById(`code-${Math.min(digits.length, 5)}`)?.focus();
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
@@ -56,25 +74,31 @@ const VerifyCode: React.FC<VerifyCodeProps> = ({ onNavigate }) => {
         <div className="w-full max-w-lg text-center space-y-12">
           <div className="space-y-2">
             <h2 className="text-4xl font-bold text-gray-900">Enter verification code</h2>
-            <p className="text-gray-500">We have sent a verification code to your email</p>
+            <p className="text-gray-500">If an account exists for {resetEmail}, a code has been sent. Codes expire after one hour.</p>
           </div>
-          {verifyMutation.isError && (
-            <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{verifyMutation.error?.message}</p>
+          {(verifyMutation.isError || resendMutation.isError) && (
+            <p role="alert" className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{verifyMutation.error?.message ?? resendMutation.error?.message}</p>
           )}
-          <div className="flex justify-center gap-3">
+          <div className="mx-auto grid w-full max-w-sm grid-cols-6 gap-2 sm:gap-3">
             {codes.map((code, idx) => (
-              <input key={idx} id={`code-${idx}`} type="text" value={code}
+              <input key={idx} id={`code-${idx}`} type="text" inputMode="numeric" autoComplete={idx === 0 ? "one-time-code" : "off"} aria-label={`Code digit ${idx + 1}`} value={code}
+                onPaste={handlePaste}
                 onChange={(e) => handleInput(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                className="w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 focus:outline-none bg-white border-gray-200 text-gray-900 focus:border-[#009688]" />
+                className="w-full min-w-0 h-14 sm:h-16 text-center text-2xl font-bold rounded-xl border-2 focus:outline-none bg-white border-gray-200 text-gray-900 focus:border-[#009688]" />
             ))}
           </div>
           <div className="space-y-6">
-            <button onClick={handleVerify} disabled={verifyMutation.isPending || codes.some(c => !c)}
-              className="w-full max-w-sm bg-[#009688] text-white py-4 rounded-lg font-semibold text-lg hover:bg-[#00796b] transition-colors disabled:opacity-60">
+            <button onClick={handleVerify} disabled={verifyMutation.isPending || resendMutation.isPending || codes.some(c => !c)}
+              className="nogiet-button nogiet-button-primary inline-flex w-full max-w-sm">
               {verifyMutation.isPending ? 'Verifying...' : 'Verify'}
             </button>
-            <p className="text-sm text-gray-500">Resend code in <span className="text-[#009688] font-semibold">{formatTime(timer)}</span></p>
+            <div>
+              <button type="button" onClick={resendCode} disabled={timer > 0 || resendMutation.isPending || verifyMutation.isPending} className="text-sm font-semibold text-primary-dark hover:underline disabled:opacity-60">
+                {resendMutation.isPending ? 'Sending code...' : timer > 0 ? `Resend code in ${formatTime(timer)}` : 'Resend code'}
+              </button>
+              {resendMutation.isSuccess && <p role="status" className="mt-3 text-sm text-gray-500">If an account exists, a new code has been sent. Use the most recent code.</p>}
+            </div>
           </div>
         </div>
       </main>

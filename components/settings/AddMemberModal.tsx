@@ -84,7 +84,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ darkMode, onClose, onSu
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Temporary Password</p>
             <div className="flex items-center gap-2">
               <code className={`flex-1 rounded-lg px-3 py-2 font-mono text-sm ${darkMode ? 'bg-[#1a1f2b] text-teal-400' : 'bg-white text-teal-700'}`}>{createdPassword}</code>
-              <button onClick={handleCopy} className="flex items-center gap-1.5 rounded-lg bg-[#009688] px-3 py-2 text-xs font-bold text-white hover:bg-[#00796b] transition">
+              <button onClick={handleCopy} className="nogiet-button nogiet-button-primary flex">
                 {copied ? <CheckCircle className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? 'Copied' : 'Copy'}
               </button>
@@ -93,7 +93,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ darkMode, onClose, onSu
               The user should change this password after their first login.
             </p>
           </div>
-          <button onClick={onClose} className="w-full py-4 bg-[#009688] text-white rounded-2xl font-extrabold text-sm hover:bg-[#00796b] transition-all shadow-xl shadow-[#009688]/20">
+          <button onClick={onClose} className="nogiet-button nogiet-button-primary inline-flex w-full">
             Done
           </button>
         </div>
@@ -168,7 +168,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ darkMode, onClose, onSu
 
           <div className="flex gap-4 pt-4">
             <button type="button" onClick={onClose} className={`flex-1 py-4 border rounded-2xl font-extrabold text-sm transition-all ${darkMode ? 'bg-[#12161f] border-[#1e2430] text-gray-400 hover:bg-gray-800' : 'bg-white border-gray-100 text-gray-800 hover:bg-gray-50'}`}>Cancel</button>
-            <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-[#009688] text-white rounded-2xl font-extrabold text-sm hover:bg-[#00796b] transition-all shadow-xl shadow-[#009688]/20 disabled:opacity-50">
+            <button type="submit" disabled={isSaving} className="nogiet-button nogiet-button-primary inline-flex flex-1">
               {isSaving ? 'Creating...' : 'Create'}
             </button>
           </div>

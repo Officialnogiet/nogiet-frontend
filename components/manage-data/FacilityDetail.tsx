@@ -202,7 +202,7 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
             {editError && <p className="text-red-500 text-xs font-bold">{editError}</p>}
             <div className="flex flex-col sm:flex-row gap-3">
               <button type="submit" disabled={updateMutation.isPending}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-50">
+                className="nogiet-button nogiet-button-primary inline-flex">
                 <Save size={15} /> {updateMutation.isPending ? 'Saving...' : 'Save Facility'}
               </button>
               <button type="button" onClick={() => { setIsEditing(false); setEditError(null); setEditForm(facilityToForm(facility)); }}
@@ -271,7 +271,7 @@ const FacilityDetail: React.FC<Props> = ({ darkMode, facility, onBack }) => {
 
           {formError && <p className="text-red-500 text-xs font-bold">{formError}</p>}
           <button type="submit" disabled={submitMutation.isPending}
-            className="w-full bg-teal-600 text-white py-3 rounded-2xl font-bold hover:bg-teal-700 transition-all disabled:opacity-50 text-sm">
+            className="nogiet-button nogiet-button-primary inline-flex w-full">
             {submitMutation.isPending ? 'Submitting...' : 'Submit Measurement'}
           </button>
         </form>

@@ -128,7 +128,7 @@ const FacilityPopup: React.FC<FacilityPopupProps> = ({ darkMode, facility, onExp
 
     <button
       onClick={onExpand}
-      className="w-full mt-5 bg-teal-600 text-white py-3 rounded-2xl font-bold hover:bg-teal-700 transition-all flex items-center justify-center gap-2"
+      className="nogiet-button nogiet-button-primary w-full mt-5 flex"
     >
       View Full Details <ChevronRight size={16} />
     </button>

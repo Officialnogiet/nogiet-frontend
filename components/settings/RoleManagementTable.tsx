@@ -120,7 +120,7 @@ const RoleManagementTable: React.FC<RoleManagementTableProps> = ({
                           <button
                             onClick={() => onSavePermissions(role.rawName, localPerms)}
                             disabled={isSaving}
-                            className="w-full mt-2 py-3 bg-[#009688] text-white rounded-xl font-bold text-sm hover:bg-[#00796b] transition-all shadow-lg shadow-[#009688]/20 disabled:opacity-50"
+                            className="nogiet-button nogiet-button-primary inline-flex w-full mt-2"
                           >
                             {isSaving ? 'Saving...' : 'Save'}
                           </button>

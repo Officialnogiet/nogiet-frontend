@@ -255,7 +255,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
                 <button
                   onClick={saveOilBlock}
                   disabled={isSaving}
-                  className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 transition-colors"
+                  className="nogiet-button nogiet-button-primary w-full inline-flex"
                 >
                   {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   Save changes
@@ -425,7 +425,7 @@ const OilBlockDetailModal: React.FC<OilBlockDetailModalProps> = ({
           </button>
           <button
             onClick={() => onOpenMethaneTrends({ blockName, state: block.state ?? null, lga: block.lga ?? null })}
-            className="order-1 sm:order-2 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-2xl text-sm font-bold hover:bg-teal-700 shadow-lg transition-all"
+            className="nogiet-button nogiet-button-primary order-1 sm:order-2 inline-flex"
           >
             <CalendarClock size={16} /> View Methane Trends
             <ChevronRight size={14} />

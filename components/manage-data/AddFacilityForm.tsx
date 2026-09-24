@@ -151,7 +151,7 @@ const AddFacilityForm: React.FC<AddFacilityFormProps> = ({ darkMode }) => {
         {formError && <p className="text-red-500 text-xs font-bold">{formError}</p>}
         {successMsg && <p className="text-teal-500 text-xs font-bold">{successMsg}</p>}
         <button type="submit" disabled={mutation.isPending}
-          className="w-full bg-[#009688] text-white py-4 rounded-2xl font-extrabold hover:bg-[#00796b] transition-all shadow-xl shadow-[#009688]/20 text-base disabled:opacity-50">
+          className="nogiet-button nogiet-button-primary inline-flex w-full">
           {mutation.isPending ? 'Creating...' : 'Add Facility'}
         </button>
       </form>

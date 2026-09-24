@@ -35,19 +35,15 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const errorMessage = validationError ?? (loginMutation.isError ? loginMutation.error?.message : undefined);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-white">
+    <div className="nogiet-public-theme flex flex-col md:flex-row min-h-screen bg-white">
       <LoginHeroPanel />
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 pt-16 md:px-8 md:pb-8 md:pt-20 lg:px-12 lg:pb-12 relative bg-white">
-        <button type="button" onClick={() => onNavigate(AuthScreen.HOME)} className="absolute left-6 top-5 text-xs font-bold text-slate-500 hover:text-teal-700 md:left-8 md:top-7">← Back to homepage</button>
+        <button type="button" onClick={() => onNavigate(AuthScreen.HOME)} className="absolute left-6 top-5 text-xs font-bold text-neutral-500 hover:text-primary-dark md:left-8 md:top-7">← Back to homepage</button>
         <div className="w-full max-w-[390px]">
-          <div className="md:hidden flex items-center justify-center mb-8">
-            <div className="w-full"><img src={logoFull} alt="NOGIET" className="h-8 w-auto mx-auto" /><PartnerLogos /></div>
-          </div>
-          <div className="flex justify-center mb-8">
-            <div className="hidden md:flex w-full flex-col items-center mb-8">
-              <img src={logoFull} alt="NOGIET" className="h-10 w-auto" />
-              <PartnerLogos />
-            </div>
+          <div className="mb-9 flex w-full flex-col items-center">
+            <img src={logoFull} alt="NOGIET" className="h-9 w-auto" />
+            <p className="mt-4 text-center text-xs leading-5 text-neutral-500 md:hidden">The Nigerian Oil and Gas Industry Emission Tracker</p>
+            <PartnerLogos />
           </div>
           <LoginForm
             email={email} setEmail={setEmail}

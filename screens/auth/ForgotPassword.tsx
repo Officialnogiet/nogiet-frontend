@@ -50,17 +50,17 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigate }) => {
             <p className="text-gray-500 leading-relaxed">Enter your email address and we'll send you password reset instructions.</p>
           </div>
           {errorMessage && (
-            <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{errorMessage}</p>
+            <p role="alert" className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{errorMessage}</p>
           )}
           <form className="space-y-6 text-left" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-600">Email</label>
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full px-4 py-3 rounded-lg border outline-none bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#009688]" />
+                className="w-full px-5 py-3 rounded-full border outline-none bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#009688]" />
             </div>
             <button type="submit" disabled={forgotMutation.isPending}
-              className="w-full bg-[#009688] text-white py-3.5 rounded-lg font-semibold hover:bg-[#00796b] transition-colors disabled:opacity-60">
+              className="nogiet-button nogiet-button-primary inline-flex w-full">
               {forgotMutation.isPending ? 'Sending...' : 'Reset password'}
             </button>
           </form>

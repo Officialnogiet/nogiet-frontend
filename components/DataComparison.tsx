@@ -223,7 +223,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
           <button
             onClick={handleExport}
             disabled={!selectedFacilityId}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold bg-[#009688] text-white hover:bg-[#00796b] shadow-lg shadow-[#009688]/20 transition-all disabled:opacity-40"
+            className="nogiet-button nogiet-button-primary flex"
           >
             <Download size={12} />
             Export PDF

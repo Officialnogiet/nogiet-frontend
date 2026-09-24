@@ -1845,7 +1845,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
         <div className="absolute top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-8 z-50">
           <button
             onClick={handleRefreshRegion}
-            className="flex items-center gap-2 lg:gap-2.5 px-4 py-2.5 lg:px-6 lg:py-3 rounded-2xl text-xs lg:text-sm font-extrabold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 bg-[#009688] text-white hover:bg-[#00796b]"
+            className="nogiet-button nogiet-button-primary flex"
           >
             <RefreshCw size={14} className="lg:hidden" />
             <RefreshCw size={16} className="hidden lg:block" />

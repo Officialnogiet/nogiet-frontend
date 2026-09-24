@@ -48,7 +48,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
           />
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
-        <button onClick={onAddNew} className="px-5 py-2.5 bg-[#002b28] text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003d38] transition-all shadow-lg">
+        <button onClick={onAddNew} className="nogiet-button nogiet-button-primary flex">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6v12m6-6H6" /></svg>
           Add New
         </button>

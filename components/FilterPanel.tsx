@@ -313,7 +313,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, fil
 
         <div className={`p-8 border-t flex gap-4 transition-colors ${darkMode ? 'border-[#1e2430]' : 'border-gray-100'}`}>
           <button onClick={handleReset} className={`flex-1 border rounded-2xl py-4 font-bold transition-all ${darkMode ? 'border-[#1e2430] text-gray-400 hover:bg-gray-800' : 'border-gray-200 text-gray-900 hover:bg-gray-50'}`}>Reset</button>
-          <button onClick={handleDone} className="flex-1 bg-teal-600 text-white rounded-2xl py-4 font-bold hover:bg-teal-700 shadow-xl shadow-teal-600/20">Done</button>
+          <button onClick={handleDone} className="nogiet-button nogiet-button-primary inline-flex flex-1">Done</button>
         </div>
       </div>
     </div>

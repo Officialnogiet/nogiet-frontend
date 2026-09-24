@@ -115,7 +115,7 @@ const GroundDataForm: React.FC<GroundDataFormProps> = ({
         {formError && <p className="text-red-500 text-[10px] font-bold">{formError}</p>}
         {success && <p className="text-teal-500 text-[10px] font-bold">Submitted</p>}
         <button type="submit" disabled={isSubmitting}
-          className="w-full bg-[#009688] text-white py-2.5 rounded-xl font-bold text-xs hover:bg-[#00796b] transition-all disabled:opacity-50">
+          className="nogiet-button nogiet-button-primary inline-flex w-full">
           {isSubmitting ? 'Submitting...' : 'Submit Measurement'}
         </button>
       </form>
@@ -166,7 +166,7 @@ const GroundDataForm: React.FC<GroundDataFormProps> = ({
           {formError && <p className="text-red-500 text-xs font-bold">{formError}</p>}
           {success && <p className="text-teal-500 text-xs font-bold">Data submitted successfully</p>}
           <button type="submit" disabled={isSubmitting}
-            className="w-full bg-[#009688] text-white py-4 rounded-2xl font-extrabold hover:bg-[#00796b] transition-all shadow-xl shadow-[#009688]/20 mt-4 text-base tracking-tight disabled:opacity-50">
+            className="nogiet-button nogiet-button-primary inline-flex w-full mt-4">
             {isSubmitting ? 'Submitting...' : 'Submit Data'}
           </button>
         </form>

@@ -64,7 +64,7 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({ darkMode, member, onC
           </div>
           <div className="flex justify-end gap-4 pt-4">
             <button type="button" onClick={onClose} className={`px-8 py-3.5 border rounded-2xl font-extrabold text-sm transition-all ${darkMode ? 'bg-[#12161f] border-[#1e2430] text-gray-400 hover:bg-gray-800' : 'bg-white border-gray-100 text-gray-800 hover:bg-gray-50'}`}>Cancel</button>
-            <button type="submit" disabled={isSaving} className="px-8 py-3.5 bg-[#009688] text-white rounded-2xl font-extrabold text-sm hover:bg-[#00796b] transition-all shadow-xl shadow-[#009688]/20 disabled:opacity-50">
+            <button type="submit" disabled={isSaving} className="nogiet-button nogiet-button-primary inline-flex">
               {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>

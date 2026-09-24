@@ -370,3 +370,43 @@ button:active:not(:disabled) { transform: translateY(1px); }
   .docs-prose .docs-heading-3 { font-size: 1.05rem; }
   .docs-prose .docs-code-block pre { font-size: 0.78rem; }
 }
+
+/* Neutral public pages with restrained brand-green accents. */
+.nogiet-public-theme ::selection { color: white; background: #00796b; }
+.nogiet-public-theme :is(button, a, input, select, textarea):focus-visible {
+  outline-color: var(--nogiet-accent);
+}
+.nogiet-public-theme :is(input, select, textarea):focus {
+  border-color: var(--nogiet-accent) !important;
+  box-shadow: 0 0 0 3px rgb(0 150 136 / 0.12);
+}
+.nogiet-public-theme * { scrollbar-color: #a3a3a3 transparent; }
+.nogiet-public-theme *::-webkit-scrollbar-thumb { background-color: #a3a3a3; }
+.nogiet-public-theme *::-webkit-scrollbar-thumb:hover { background-color: #737373; }
+
+/* Shared main-action button: use layout utilities only at call sites. */
+.nogiet-button {
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 3rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+  transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+.nogiet-button-primary {
+  color: #fff;
+  background-color: #171717;
+  border-color: #525252;
+}
+.nogiet-button-primary:hover:not(:disabled) { background-color: #00796b; border-color: #00796b; }
+.nogiet-button-primary:active:not(:disabled) { background-color: #005b50; border-color: #005b50; }
+.nogiet-button:focus-visible { outline: 2px solid var(--nogiet-accent); outline-offset: 3px; }
+.nogiet-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.password-visibility-toggle:active:not(:disabled) { transform: none; }

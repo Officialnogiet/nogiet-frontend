@@ -58,7 +58,7 @@ class ErrorBoundary extends React.Component<Props, State> {
             )}
             <button
               onClick={this.handleRetry}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#009688] text-white rounded-xl font-bold text-sm hover:bg-[#00796b] transition-all"
+              className="nogiet-button nogiet-button-primary inline-flex"
             >
               <RefreshCw size={14} />
               Try Again

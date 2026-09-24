@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthScreen } from '../../types';
+import { resetPasswordSchema } from '../../src/validations/auth.schema';
 import { useResetPassword } from '../../src/hooks/useAuth';
 import { useAuthStore } from '../../src/stores/auth.store';
 import logoFull from '../../assets/logo-full.png';
@@ -19,11 +20,25 @@ const NewPassword: React.FC<NewPasswordProps> = ({ onNavigate }) => {
   const resetEmail = useAuthStore((s) => s.resetEmail);
   const resetCode = useAuthStore((s) => s.resetCode);
   const resetMutation = useResetPassword();
+  const [validationError, setValidationError] = useState<string>();
+
+  useEffect(() => {
+    if (!resetEmail || !resetCode) onNavigate(AuthScreen.FORGOT_PASSWORD);
+  }, [resetEmail, resetCode, onNavigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    resetMutation.mutate({ email: resetEmail, code: resetCode, password, confirmPassword }, {
-      onSuccess: () => onNavigate(AuthScreen.SUCCESS),
+    setValidationError(undefined);
+    const result = resetPasswordSchema.safeParse({ email: resetEmail, code: resetCode, password, confirmPassword });
+    if (!result.success) {
+      setValidationError(result.error.issues[0]?.message);
+      return;
+    }
+    resetMutation.mutate(result.data, {
+      onSuccess: () => {
+        useAuthStore.setState({ resetEmail: '', resetCode: '' });
+        onNavigate(AuthScreen.SUCCESS);
+      },
     });
   };
 
@@ -37,10 +52,10 @@ const NewPassword: React.FC<NewPasswordProps> = ({ onNavigate }) => {
           <img src={iconTeal} alt="Reset" className="w-20 h-20 mx-auto" />
           <div className="space-y-2">
             <h2 className="text-3xl font-bold text-gray-900">Reset your password</h2>
-            <p className="text-gray-500">Create a new password to secure your account.</p>
+            <p className="text-gray-500">Use at least 8 characters, including an uppercase letter and a number.</p>
           </div>
-          {resetMutation.isError && (
-            <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{resetMutation.error?.message}</p>
+          {(validationError || resetMutation.isError) && (
+            <p role="alert" className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">{validationError ?? resetMutation.error?.message}</p>
           )}
           <form className="space-y-6 text-left" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
@@ -48,8 +63,8 @@ const NewPassword: React.FC<NewPasswordProps> = ({ onNavigate }) => {
               <div className="relative">
                 <input type={showPwd1 ? "text" : "password"} required value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border outline-none bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#009688]" />
-                <button type="button" onClick={() => setShowPwd1(!showPwd1)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"><EyeIcon /></button>
+                  className="w-full pl-5 pr-12 py-3 rounded-full border outline-none bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#009688]" />
+                <button type="button" aria-label={showPwd1 ? "Hide new password" : "Show new password"} onClick={() => setShowPwd1(!showPwd1)} className="password-visibility-toggle absolute inset-y-0 right-3 flex w-10 items-center justify-center text-gray-400"><EyeIcon /></button>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -57,12 +72,12 @@ const NewPassword: React.FC<NewPasswordProps> = ({ onNavigate }) => {
               <div className="relative">
                 <input type={showPwd2 ? "text" : "password"} required value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border outline-none bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#009688]" />
-                <button type="button" onClick={() => setShowPwd2(!showPwd2)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"><EyeIcon /></button>
+                  className="w-full pl-5 pr-12 py-3 rounded-full border outline-none bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#009688]" />
+                <button type="button" aria-label={showPwd2 ? "Hide confirm password" : "Show confirm password"} onClick={() => setShowPwd2(!showPwd2)} className="password-visibility-toggle absolute inset-y-0 right-3 flex w-10 items-center justify-center text-gray-400"><EyeIcon /></button>
               </div>
             </div>
             <button type="submit" disabled={resetMutation.isPending}
-              className="w-full bg-[#009688] text-white py-3.5 rounded-lg font-semibold hover:bg-[#00796b] transition-colors disabled:opacity-60">
+              className="nogiet-button nogiet-button-primary inline-flex w-full">
               {resetMutation.isPending ? 'Resetting...' : 'Reset password'}
             </button>
           </form>

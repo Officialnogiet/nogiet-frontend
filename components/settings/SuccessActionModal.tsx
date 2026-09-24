@@ -16,7 +16,7 @@ const SuccessActionModal: React.FC<SuccessActionModalProps> = ({ darkMode, onClo
         <h2 className={`text-2xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Success!</h2>
         <p className="text-sm font-bold leading-relaxed text-gray-500">Team member action processed successfully</p>
       </div>
-      <button onClick={onClose} className="w-full py-4 bg-[#009688] text-white rounded-2xl font-extrabold text-sm hover:bg-[#00796b] transition-all shadow-xl shadow-[#009688]/20 mt-4">
+      <button onClick={onClose} className="nogiet-button nogiet-button-primary inline-flex w-full mt-4">
         Continue
       </button>
     </div>
