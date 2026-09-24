@@ -62,7 +62,3 @@
 - [ ] Automated database backups
 - [ ] Horizontal scaling for 1,000-3,000 MAUs
 - [ ] 99.9% uptime monitoring and alerting
-
-## Decisions
-
-- **Auth0**: Skipped: current JWT auth retained as-is per app owner directive
