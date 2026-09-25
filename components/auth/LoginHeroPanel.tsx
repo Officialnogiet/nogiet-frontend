@@ -6,19 +6,13 @@ const LoginHeroPanel: React.FC = () => (
     <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${loginBg})` }} />
     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/15 to-black/10" />
     <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-transparent" />
-    <div className="flex-1" />
-    <div className="relative z-10 mb-12 max-w-xl space-y-4">
-      <span className="inline-flex rounded-full border border-teal-300/25 bg-teal-300/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-teal-200 backdrop-blur">National methane intelligence</span>
-      <h1 className="text-4xl lg:text-5xl font-semibold leading-[1.04] tracking-[-0.04em]"><span className="text-neutral-200">Welcome to NOGIET</span></h1>
-      <p className="text-base font-medium text-neutral-300">The Nigerian Oil and Gas Industry Emission Tracker</p>
+    <div className="relative z-10 mt-[clamp(8rem,24vh,15rem)] max-w-xl space-y-3">
+      <h1 className="text-3xl lg:text-4xl font-semibold leading-[1.12] tracking-[-0.035em] text-[#d6eee2]">Welcome to NOGIET</h1>
+      <p className="max-w-sm text-sm leading-6 font-medium text-[#d9e4e1]">The Nigerian Oil and Gas Industry Emission Tracker</p>
     </div>
-    <div className="relative z-10 border-t border-white/15 pt-4 text-[10px] font-medium leading-relaxed text-neutral-400">
-      <p>&copy; 2026 NOGIET</p>
+    <div className="relative z-10 mt-auto border-t border-white/20 pt-4 text-[10px] font-medium leading-relaxed text-neutral-300">
+      <p>&copy; {new Date().getFullYear()} NOGIET</p>
       <p className="mt-1 max-w-lg">Sponsored by the Stakeholder Democracy Network (SDN) with support from the Global Methane Hub</p>
-      <div className="mt-3 flex gap-6">
-        <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-        <a href="#" className="hover:text-white transition-colors">Terms of Use</a>
-      </div>
     </div>
   </div>
 );
