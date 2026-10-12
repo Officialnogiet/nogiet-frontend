@@ -347,9 +347,19 @@ export function useDashboardSummary() {
     queryFn: async () => {
       try {
         const res = await emissionsApi.getDashboardSummary();
-        if (res.data) {
-          cacheEmissions("dashboard-summary", res.data).catch(() => {});
+        const summary = res.data;
+        if (
+          !summary ||
+          !Number.isFinite(summary.totalSatelliteEmissionRate) ||
+          !Number.isFinite(summary.totalFacilities) ||
+          !Number.isFinite(summary.activeSatelliteSources) ||
+          !Number.isFinite(summary.alertsThisWeek) ||
+          !Array.isArray(summary.recentAlerts) ||
+          !Array.isArray(summary.topFacilities)
+        ) {
+          throw new Error("Dashboard summary returned incomplete data.");
         }
+        cacheEmissions("dashboard-summary", res.data).catch(() => {});
         return res;
       } catch (err) {
         if (isOffline()) {

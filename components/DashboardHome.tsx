@@ -201,7 +201,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
     );
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <div
         className={`rounded-xl border p-6 ${
@@ -215,7 +215,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
     );
   }
 
-  const summary = data!;
+  const summary = data;
 
   const emissionDisplay = `${formatEmission(
     summary.totalSatelliteEmissionRate,
