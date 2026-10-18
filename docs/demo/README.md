@@ -6,8 +6,7 @@ covers one screen: what it does, what it shows, what the user can interact with,
 and how the data behind it flows.
 
 > **NOGIET**: *Nigerian Oil & Gas Industry Emissions Tracker*. A
-> portal that fuses satellite methane detections (Carbon Mapper, UNEP IMEO,
-> Sentinel-5P TROPOMI) with ground-truth measurements collected by Nigerian
+> portal that fuses satellite methane detections (Carbon Mapper and UNEP IMEO) with ground-truth measurements collected by Nigerian
 > facility operators, and turns the result into an actionable map, alert system,
 > and reporting tool.
 
@@ -30,7 +29,7 @@ backtrack:
 | 09 | [09-field-data.md](./09-field-data.md) | Mobile-first form for facility owners (offline queue, photo upload) |
 | 10 | [10-user-management.md](./10-user-management.md) | Roles (Super Admin / Admin / Member / Facility Owner) and team workflows |
 | 11 | [11-settings.md](./11-settings.md) | Personal preferences, units, dark mode, map theme, alert thresholds |
-| 12 | [12-integrations.md](./12-integrations.md) | Carbon Mapper, IMEO V2, TROPOMI: what we ingest, how we authenticate, caching strategy |
+| 12 | [12-integrations.md](./12-integrations.md) | Carbon Mapper and IMEO V2: what we ingest, how we authenticate, caching strategy |
 | 13 | [13-architecture.md](./13-architecture.md) | High-level system diagram, frontend/backend stack, where the data lives |
 
 ## Conventions used in these docs

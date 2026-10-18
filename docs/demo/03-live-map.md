@@ -37,7 +37,7 @@ spend their entire day here.
 | Element | What it does |
 |---|---|
 | **Square emissions grid** | Background ppb-themed grid built from every visible point. Cells colored by aggregated emission rate, with a thicker dark border for cells exceeding the alert threshold. Click a cell to zoom in. |
-| **Satellite plume markers** | One dot per detected source, **fill color = data source** (Carbon Mapper teal, each IMEO instrument its own hashed color, TROPOMI violet). Halo size = plume count, halo brightness = emission rate. |
+| **Satellite plume markers** | One dot per detected source, **fill color = data source** (Carbon Mapper teal, each IMEO instrument its own hashed color). Halo size = plume count, halo brightness = emission rate. |
 | **Facility markers** | Teal building icons with a numeric badge for measurement count. Click to see ground-reading history. |
 | **Search bar** | Free-text search across facility names, sectors, source names. |
 | **Alerts button** (left) | Pops a panel of unread alerts, with a count badge. |
@@ -63,7 +63,6 @@ Sources                     [Select all | Clear all]
    ☑ ● GHGSat                     31
    ☑ ● PRISMA                     15
    ☑ ● MethaneSAT                  7
-☑ ● TROPOMI                      68
 ```
 
 - Provider checkbox toggles the whole feed; a checkbox shows the **indeterminate**
@@ -111,19 +110,19 @@ SatelliteAggregator.fetchAllSources()
          │
          │  In parallel:
          ▼
-┌────────────────┐  ┌──────────────────┐  ┌────────────────┐
-│ Carbon Mapper  │  │ IMEO (UNEP)      │  │ TROPOMI        │
-│ JWT → JSON     │  │ Bearer →          │  │ stub           │
-│ /catalog/      │  │ /api/v2/         │  │ (placeholder)  │
-│  sources       │  │  plumes_w_wo_…   │  │                │
-└────────────────┘  └──────────────────┘  └────────────────┘
-         │                  │                     │
-         └──────────────────┼─────────────────────┘
-                            ▼
-                  Normalized to NormalizedSource[]
-                            │
-                            ▼
-                  Redis cache (30 minutes, plus 7-day stale fallback)
+┌────────────────┐  ┌──────────────────┐
+│ Carbon Mapper  │  │ IMEO (UNEP)      │
+│ JWT → JSON     │  │ Bearer →         │
+│ /catalog/      │  │ /api/v2/         │
+│  sources       │  │  plumes_w_wo_…   │
+└────────────────┘  └──────────────────┘
+         │                  │
+         └────────┬─────────┘
+                  ▼
+        Normalized to NormalizedSource[]
+                  │
+                  ▼
+        Redis cache (30 minutes, plus 7-day stale fallback)
                             │
                             ▼
                   Frontend useSatelliteStore (Zustand) populated
@@ -142,7 +141,7 @@ SatelliteAggregator.fetchAllSources()
 
 | What | Color from |
 |---|---|
-| Plume marker fill | `feedColor(provider, instrument)`: Carbon Mapper teal, IMEO instrument-hashed, TROPOMI violet |
+| Plume marker fill | `feedColor(provider, instrument)`: Carbon Mapper teal, IMEO instrument-hashed |
 | Plume halo size | Plume count (more plumes = bigger halo) |
 | Plume halo opacity | Emission rate (hotter source = brighter halo) |
 | Grid cell fill | Methane intensity binned to the IMEO ppb scale (0-1970, 1970-2000, …, 2080+) |

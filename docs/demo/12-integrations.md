@@ -1,9 +1,9 @@
-# 12 · Integrations: Carbon Mapper, IMEO, TROPOMI
+# 12 · Integrations: Carbon Mapper, IMEO
 
 > **Source code:** `noiget-backend/src/services/third-party/*`.
 > Detailed IMEO writeup: [../IMEO_INTEGRATION.md](../IMEO_INTEGRATION.md).
 
-NOGIET pulls satellite methane data from three independent providers and
+NOGIET pulls satellite methane data from two independent providers and
 reconciles them into a single normalised feed.
 
 ## Provider matrix
@@ -12,7 +12,6 @@ reconciles them into a single normalised feed.
 |---|---|---|---|
 | **Carbon Mapper** | JWT (`/token/pair`, refresh on 401) | `https://api.carbonmapper.org/api/v1/catalog/sources` | Per-source plume catalogue with `instrument` (EMIT, AVIRIS-NG, AVIRIS-3, ASU GAO). |
 | **UNEP IMEO** | Bearer token from `https://methanedata.unep.org/api/docs` | `/api/v2/plumes_w_wo_sources`, `/api/v2/plumes/{id_source}`, `/api/v2/plumes_last_update`, `/api/v2/plumes/image/{id_plume}` | Aggregated plume catalogue spanning EnMAP, Sentinel-2, Sentinel-5P, GHGSat, PRISMA, MethaneSAT and more. |
-| **TROPOMI / Sentinel-5P** | (placeholder; will use Copernicus Data Space credentials) | Sentinel-5P L2 CH4 product | Atmospheric column data (currently a stub returning `[]`; ready for activation). |
 
 ## Service layout
 
@@ -20,8 +19,7 @@ reconciles them into a single normalised feed.
 noiget-backend/src/services/third-party/
   carbon-mapper.service.ts          ← JWT auth + /catalog/sources fetch
   imeo.service.ts                   ← Bearer auth + V2 endpoints + retries
-  tropomi.service.ts                ← stub
-  satellite-aggregator.service.ts   ← runs all three in parallel + merges
+  satellite-aggregator.service.ts   ← runs both in parallel + merges
 ```
 
 Each service exposes `fetchAllSources(filters)` returning `NormalizedSource[]`.
@@ -32,7 +30,7 @@ Each service exposes `fetchAllSources(filters)` returning `NormalizedSource[]`.
 interface NormalizedSource {
   id: string;            // "cm-<source_name>" or "imeo-<id_plume>" etc.
   name: string;
-  provider: 'carbon_mapper' | 'imeo' | 'tropomi';
+  provider: 'carbon_mapper' | 'imeo';
   instrument: string;    // "EMIT", "EnMAP - DLR", "Sentinel-2", …
   latitude: number;
   longitude: number;
@@ -76,8 +74,8 @@ for the full troubleshooting playbook.
 
 ## Demo script
 
-> ► *"NOGIET integrates three independent satellite providers: Carbon Mapper,
-> UNEP IMEO, TROPOMI. We don't pick a winner; we show all three side-by-side,
+> ► *"NOGIET integrates two independent satellite providers: Carbon Mapper
+> and UNEP IMEO. We don't pick a winner; we show both side-by-side,
 > color-coded by source. IMEO is special because it's an aggregator that
 > re-publishes data from many satellites: we expose every underlying
 > instrument so you can see exactly which sensor caught which plume. We cache

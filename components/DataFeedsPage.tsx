@@ -5,7 +5,7 @@ import type { DataFeedProvider } from "../src/api/imeo-feed.api";
 
 const tabs: { id: DataFeedProvider; label: string }[] = [
   { id: "imeo", label: "IMEO" }, { id: "carbon_mapper", label: "Carbon Mapper" },
-  { id: "tropomi", label: "TROPOMI" }, { id: "emit", label: "EMIT" },
+  // { id: "tropomi", label: "TROPOMI" }, { id: "emit", label: "EMIT" },
 ];
 export default function DataFeedsPage({ darkMode, onClose }: { darkMode: boolean; onClose?: () => void }) {
   const [provider, setProvider] = useState<DataFeedProvider>("imeo");

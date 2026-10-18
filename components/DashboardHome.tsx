@@ -36,7 +36,7 @@ import type { ProviderId } from "./methane-trends/types";
 
 /** Trend chart shows the last 7 calendar days, one bucket per UTC date. */
 const TREND_DAYS = 7;
-const PROVIDER_KEYS: ProviderId[] = ["carbon_mapper", "imeo", "tropomi", "emit"];
+const PROVIDER_KEYS: ProviderId[] = ["carbon_mapper", "imeo" /* , "tropomi", "emit" */];
 const PROVIDER_LABELS: Record<ProviderId, string> = {
   carbon_mapper: "Carbon Mapper",
   imeo: "IMEO (UNEP)",
@@ -260,7 +260,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
   const dataSources = [
     { name: "Carbon Mapper", id: "carbon_mapper", desc: "Satellite methane detection" },
     { name: "UNEP IMEO", id: "imeo", desc: "International Methane Observatory" },
-    { name: "TROPOMI", id: "tropomi", desc: "Sentinel-5P satellite data" },
+    // { name: "TROPOMI", id: "tropomi", desc: "Sentinel-5P satellite data" },
   ];
 
   return (
@@ -309,7 +309,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ darkMode, onNavigate }) =
             <p className={`mt-1 text-sm ${muted}`}>
               {hasSatelliteTrend
                 ? `Daily total emission rate by data source (${getUnitLabel(emissionUnit)})`
-                : `No satellite data in the last 7 days yet: chart populates as Carbon Mapper, IMEO and TROPOMI feeds load (${getUnitLabel(emissionUnit)})`}
+                : `No satellite data in the last 7 days yet: chart populates as Carbon Mapper and IMEO feeds load (${getUnitLabel(emissionUnit)})`}
             </p>
           </div>
           {hasSatelliteTrend && (

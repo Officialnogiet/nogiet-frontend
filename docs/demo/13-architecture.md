@@ -44,7 +44,6 @@ file path below is verified against the running code.
 │   ├ /satellite/...       └ third-party/                          │
 │                            ├ CarbonMapperService                 │
 │                            ├ ImeoService                         │
-│                            ├ TropomiService                      │
 │                            └ SatelliteAggregatorService          │
 │                                                                  │
 │  Background                                                      │
@@ -113,7 +112,7 @@ fails fast with a descriptive error.
 ## Observability
 
 Pino logger with pretty output in dev, JSON in production. Every external
-fetch (Carbon Mapper, IMEO, TROPOMI) emits structured logs prefixed by
+fetch (Carbon Mapper, IMEO) emits structured logs prefixed by
 provider tag for easy grep.
 
 ## Where to start reading the code

@@ -63,7 +63,7 @@ const SECTORS = [
 ];
 const INSTRUMENTS = ['NASA EMIT', 'EMU', 'NASA AVIRIS-NG', 'NASA AVIRIS-3', 'ASU GAO'];
 
-const PROVIDERS = ['carbon_mapper', 'imeo', 'tropomi', 'emit'];
+const PROVIDERS = ['carbon_mapper', 'imeo' /* , 'tropomi', 'emit' */];
 const PROVIDER_LABELS: Record<string, string> = {
   carbon_mapper: 'Carbon Mapper',
   imeo: 'IMEO (UNEP)',
@@ -136,7 +136,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onClose, darkMode = true, fil
             </div>
             <div className="space-y-3">
               <Checkbox checked={local.showFacilities} onChange={() => setLocal(p => ({ ...p, showFacilities: !p.showFacilities }))} label="In-app Facility Sources" />
-              <Checkbox checked={local.showSatellite} onChange={() => setLocal(p => ({ ...p, showSatellite: !p.showSatellite }))} label="Satellite sources (Carbon Mapper, IMEO, TROPOMI)" />
+              <Checkbox checked={local.showSatellite} onChange={() => setLocal(p => ({ ...p, showSatellite: !p.showSatellite }))} label="Satellite sources (Carbon Mapper, IMEO)" />
             </div>
           </section>
 

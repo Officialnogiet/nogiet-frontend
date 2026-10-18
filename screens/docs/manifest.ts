@@ -170,7 +170,7 @@ const RAW_PAGES: Omit<DocPage, 'readingTime'>[] = [
   {
     slug: 'integrations',
     title: 'Satellite Integrations',
-    summary: 'Carbon Mapper, IMEO V2, and TROPOMI: what we ingest and how we authenticate.',
+    summary: 'Carbon Mapper and IMEO V2: what we ingest and how we authenticate.',
     group: 'reference',
     source: integrations,
   },

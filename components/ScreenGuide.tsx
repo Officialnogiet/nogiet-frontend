@@ -27,7 +27,7 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
   },
   METHANE_TRENDS: {
     title: 'Methane Trends',
-    description: 'Long-term per-source comparison of Carbon Mapper, IMEO and TROPOMI feeds, plus a year-by-year statistics table.',
+    description: 'Long-term per-source comparison of Carbon Mapper and IMEO feeds, plus a year-by-year statistics table.',
     tips: [
       'Long-term Trends plots monthly mean kg/hr per provider with a 12-month rolling average.',
       'Toggle a provider in the legend to mute/show its line. Use the date pickers to zoom the time window.',
@@ -59,7 +59,7 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
     title: 'Data Explorer',
     description: 'Browse and search emission data organized into structured tabs for deep analysis.',
     tips: [
-      'Satellite Sources tab shows all integrated providers (Carbon Mapper, IMEO, TROPOMI).',
+      'Satellite Sources tab shows all integrated providers (Carbon Mapper, IMEO).',
       'Individual Sources lists each emission source with detailed attributes.',
       'Emission Rates tab ranks sources by their kg/hr output.',
       'Cumulative Totals aggregates total emissions per facility over time.',
@@ -122,7 +122,7 @@ const SCREEN_GUIDES: Record<string, { title: string; description: string; tips: 
       'Walk through the Walkthrough section to see every screen explained the way you would demo it.',
       'Search the entire docs from the sidebar: matches title, summary, and the raw markdown body.',
       'The right-hand "On this page" panel jumps to any section; headings have copyable # links.',
-      'The Reference group has the Carbon Mapper / IMEO / TROPOMI integration deep-dive and the system architecture.',
+      'The Reference group has the Carbon Mapper / IMEO integration deep-dive and the system architecture.',
     ],
   },
 };

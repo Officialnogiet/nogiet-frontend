@@ -15,7 +15,7 @@ The Methane Trends screen answers two analytical questions:
 A header bar with three filters:
 - **Scope**: currently `Nigeria (all states)`. Drilling into a row from the
   Annual table changes scope to that state's name.
-- **Provider**: All / Carbon Mapper / IMEO / TROPOMI.
+- **Provider**: All / Carbon Mapper / IMEO.
 - **Group by** (Annual tab only): State / Region / Facility.
 
 Below the header, two tabs:
@@ -35,7 +35,6 @@ Above the chart, a **grouped legend**:
 Sources           [Reset]
 Carbon Mapper:    EMIT  ·  AVIRIS-NG
 IMEO (UNEP):      EnMAP  ·  Sentinel-2  ·  GHGSat  ·  PRISMA  ·  MethaneSAT
-TROPOMI:          TROPOMI
 ```
 
 Each chip is clickable to mute/show the corresponding line. The **Reset** link
@@ -62,8 +61,6 @@ Carbon Mapper
 IMEO instruments
    ● EnMAP                      …     …      …      …      …      …
    ● Sentinel-2                 …     …      …      …      …      …
-TROPOMI
-   ● TROPOMI                    …     …      …      …      …      …
 ```
 
 A **Download CSV** button exports the entire table including the per-feed and

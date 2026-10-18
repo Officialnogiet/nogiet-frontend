@@ -204,7 +204,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({ darkMode }) => {
             Data Comparison
           </h1>
           <p className={`text-xs mt-1 ${subText}`}>
-            Validates operator ground submissions against Carbon Mapper, IMEO and TROPOMI satellite detections
+            Validates operator ground submissions against Carbon Mapper and IMEO satellite detections
             and produces a per-pair verdict.
           </p>
         </div>
@@ -407,7 +407,7 @@ const EmptyChooseFacility: React.FC<{ dm: boolean }> = ({ dm }) => (
   <div className={`rounded-2xl border p-10 text-center ${dm ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-100'}`}>
     <p className={`text-sm font-bold mb-1 ${dm ? 'text-white' : 'text-gray-900'}`}>Choose a facility to begin</p>
     <p className={`text-xs ${dm ? 'text-gray-400' : 'text-gray-500'}`}>
-      Select a facility above to compare its ground readings against Carbon Mapper, IMEO and TROPOMI satellite detections.
+      Select a facility above to compare its ground readings against Carbon Mapper and IMEO satellite detections.
     </p>
   </div>
 );

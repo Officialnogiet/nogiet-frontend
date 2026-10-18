@@ -3,7 +3,7 @@
 ## In one sentence
 
 NOGIET is a **methane emissions tracker** for Nigeria's oil &
-gas sector that combines **satellite plume detections** from three independent
+gas sector that combines **satellite plume detections** from two independent
 providers with **ground-truth measurements** submitted by facility operators,
 then surfaces actionable insight through a single map, dashboard, and alert system.
 
@@ -75,7 +75,6 @@ All of this without leaving the browser, without spreadsheet juggling, and with
                     ┌──────────────────────────────┐
                     │   Carbon Mapper API (JWT)    │
                     │   IMEO V2 API (Bearer)       │
-                    │   TROPOMI / Sentinel-5P      │
                     └──────────────┬───────────────┘
                                    │ pull every cron tick
                                    ▼

@@ -106,7 +106,7 @@ const AnnualStatisticsTable: React.FC<AnnualStatisticsTableProps> = ({
           <h2 className={`text-lg md:text-xl font-bold ${heading}`}>Annual Statistics</h2>
           <p className={`text-xs md:text-sm mt-1 ${sub}`}>
             Annual average methane readings across wide regions, with year-over-year change.
-            Click a row to expand the per-source breakdown: Carbon Mapper, TROPOMI, and each individual IMEO instrument
+            Click a row to expand the per-source breakdown: Carbon Mapper and each individual IMEO instrument
             (EnMAP, Sentinel-2, GHGSat, …) appear on their own line.
           </p>
         </div>

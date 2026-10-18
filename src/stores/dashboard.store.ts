@@ -24,7 +24,8 @@ export const DEFAULT_LAYERS: MapLayerState = {
 
 /** Concrete satellite providers: the legend's "all" virtual entry just selects every one. */
 export type GridProvider = 'carbon_mapper' | 'imeo' | 'tropomi' | 'emit';
-export const ALL_GRID_PROVIDERS: GridProvider[] = ['carbon_mapper', 'imeo', 'tropomi', 'emit'];
+// TROPOMI and EMIT hidden for now: their data arrives via IMEO.
+export const ALL_GRID_PROVIDERS: GridProvider[] = ['carbon_mapper', 'imeo' /* , 'tropomi', 'emit' */];
 export type GridStatistic = 'max' | 'average' | 'sum';
 
 /**

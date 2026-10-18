@@ -1125,8 +1125,8 @@ export const DataTabs: React.FC<DataTabsProps> = ({ darkMode }) => {
                   <option value="">All</option>
                   <option value="carbon_mapper">Carbon Mapper</option>
                   <option value="imeo">IMEO</option>
-                  <option value="tropomi">TROPOMI</option>
-                  <option value="emit">NASA EMIT</option>
+                  {/* <option value="tropomi">TROPOMI</option>
+                  <option value="emit">NASA EMIT</option> */}
                 </select>
               </ReportField>
             </div>

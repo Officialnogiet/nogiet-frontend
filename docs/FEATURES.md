@@ -32,7 +32,7 @@
 ## Phase 1: Core Data and Satellite Foundation
 
 - [x] **1.1 Extended Facility Model**: Added state, LGA, oilBlock, operator, facilityType, alertThreshold fields to facilities table
-- [x] **1.2 Multi-Satellite Data Integration**: Carbon Mapper, IMEO, TROPOMI services + satellite aggregator with normalized API (MethaneSAT removed: no access)
+- [x] **1.2 Multi-Satellite Data Integration**: Carbon Mapper and IMEO services + satellite aggregator with normalized API (MethaneSAT removed: no access)
 - [x] **1.3 Unit Conversion System**: Dynamic conversion between kg/hr, kg/day, tonnes/year, CO2e/hr with global selector
 - [x] **1.4 Spatial Filtering and Search**: Backend filter params + frontend cascading dropdowns for state, LGA, oil block, operator, facility type
 - [x] **1.5 Data Tabs Interface**: 5 searchable tabs: Satellite Sources, Individual Sources, Emission Rates, Cumulative Totals, Aggregated Averages

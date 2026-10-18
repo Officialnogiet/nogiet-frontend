@@ -225,7 +225,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
       const y = years[i];
       headerCells.push(`${y} Avg (kg/hr)`);
       if (i > 0) headerCells.push(`${y} YoY %`);
-      headerCells.push(`${y} CarbonMapper`, `${y} IMEO`, `${y} TROPOMI`);
+      headerCells.push(`${y} CarbonMapper`, `${y} IMEO` /* , `${y} TROPOMI` */);
     }
     const lines = [headerCells.join(',')];
     for (const row of annualRows) {
@@ -244,10 +244,10 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
         }
         const cm = row.byProvider.carbon_mapper[y];
         const im = row.byProvider.imeo[y];
-        const tr = row.byProvider.tropomi[y];
+        // const tr = row.byProvider.tropomi[y];
         cells.push(cm == null ? '' : cm.toFixed(2));
         cells.push(im == null ? '' : im.toFixed(2));
-        cells.push(tr == null ? '' : tr.toFixed(2));
+        // cells.push(tr == null ? '' : tr.toFixed(2));
       });
       lines.push(cells.join(','));
     }
@@ -294,7 +294,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
                 ? `Filtered to satellite observations whose centroid lies inside the ${scope.name} polygon.`
                 : scope.kind === 'state'
                   ? `Filtered to observations within ${scope.name} state.`
-                  : 'Long-term satellite observations comparing Carbon Mapper, IMEO and TROPOMI feeds.'}
+                  : 'Long-term satellite observations comparing Carbon Mapper and IMEO feeds.'}
             </p>
             {scope.kind === 'oilBlock' && (
               // Inline "clear filter" pill so the user can return to Nigeria-
@@ -356,7 +356,7 @@ const MethaneTrends: React.FC<MethaneTrendsProps> = ({ darkMode = true, onClose 
               <option value="all">All providers</option>
               <option value="carbon_mapper">Carbon Mapper</option>
               <option value="imeo">IMEO (UNEP)</option>
-              <option value="tropomi">TROPOMI</option>
+              {/* <option value="tropomi">TROPOMI</option> */}
             </select>
             {tab === 'ANNUAL' && (
               <select
@@ -472,7 +472,7 @@ const FetchingPanel: React.FC<{ dm: boolean; text: string }> = ({ dm, text }) =>
         {text}
       </p>
       <p className={`mt-1.5 text-[11px] ${dm ? 'text-gray-500' : 'text-gray-500'}`}>
-        Hang tight: pulling from Carbon Mapper, IMEO (UNEP) and TROPOMI feeds, then resolving each point to a Nigerian state and nearest facility.
+        Hang tight: pulling from Carbon Mapper and IMEO (UNEP) feeds, then resolving each point to a Nigerian state and nearest facility.
       </p>
     </div>
   </div>
@@ -482,7 +482,7 @@ const EmptyState: React.FC<{ dm: boolean }> = ({ dm }) => (
   <div className={`rounded-2xl border ${dm ? 'bg-[#12161f] border-[#1e2430]' : 'bg-white border-gray-200'} p-10 text-center`}>
     <p className={`text-sm font-bold ${dm ? 'text-white' : 'text-gray-900'} mb-2`}>No satellite history yet</p>
     <p className={`text-xs ${dm ? 'text-gray-400' : 'text-gray-500'}`}>
-      Trends populate as Carbon Mapper, IMEO and TROPOMI feeds return data for the configured region. Open the Live Map to trigger an initial load.
+      Trends populate as Carbon Mapper and IMEO feeds return data for the configured region. Open the Live Map to trigger an initial load.
     </p>
   </div>
 );
