@@ -24,6 +24,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import Docs from './docs/Docs';
 import { getDocBySlug } from './docs/manifest';
 import DataFeedsPage from '../components/DataFeedsPage';
+import { usersApi } from '../src/api/users.api';
 
 interface DashboardProps {
   onNavigate: (screen: AuthScreen) => void;
@@ -34,6 +35,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const logoutMutation = useLogout();
   const [mapFilters, setMapFilters] = useState<MapFilters>(DEFAULT_FILTERS);
   const user = useAuthStore((s) => s.user);
+  const syncCurrentUserName = useAuthStore((s) => s.syncCurrentUserName);
   const isFacilityOwner = user?.role === 'facility_owner';
   const returnFromDocs = React.useRef<typeof activeView>('LIVE_MAP');
   const previousView = React.useRef(activeView);
@@ -50,6 +52,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     setTourViewReady(true);
     setActiveView(view);
   }, [setActiveView]);
+
+  useEffect(() => {
+    if (!user?.id || (user.role !== 'super_admin' && user.role !== 'admin')) return;
+    let active = true;
+    usersApi.getById(user.id).then((response) => {
+      if (active) syncCurrentUserName(response.data.id, response.data.fullName);
+    }).catch(() => {
+      // Keep the cached name if the profile cannot be loaded.
+    });
+    return () => { active = false; };
+  }, [user?.id, user?.role, syncCurrentUserName]);
 
   useEffect(() => {
     if (activeView === 'DOCS' && previousView.current !== 'DOCS') returnFromDocs.current = previousView.current;

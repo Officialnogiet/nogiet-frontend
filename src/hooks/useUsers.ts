@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "../api/users.api";
 import { createUserSchema, updateUserSchema } from "../validations/user.schema";
 import type { CreateUserInput, UpdateUserInput } from "../validations/user.schema";
+import { useAuthStore } from "../stores/auth.store";
 
 export function useUsers(page = 1, limit = 10, search?: string) {
   return useQuery({
@@ -25,13 +26,17 @@ export function useCreateUser() {
 
 export function useUpdateUser() {
   const qc = useQueryClient();
+  const syncCurrentUserName = useAuthStore((s) => s.syncCurrentUserName);
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateUserInput }) => {
       const parsed = updateUserSchema.parse(data);
       return usersApi.update(id, parsed);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    onSuccess: (response) => {
+      syncCurrentUserName(response.data.id, response.data.fullName);
+      qc.invalidateQueries({ queryKey: ["users"] });
+    },
   });
 }
 

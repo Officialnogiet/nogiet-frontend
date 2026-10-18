@@ -12,6 +12,7 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   setUser: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  syncCurrentUserName: (id: string, fullName: string) => void;
   logout: () => void;
   resetEmail: string;
   setResetEmail: (email: string) => void;
@@ -32,6 +33,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem("user", JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
+
+  syncCurrentUserName: (id, fullName) => set((state) => {
+    if (!state.user || state.user.id !== id || state.user.fullName === fullName) return state;
+    const user = { ...state.user, fullName };
+    localStorage.setItem("user", JSON.stringify(user));
+    return { user };
+  }),
 
   logout: () => {
     localStorage.removeItem("accessToken");
