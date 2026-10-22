@@ -304,6 +304,10 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
   const viewportBBoxRef = useRef(NIGERIA_DEFAULT_BBOX);
   const [regionChanged, setRegionChanged] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // True once the states/LGA/oil-block boundary GeoJSONs are loaded, so
+  // findStateAtPoint() has data to look up against (see preloadAdminGeoJSONs
+  // call below). Drives the satellite-source state lookup used for search.
+  const [boundariesReady, setBoundariesReady] = useState(false);
   const [satelliteError, setSatelliteError] = useState<string | null>(null);
   const [activePlumeSource, setActivePlumeSource] = useState<string>('');
   const groundDataMapRef = useRef<Map<string, any[]>>(new Map());
@@ -438,16 +442,40 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
   const allProvidersSelected = providerSet.size === ALL_GRID_PROVIDERS.length;
   const instrumentsByProvider = gridControls.instrumentsByProvider ?? {};
 
-  const filteredSatellite = useMemo(() => {
+  // Satellite sources carry no state/LGA/oil-block field of their own (unlike
+  // facilities, which have `region`), so a search for a state name like
+  // "Rivers" would never match them by name/sector alone. Derive each
+  // source's state via the same point-in-polygon boundary data the map
+  // already loads, so state search works for satellite markers too.
+  const satelliteStateById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    if (!boundariesReady) return map;
+    for (const s of globalSatSources as any[]) {
+      const lon = s.longitude, lat = s.latitude;
+      map.set(s.id, Number.isFinite(lon) && Number.isFinite(lat) ? findStateAtPoint(lon, lat) : null);
+    }
+    return map;
+  }, [globalSatSources, boundariesReady]);
+
+  // Split out the search stage so the "filtered to nothing" banner can tell
+  // whether the search text itself is what emptied the results, as opposed
+  // to the legend/instrument/slider filters further down the pipeline.
+  const searchFilteredSatellite = useMemo(() => {
     if (!mapFilters.showSatellite) return [];
     let features: any[] = globalSatSources;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       features = features.filter((s: any) =>
         (s.name ?? s.source_name ?? '').toLowerCase().includes(q) ||
-        (s.sector ?? '').toLowerCase().includes(q)
+        (s.sector ?? '').toLowerCase().includes(q) ||
+        (satelliteStateById.get(s.id) ?? '').toLowerCase().includes(q)
       );
     }
+    return features;
+  }, [globalSatSources, searchQuery, mapFilters.showSatellite, satelliteStateById]);
+
+  const filteredSatellite = useMemo(() => {
+    let features: any[] = searchFilteredSatellite;
     if (mapFilters.sectors.length > 0) {
       features = features.filter((s: any) => mapFilters.sectors.some(sec => (s.sector ?? '').toLowerCase().includes(sec.toLowerCase())));
     }
@@ -477,7 +505,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
         && persist >= mapFilters.minPersistence && persist <= mapFilters.maxPersistence;
     });
     return features;
-  }, [globalSatSources, searchQuery, mapFilters, providerSet, instrumentsByProvider]);
+  }, [searchFilteredSatellite, mapFilters, providerSet, instrumentsByProvider]);
   filteredSatRef.current = filteredSatellite;
 
   const totalSources = filteredFacilities.length + filteredSatellite.length;
@@ -486,6 +514,11 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
   // True when the backend returned features but our filter pipeline produced nothing.
   // Powers both the dev-mode diagnostic log AND the on-map "filtered to nothing" banner.
   const isFilteredToNothing = globalSatSources.length > 0 && filteredSatellite.length === 0;
+  // Narrower than isFilteredToNothing: true when the search box alone (before
+  // the legend/instrument/slider filters even run) is what emptied the list,
+  // so the banner can name the actual cause instead of always blaming the
+  // legend/filter panel.
+  const isSearchTheCause = searchQuery.trim().length > 0 && isFilteredToNothing && searchFilteredSatellite.length === 0;
 
   // Dev-only diagnostic: log every filter input when the filter pipeline drops all
   // sources so we can see exactly which control is responsible. Fires only on the
@@ -506,6 +539,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
     console.log('plume-count range:', mapFilters.minPlumes, '–', mapFilters.maxPlumes);
     console.log('persistence range:', mapFilters.minPersistence, '–', mapFilters.maxPersistence);
     console.log('search query:', searchQuery || '(empty)');
+    console.log('search is the cause (legend/sliders never even ran):', isSearchTheCause);
     const sample = globalSatSources[0] as any;
     console.log('first source in store:', {
       provider: sample.provider,
@@ -519,6 +553,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
     /* eslint-enable no-console */
   }, [
     isFilteredToNothing,
+    isSearchTheCause,
     globalSatSources,
     mapFilters.showSatellite,
     mapFilters.providers,
@@ -575,11 +610,20 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
       return;
     }
 
-    // Check satellite sources
+    // Check satellite sources. Sources carry no state field of their own, so
+    // also resolve each one's state via the boundary GeoJSON (same lookup
+    // used for the satellite search filter above) before falling through to
+    // the plain boundary-centroid search below.
     const allSatFeatures: any[] = (satelliteData as any)?.features ?? [];
-    const matchedSat = allSatFeatures.find((s: any) =>
-      (s.name ?? s.source_name ?? '').toLowerCase().includes(q) || (s.sector ?? '').toLowerCase().includes(q)
-    );
+    const matchedSat = allSatFeatures.find((s: any) => {
+      const lon = s.longitude ?? s.lon;
+      const lat = s.latitude ?? s.lat;
+      return (s.name ?? s.source_name ?? '').toLowerCase().includes(q) ||
+        (s.sector ?? '').toLowerCase().includes(q) ||
+        (boundariesReady && Number.isFinite(lon) && Number.isFinite(lat)
+          ? (findStateAtPoint(lon, lat) ?? '').toLowerCase().includes(q)
+          : false);
+    });
     if (matchedSat) {
       flyToAndPulse(matchedSat.longitude ?? matchedSat.lon, matchedSat.latitude ?? matchedSat.lat);
       return;
@@ -615,7 +659,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
     }
 
     clearPulse();
-  }, [searchQuery, mapLoaded, facilities, satelliteData]);
+  }, [searchQuery, mapLoaded, facilities, satelliteData, boundariesReady]);
 
   function flyToAndPulse(lng: number, lat: number) {
     const m = map.current;
@@ -869,7 +913,7 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
         // Pre-warm the states + LGAs GeoJSONs so the modal can show "State /
         // LGA" even when those layers are turned off in the toggle panel.
         // Fire-and-forget: load errors are swallowed by the helper.
-        preloadAdminGeoJSONs().catch(() => { /* non-fatal */ });
+        preloadAdminGeoJSONs().then(() => setBoundariesReady(true)).catch(() => { /* non-fatal */ });
       });
 
       m.on('error', (e) => {
@@ -1881,25 +1925,38 @@ const LiveMap: React.FC<LiveMapProps> = ({ onOpenFilters, darkMode: _dashboardDa
             <Satellite className="flex-shrink-0 mt-0.5 text-amber-500" size={20} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">
-                {globalSatSources.length} source{globalSatSources.length === 1 ? '' : 's'} loaded: filters are hiding them all
+                {globalSatSources.length} source{globalSatSources.length === 1 ? '' : 's'} loaded: {isSearchTheCause ? `no match for "${searchQuery.trim()}"` : 'filters are hiding them all'}
               </p>
               <p className={`text-xs mt-1 ${mapUiDark ? 'text-amber-200/70' : 'text-amber-700/80'}`}>
-                The backend returned data, but the current filter selection (legend providers / instruments, or filter panel sliders) excludes every source. Reset the legend or open Filters to widen the selection.
+                {isSearchTheCause
+                  ? `The backend returned data, but no satellite source's name, sector, or state matches "${searchQuery.trim()}". Clear the search to see all loaded sources.`
+                  : 'The backend returned data, but the current filter selection (legend providers / instruments, or filter panel sliders) excludes every source. Reset the legend or open Filters to widen the selection.'}
               </p>
               <div className="mt-2.5 flex flex-wrap gap-2">
-                <button
-                  onClick={() => setGridControls(DEFAULT_GRID_CONTROLS)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-100' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
-                >
-                  Reset legend
-                </button>
-                {onOpenFilters && (
+                {isSearchTheCause ? (
                   <button
-                    onClick={onOpenFilters}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-white/10 hover:bg-white/20 text-amber-100' : 'bg-white hover:bg-gray-50 text-amber-800 border border-amber-200'}`}
+                    onClick={() => setSearchQuery('')}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-100' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                   >
-                    Open Filters
+                    Clear search
                   </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setGridControls(DEFAULT_GRID_CONTROLS)}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-100' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                    >
+                      Reset legend
+                    </button>
+                    {onOpenFilters && (
+                      <button
+                        onClick={onOpenFilters}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${mapUiDark ? 'bg-white/10 hover:bg-white/20 text-amber-100' : 'bg-white hover:bg-gray-50 text-amber-800 border border-amber-200'}`}
+                      >
+                        Open Filters
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
